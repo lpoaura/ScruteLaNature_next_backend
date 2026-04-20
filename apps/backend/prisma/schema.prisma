@@ -1,0 +1,381 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------
+
+enum Role {
+  USER
+  EDITOR
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum ProviderType {
+  GOOGLE
+  GITHUB
+  APPLE
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum Difficulty {
+  FACILE
+  MOYEN
+  DIFFICILE
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum JeuType {
+  INFO
+  QCM
+  CHARADE
+  CODE_CAESAR
+  CALCUL_PYRAMIDAL
+  VALIDATION_LIEU
+  ECO_GESTE
+}
+
+// ------------------------------------------------------
+// MODELS (AUTH BOILERPLATE & LPO)
+// ------------------------------------------------------
+
+model User {
+  id        String  @id @default(uuid())
+  // Email et password deviennent optionnels pour le mode "Invité"
+  email     String? @unique
+  password  String? // Optionnel (Invité ou OAuth)
+  pseudo    String? // Requis par l'app LPO, optionnel en création boilerplate
+  firstName String?
+  lastName  String?
+  role      Role    @default(USER)
+  isGuest   Boolean @default(false)
+
+  // Vérification & Sécurité
+  isEmailVerified Boolean @default(false)
+
+  // 2FA (Double Authentification)
+  twoFactorSecret    String? // Stocke le secret TOTP généré
+  isTwoFactorEnabled Boolean @default(false)
+
+  // Métriques LPO
+  agenceId String?
+  agence   Agence? @relation(fields: [agenceId], references: [id])
+
+  analyticsConsent Boolean @default(false)
+  pushToken        String?
+
+  level       Int   @default(1)
+  totalPoints Int   @default(0)
+  co2Saved    Float @default(0.0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations (Boilerplate)
+  sessions           Session[]
+  oauthAccounts      OAuthAccount[]
+  verificationTokens VerificationToken[]
+
+  // Relations (LPO)
+  sentRequests     Friendship[]   @relation("SentRequests")
+  receivedRequests Friendship[]   @relation("ReceivedRequests")
+  observations     Observation[]
+  badges           UserBadge[]
+  parcoursDone     UserParcours[]
+  reviews          Review[]
+
+  @@index([agenceId])
+  @@map("users")
+}
+
+model Session {
+  id                 String @id @default(uuid())
+  userId             String
+  hashedRefreshToken String // On ne stocke jamais le token en clair !
+
+  // Métadonnées pour l'audit et la sécurité (Optionnel mais recommandé)
+  ipAddress String?
+  userAgent String?
+
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relation
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique // Le token envoyé par email (idéalement hashé ici aussi)
+  type      TokenType
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  // Relation
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, token])
+  @@map("verification_tokens")
+}
+
+model OAuthAccount {
+  id             String       @id @default(uuid())
+  userId         String
+  provider       ProviderType // ex: GOOGLE
+  providerUserId String // L'ID fourni par Google ou Github
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relation
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Un utilisateur ne peut lier qu'un seul compte d'un même fournisseur
+  @@unique([provider, providerUserId])
+  @@map("oauth_accounts")
+}
+
+// ======================================================
+// 🤝 GESTION DES AMIS (Table de jointure explicite)
+// ======================================================
+
+model Friendship {
+  id     String           @id @default(uuid())
+  status FriendshipStatus @default(PENDING)
+
+  requesterId String
+  receiverId  String
+
+  requester User @relation("SentRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId])
+  @@map("friendships")
+}
+
+// ======================================================
+// 🏙️ COMMUNES & AGENCES
+// ======================================================
+
+model Agence {
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  employes  User[]
+  parcours  Parcours[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("agences")
+}
+
+model Commune {
+  id         String     @id @default(uuid())
+  nom        String     @unique
+  codePostal String?
+  parcours   Parcours[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("communes")
+}
+
+// ======================================================
+// 🗺️ PARCOURS (Optimisé avec Index)
+// ======================================================
+
+model Parcours {
+  id          String        @id @default(uuid())
+  title       String
+  description String        @db.Text
+  difficulty  Difficulty
+  distanceKm  Float
+  durationMin Int
+  coverImage  String
+  status      PublishStatus @default(DRAFT)
+
+  pathGeoJSON String? @db.Text
+  mascotteNom String?
+  mascotteImg String?
+
+  agenceId String
+  agence   Agence @relation(fields: [agenceId], references: [id], onDelete: Cascade)
+
+  communeId String
+  commune   Commune @relation(fields: [communeId], references: [id], onDelete: Restrict)
+
+  isPMRFriendly            Boolean @default(false)
+  isChildFriendly          Boolean @default(false)
+  isMentalHandicapFriendly Boolean @default(false)
+
+  etapes     Etape[]
+  usersStats UserParcours[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([communeId])
+  @@index([agenceId])
+  @@map("parcours")
+}
+
+// ======================================================
+// 📍 ÉTAPES & JEUX
+// ======================================================
+
+model Etape {
+  id         String   @id @default(uuid())
+  parcoursId String
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  order          Int
+  latitude       Float
+  longitude      Float
+  title          String
+  description    String? @db.Text
+  transitionText String? @db.Text
+
+  jeux Jeu[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parcoursId])
+  @@map("etapes")
+}
+
+model Jeu {
+  id      String @id @default(uuid())
+  etapeId String
+  etape   Etape  @relation(fields: [etapeId], references: [id], onDelete: Cascade)
+
+  order       Int
+  type        JeuType
+  question    String  @db.Text
+  explication String? @db.Text
+  audioUrl    String?
+  imageUrl    String?
+  donneesJeu  Json?
+  reponse     String?
+
+  @@index([etapeId])
+  @@map("jeux")
+}
+
+// ======================================================
+// 📊 HISTORIQUE (Avec protection contre les doublons)
+// ======================================================
+model UserParcours {
+  id     String  @id @default(uuid())
+  // Clé d'idempotence générée par le mobile pour éviter les doublons de sync
+  syncId String? @unique
+
+  userId     String
+  parcoursId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  score       Int
+  completedAt DateTime @default(now())
+
+  @@unique([userId, parcoursId])
+  @@index([parcoursId])
+  @@map("user_parcours")
+}
+
+// ======================================================
+// 🌿 OBSERVATIONS & BADGES
+// ======================================================
+model Observation {
+  id     String  @id @default(uuid())
+  syncId String? @unique // Protection doublons
+  userId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  speciesName   String?
+  imageUrl      String
+  latitude      Float
+  longitude     Float
+  aiConfidence  Float?
+  isOfflineSync Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("observations")
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String
+  description String      @db.Text
+  imageUrl    String
+  category    String
+  users       UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id       String   @id @default(uuid())
+  userId   String
+  badgeId  String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  rating     Int
+  comment    String?  @db.Text
+  userId     String
+  parcoursId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, parcoursId])
+  @@index([parcoursId])
+  @@map("reviews")
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { display: inline-block; padding: 10px 20px; color: #fff; background-color: #007bff; text-decoration: none; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Vérification de votre compte</h2>
+    <p>Bonjour,</p>
+    <p>Merci de vous être inscrit sur notre plateforme. Veuillez cliquer sur le bouton ci-dessous pour vérifier votre adresse e-mail :</p>
+    <p style="text-align: center;">
+      <a href="<%= url %>" class="btn">Vérifier mon email</a>
+    </p>
+    <p>Si ce bouton ne fonctionne pas, copiez-collez le lien suivant dans votre navigateur :</p>
+    <p><a href="<%= url %>"><%= url %></a></p>
+    <p>Merci,<br>L'équipe technique</p>
+  </div>
+</body>
+</html>
