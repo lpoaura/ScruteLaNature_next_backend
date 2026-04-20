@@ -15,6 +15,7 @@ import * as crypto from 'crypto';
 import { authenticator } from 'otplib';
 import * as qrcode from 'qrcode';
 import { User, Role } from '@prisma/client';
+import { RegisterUserDto } from './dto/register-user.dto';
 
 export interface JwtPayload {
   email?: string | null;
@@ -88,6 +89,52 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+      },
+    };
+  }
+
+  async register(registerUserDto: RegisterUserDto, ipAddress?: string, userAgent?: string) {
+    const { password, ...otherData } = registerUserDto;
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const user = await this.databaseService.user.create({
+      data: {
+        ...otherData,
+        password: hashedPassword,
+        role: Role.USER,
+        isGuest: false,
+      },
+    });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    await this.databaseService.verificationToken.create({
+      data: {
+        userId: user.id,
+        token: token,
+        type: 'EMAIL_VERIFICATION',
+        expiresAt: expiresAt,
+      },
+    });
+
+    this.mailService.sendVerificationEmail(user.email!, token).catch(() => {});
+
+    const tokens = await this.getTokens(user.id, user.email, user.role);
+    await this.updateRefreshToken(user.id, tokens.refresh_token, ipAddress, userAgent);
+
+    return {
+      requires_2fa: false,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        pseudo: user.pseudo,
+        role: user.role,
+        isGuest: user.isGuest,
       },
     };
   }

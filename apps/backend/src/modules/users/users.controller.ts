@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Request
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,82 +24,44 @@ import { Role } from '@prisma/client';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@Controller('users')
+@Controller()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
-  @Public()
-  @Post()
-  @ApiOperation({ summary: 'Créer un nouvel utilisateur' })
-  @ApiResponse({
-    status: 201,
-    description: "L'utilisateur a été créé avec succès.",
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Requête invalide (erreur de validation).',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Un utilisateur avec cet email existe déjà.',
-  })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @Get('users/me')
+  @ApiOperation({ summary: 'Récupérer le profil courant' })
+  @ApiResponse({ status: 200, description: 'Le profil utilisateur.' })
+  findMe(@Request() req: any) {
+    return this.usersService.findOne(req.user.sub || req.user.id);
   }
 
-  @Get()
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Récupérer tous les utilisateurs (Role: ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Liste de tous les utilisateurs.' })
-  @ApiResponse({
-    status: 403,
-    description: 'Accès refusé. Rôle administrateur requis.',
-  })
+  @Patch('users/me')
+  @ApiOperation({ summary: 'Mettre à jour son profil' })
+  @ApiResponse({ status: 200, description: 'Profil mis à jour.' })
+  updateMe(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(req.user.sub || req.user.id, updateUserDto);
+  }
+
+  @Delete('users/me')
+  @ApiOperation({ summary: 'Bouton RGPD : Supprimer son compte (cascade)' })
+  @ApiResponse({ status: 200, description: 'Compte supprimé.' })
+  removeMe(@Request() req: any) {
+    return this.usersService.remove(req.user.sub || req.user.id);
+  }
+
+  @Get('admin/users')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Lister les employés (Role: ADMIN/SUPER_ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Liste des utilisateurs.' })
   findAll() {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Récupérer un utilisateur par son ID' })
-  @ApiParam({
-    name: 'id',
-    description: "ID de l'utilisateur (UUID)",
-    type: String,
-  })
-  @ApiResponse({ status: 200, description: "L'utilisateur trouvé." })
-  @ApiResponse({ status: 404, description: 'Utilisateur non trouvé.' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Mettre à jour un utilisateur' })
-  @ApiParam({
-    name: 'id',
-    description: "ID de l'utilisateur (UUID)",
-    type: String,
-  })
-  @ApiResponse({ status: 200, description: "L'utilisateur a été mis à jour." })
-  @ApiResponse({ status: 404, description: 'Utilisateur non trouvé.' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Supprimer un utilisateur (Role: ADMIN)' })
-  @ApiParam({
-    name: 'id',
-    description: "ID de l'utilisateur (UUID)",
-    type: String,
-  })
-  @ApiResponse({ status: 200, description: "L'utilisateur a été supprimé." })
-  @ApiResponse({
-    status: 403,
-    description: 'Accès refusé. Rôle administrateur requis.',
-  })
-  @ApiResponse({ status: 404, description: 'Utilisateur non trouvé.' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @Post('admin/users')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Créer un compte employé (Role: ADMIN/SUPER_ADMIN)' })
+  @ApiResponse({ status: 201, description: 'Employé créé.' })
+  createAdmin(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
   }
 }

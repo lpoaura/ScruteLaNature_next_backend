@@ -11,7 +11,6 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from '../../common/guards/jwt-refresh-auth.guard';
-import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -21,9 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { LoginDto } from './dto/login.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { Verify2faDto } from './dto/verify-2fa.dto';
 import type { Request as ExpressRequest } from 'express';
 import { User, Role } from '@prisma/client';
 import { Public } from '../../common/decorators/public.decorator';
@@ -47,7 +46,6 @@ export interface RequestWithJwtPayload extends ExpressRequest {
     sub: string;
     email?: string | null;
     role: Role;
-    isTwoFactorAuthenticated: boolean;
   };
 }
 
@@ -73,6 +71,20 @@ export class AuthController {
   login(@Request() req: RequestWithUser, @Body() _loginDto: LoginDto) {
     const userAgent = req.headers['user-agent'];
     return this.authService.login(req.user, req.ip, userAgent);
+  }
+
+  @Public()
+  @Post('register')
+  @ApiOperation({
+    summary: 'Créer un nouveau compte Joueur',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Compte créé avec succès, retourne les Tokens JWT.',
+  })
+  register(@Request() req: ExpressRequest, @Body() dto: RegisterUserDto) {
+    const userAgent = req.headers['user-agent'];
+    return this.authService.register(dto, req.ip, userAgent);
   }
 
   @Public()
@@ -167,100 +179,4 @@ export class AuthController {
     );
   }
 
-  // ─── 2FA ─────────────────────────────────────────────────────────────────────
-
-  @ApiBearerAuth()
-  @Get('2fa/generate')
-  @ApiOperation({
-    summary: 'Générer un QR Code pour configurer Google Authenticator (2FA)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Retourne un QR Code (base64) et le secret à scanner.',
-  })
-  generate2fa(@Request() req: RequestWithUser) {
-    return this.authService.generate2faSecret(req.user.id, req.user.email!);
-  }
-
-  @ApiBearerAuth()
-  @Post('2fa/activate')
-  @ApiOperation({
-    summary: 'Activer la 2FA en validant le premier code de son application',
-  })
-  @ApiBody({ type: Verify2faDto })
-  @ApiResponse({ status: 200, description: '2FA activée avec succès.' })
-  @ApiResponse({ status: 401, description: 'Code 2FA invalide.' })
-  activate2fa(@Request() req: RequestWithUser, @Body() dto: Verify2faDto) {
-    return this.authService.activate2fa(req.user.id, dto.code);
-  }
-
-  @ApiBearerAuth()
-  @Post('2fa/disable')
-  @ApiOperation({ summary: 'Désactiver la 2FA (nécessite un code valide)' })
-  @ApiBody({ type: Verify2faDto })
-  @ApiResponse({ status: 200, description: '2FA désactivée.' })
-  @ApiResponse({ status: 401, description: 'Code 2FA invalide.' })
-  disable2fa(@Request() req: RequestWithUser, @Body() dto: Verify2faDto) {
-    return this.authService.disable2fa(req.user.id, dto.code);
-  }
-
-  @Public()
-  @UseGuards(JwtAuthGuard)
-  @Post('2fa/authenticate')
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary:
-      'Valider le code 2FA avec le partial_token pour obtenir les vrais tokens JWT',
-  })
-  @ApiBody({ type: Verify2faDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Authentification 2FA réussie, retourne les tokens complets.',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Code 2FA invalide ou partial_token expiré.',
-  })
-  authenticate2fa(
-    @Request() req: RequestWithJwtPayload,
-    @Body() dto: Verify2faDto,
-  ) {
-    const userAgent = req.headers['user-agent'];
-    return this.authService.authenticate2fa(
-      req.user.sub,
-      dto.code,
-      req.ip,
-      userAgent,
-    );
-  }
-
-  // ─── OAuth (Google) ────────────────────────────────────────────────────────
-
-  @Public()
-  @UseGuards(GoogleAuthGuard)
-  @Get('google')
-  @ApiOperation({ summary: "S'authentifier via Google" })
-  googleAuth() {
-    // Redirige vers la page de login Google
-  }
-
-  @Public()
-  @UseGuards(GoogleAuthGuard)
-  @Get('google/callback')
-  @ApiOperation({ summary: 'Callback appelé par Google après autorisation' })
-  googleAuthCallback(
-    @Request()
-    req: ExpressRequest & {
-      user: {
-        providerUserId: string;
-        provider: 'GOOGLE';
-        email: string;
-        firstName: string;
-        lastName: string;
-      };
-    },
-  ) {
-    const userAgent = req.headers['user-agent'];
-    return this.authService.loginWithGoogle(req.user, req.ip, userAgent);
-  }
 }

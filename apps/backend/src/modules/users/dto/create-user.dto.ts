@@ -6,8 +6,10 @@ import {
   MinLength,
   MaxLength,
   Matches,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -60,4 +62,21 @@ export class CreateUserDto {
   @IsOptional({ message: 'Le nom de famille est optionnel' })
   @IsString({ message: 'Le nom de famille doit être une chaîne de caractères' })
   lastName?: string;
+
+  @ApiProperty({
+    example: 'EDITOR',
+    description: 'Le rôle LPO (ADMIN, EDITOR, SUPER_ADMIN)',
+    enum: Role,
+  })
+  @IsEnum(Role, { message: 'Le rôle doit être valide (ADMIN, EDITOR...)' })
+  @IsNotEmpty()
+  role: Role;
+
+  @ApiPropertyOptional({
+    example: 'uuid-agence-1234',
+    description: "L'agence LPO de rattachement (si ADMIN ou EDITOR)",
+  })
+  @IsOptional()
+  @IsString()
+  agenceId?: string;
 }
