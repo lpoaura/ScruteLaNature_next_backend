@@ -1,0 +1,14 @@
+{
+  "name": "lpo-balades-web",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=backoffice\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
