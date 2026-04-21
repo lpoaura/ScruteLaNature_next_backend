@@ -10,6 +10,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { RedisModule } from './providers/redis/redis.module';
 import { MailModule } from './providers/mail/mail.module';
+import { AgencesModule } from './modules/agences/agences.module';
+import { CommunesModule } from './modules/communes/communes.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 import { join } from 'path';
@@ -46,6 +48,8 @@ import { join } from 'path';
     MailModule,
     UsersModule,
     AuthModule,
+    AgencesModule,
+    CommunesModule,
   ],
   controllers: [AppController],
   providers: [
