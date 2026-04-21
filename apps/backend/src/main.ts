@@ -3,11 +3,18 @@ import { AppModule } from './app.module';
 import { PrismaClientExceptionFilter } from './common/filters/filters-prisma-exceptions.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Servir les fichiers uploadés en statique sous /uploads
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+  });
 
   // Activation de CORS avec configuration par défaut (à adapter en prod)
   app.enableCors();
@@ -44,12 +51,10 @@ async function bootstrap() {
 
   // Configuration Swagger
   const config = new DocumentBuilder()
-    .setTitle('NestJS Auth Boilerplate API')
-    .setDescription(
-      "Documentation de l'API du Boilerplate avec Authentification Complète",
-    )
+    .setTitle('Scrute La Nature — API Backend')
+    .setDescription('Documentation de toutes les API du projet LPO Scrute La Nature')
     .setVersion('1.0')
-    .addBearerAuth() // Pour pouvoir passer le JWT plus tard
+    .addBearerAuth()
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);
