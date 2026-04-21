@@ -42,6 +42,9 @@ export class AuthService {
     const user = await this.usersService.findByEmailForAuth(email);
 
     if (user && user.password && (await bcrypt.compare(pass, user.password))) {
+      if (!user.isEmailVerified) {
+        throw new ForbiddenException('Veuillez vérifier votre adresse email pour vous connecter.');
+      }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...result } = user;
       return result;
@@ -94,13 +97,22 @@ export class AuthService {
   }
 
   async register(registerUserDto: RegisterUserDto, ipAddress?: string, userAgent?: string) {
-    const { password, ...otherData } = registerUserDto;
+    const { password, rgpdAccepted, ...otherData } = registerUserDto;
+
+    // Obligation légale RGPD : pas de traitement de données sans consentement explicite
+    if (!rgpdAccepted) {
+      throw new BadRequestException(
+        'Vous devez accepter les conditions RGPD pour créer un compte.',
+      );
+    }
+
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const user = await this.databaseService.user.create({
       data: {
         ...otherData,
+        analyticsConsent: rgpdAccepted,
         password: hashedPassword,
         role: Role.USER,
         isGuest: false,
@@ -122,19 +134,12 @@ export class AuthService {
 
     this.mailService.sendVerificationEmail(user.email!, token).catch(() => {});
 
-    const tokens = await this.getTokens(user.id, user.email, user.role);
-    await this.updateRefreshToken(user.id, tokens.refresh_token, ipAddress, userAgent);
-
     return {
-      requires_2fa: false,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      message: 'Compte créé avec succès. Veuillez vérifier votre email pour pouvoir vous connecter.',
       user: {
         id: user.id,
         email: user.email,
         pseudo: user.pseudo,
-        role: user.role,
-        isGuest: user.isGuest,
       },
     };
   }
@@ -506,7 +511,7 @@ export class AuthService {
 
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     const refreshExpiresIn =
-      this.configService.get<string>('JWT_REFRESH_EXPIRATION') || '7d';
+      this.configService.get<string>('JWT_REFRESH_EXPIRATION') || '180d';
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {

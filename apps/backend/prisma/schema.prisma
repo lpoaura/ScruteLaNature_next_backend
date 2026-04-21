@@ -71,7 +71,7 @@ model User {
   // Email et password deviennent optionnels pour le mode "Invité"
   email     String? @unique
   password  String? // Optionnel (Invité ou OAuth)
-  pseudo    String? // Requis par l'app LPO, optionnel en création boilerplate
+  pseudo    String? @unique // Requis par l'app LPO, identifiant public unique
   firstName String?
   lastName  String?
   role      Role    @default(USER)
