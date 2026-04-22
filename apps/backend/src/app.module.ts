@@ -13,6 +13,7 @@ import { MailModule } from './providers/mail/mail.module';
 import { AgencesModule } from './modules/agences/agences.module';
 import { CommunesModule } from './modules/communes/communes.module';
 import { MediasModule } from './modules/medias/medias.module';
+import { ParcoursModule } from './modules/parcours/parcours.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 import { join } from 'path';
@@ -52,6 +53,7 @@ import { join } from 'path';
     AgencesModule,
     CommunesModule,
     MediasModule,
+    ParcoursModule,
   ],
   controllers: [AppController],
   providers: [

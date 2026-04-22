@@ -64,7 +64,7 @@ cd ../.. && npm run dev
 | **Agences** | `GET/POST/PATCH /admin/agences` | ✅ Sprint 1 |
 | **Communes** | `GET/POST /admin/communes`, `GET /admin/stats/communes` | ✅ Sprint 1 |
 | **Médias** | `POST /medias/upload`, `DELETE /medias/:filename` | ✅ Sprint 2 |
-| **Parcours** | `GET/POST/PATCH/DELETE /admin/parcours` | 🔜 Sprint 2 |
+| **Parcours** | `GET/POST/PATCH/DELETE /admin/parcours` + filtres | ✅ Sprint 2 |
 | **Étapes & Jeux** | `/admin/etapes`, `/admin/jeux` | 🔜 Sprint 3 |
 | **Mobile** | `/mobile/parcours/download`, `/mobile/sync` | 🔜 Sprint 3 |
 | **Social** | `/social/friends`, `/social/observations`, `/social/reviews` | 🔜 Sprint 4 |
