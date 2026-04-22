@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AppConfigModule } from './config/app-config.module';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -22,6 +23,7 @@ import { join } from 'path';
 @Module({
   imports: [ 
     ConfigModule.forRoot({ isGlobal: true }),
+    AppConfigModule,
     DatabaseModule,
     RedisModule,
     MailerModule.forRootAsync({

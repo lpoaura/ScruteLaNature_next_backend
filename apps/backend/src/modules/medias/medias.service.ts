@@ -3,20 +3,19 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../../config/app-config.service';
 import * as fs from 'fs';
 import { join } from 'path';
 
 @Injectable()
 export class MediasService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly appConfig: AppConfigService) {}
 
   /**
    * Retourne l'URL publique absolue du fichier uploadé
    */
   getFileUrl(filename: string, subfolder: 'images' | 'audio' | 'gpx'): string {
-    const appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
-    return `${appUrl}/uploads/${subfolder}/${filename}`;
+    return this.appConfig.buildMediaUrl(subfolder, filename);
   }
 
   /**

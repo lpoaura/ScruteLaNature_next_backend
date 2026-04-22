@@ -16,6 +16,11 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
+  // Servir les assets publics (logo LPO, etc.) sous /public
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    prefix: '/public',
+  });
+
   // Activation de CORS avec configuration par défaut (à adapter en prod)
   app.enableCors();
 
