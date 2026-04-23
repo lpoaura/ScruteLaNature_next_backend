@@ -19,6 +19,8 @@ import { MobileModule } from './modules/mobile/mobile.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EjsAdapter } from '@nestjs-modules/mailer/adapters/ejs.adapter';
 import { join } from 'path';
+import { EtapesModule } from './modules/etapes/etapes.module';
+import { JeuxModule } from './modules/jeux/jeux.module';
 
 @Module({
   imports: [ 
@@ -58,6 +60,8 @@ import { join } from 'path';
     MediasModule,
     ParcoursModule,
     MobileModule,
+    EtapesModule,
+    JeuxModule,
   ],
   controllers: [AppController],
   providers: [
