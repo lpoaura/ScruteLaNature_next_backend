@@ -8,7 +8,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
-import { RedisService } from '../../providers/redis/redis.service';
+
 import { MailService } from '../../providers/mail/mail.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -31,7 +31,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private databaseService: DatabaseService,
-    private redisService: RedisService,
+
     private mailService: MailService,
   ) {}
 
@@ -180,21 +180,6 @@ export class AuthService {
     await this.databaseService.session.deleteMany({
       where: { userId },
     });
-
-    if (accessToken) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const decoded = this.jwtService.decode(accessToken);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (decoded && typeof decoded.exp === 'number') {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-          await this.redisService.blacklistToken(accessToken, decoded.exp);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (_error) {
-        // Ignorer l'erreur si le token est malformé, on déconnecte quand même
-      }
-    }
 
     return { message: 'Déconnexion réussie' };
   }
