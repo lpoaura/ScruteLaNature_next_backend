@@ -1,27 +1,108 @@
-# Scrute La Nature - Backend & Backoffice 🌿
+# Scrute La Nature — Backend & Backoffice 🌿
 
-Ce dépôt contient le monorepo web du projet "Scrute La Nature" pour la LPO (Ligue pour la Protection des Oiseaux).
-Il inclut l'API serveur robuste et l'interface d'administration (Backoffice).
+Ce dépôt est le **monorepo Web** du projet *Scrute La Nature* développé pour la **LPO (Ligue pour la Protection des Oiseaux)**.  
+Il contient l'API serveur NestJS et l'interface d'administration (Backoffice Next.js).
 
-## 🏗️ Architecture
+---
 
-- **`apps/backend`** : Serveur principal développé en **NestJS**. Il utilise **Prisma** avec **PostgreSQL** pour la gestion de la base de données. Il contient la logique métier, la gestion du jeu hors ligne (téléchargement et synchronisation), l'authentification avancée (JWT, Invité), et la médiathèque.
-- **`apps/backoffice`** : Interface d'administration pour les équipes de la LPO, développée en **Next.js** avec **shadcn/ui** et **Tailwind CSS**. Elle permet de configurer les balades, les étapes GPS, et les mini-jeux.
+## 🏗️ Architecture du monorepo
 
-## 🚀 Démarrage
+```
+lpo-balades-web/
+├── apps/
+│   ├── backend/         → API NestJS (REST + Swagger)
+│   └── backoffice/      → Interface admin Next.js
+└── package.json         → npm workspaces
+```
+
+### `apps/backend` — Serveur principal
+- Framework : **NestJS** (TypeScript)
+- ORM : **Prisma** + PostgreSQL (via Docker)
+- Auth : **JWT** (Access 15 min + Refresh 6 mois) + **Redis** (blacklist tokens)
+- Stockage fichiers : **Multer** (local, souverain, sans cloud GAFAM)
+- Documentation API : **Swagger** → `http://localhost:3000/api/docs`
+
+### `apps/backoffice` — Interface d'administration
+- Framework : **Next.js** (TypeScript)
+- UI : **shadcn/ui** + **Tailwind CSS**
+
+---
+
+## 🚀 Démarrage local
 
 ### Pré-requis
-- Node.js & npm
-- Docker et Docker Compose
+- Node.js ≥ 20 & npm
+- Docker & Docker Compose
 
-### Lancement Local
-1. `npm install` à la racine pour installer toutes les dépendances des workspaces.
-2. Démarrer la base de données locale (PostgreSQL et Redis) via `docker-compose up -d`.
-3. Pousser le schéma Prisma : `cd apps/backend && npx prisma migrate dev`.
-4. Lancer les projets en développement : `npm run dev` à la racine.
+### Installation
+
+```bash
+# 1. Installer toutes les dépendances
+npm install
+
+# 2. Démarrer PostgreSQL + Redis via Docker
+docker-compose up -d
+
+# 3. Appliquer les migrations Prisma
+cd apps/backend && npx prisma migrate dev
+
+# 4. Créer le compte Super Admin initial
+npx prisma db seed
+
+# 5. Lancer l'environnement de développement (backend + backoffice)
+cd ../.. && npm run dev
+```
+
+---
+
+## 📦 Modules Backend implémentés
+
+| Module | Routes | Statut |
+|---|---|---|
+| **Auth** | `POST /auth/register`, `/login`, `/guest`, `/logout`, `/refresh` | ✅ Sprint 1 |
+| **Users** | `GET/PATCH/DELETE /users/me`, `GET/POST /admin/users` | ✅ Sprint 1 |
+| **Agences** | `GET/POST/PATCH /admin/agences` | ✅ Sprint 1 |
+| **Communes** | `GET/POST /admin/communes`, `GET /admin/stats/communes` | ✅ Sprint 1 |
+| **Médias** | `POST /medias/upload`, `DELETE /medias/:filename` | ✅ Sprint 2 |
+| **Parcours** | `GET/POST/PATCH/DELETE /admin/parcours` + filtres | ✅ Sprint 2 |
+| **Mobile (search)** | `GET /mobile/parcours/search` (commune + accessibilité) | ✅ Sprint 2 |
+| **Étapes & Jeux** | `/admin/etapes`, `/admin/jeux` | 🔜 Sprint 3 |
+| **Mobile** | `/mobile/parcours/download`, `/mobile/sync` | 🔜 Sprint 3 |
+| **Social** | `/social/friends`, `/social/observations`, `/social/reviews` | 🔜 Sprint 4 |
+
+---
 
 ## 🔒 Sécurité
-- Authentification JWT avec Refresh Token
-- Liste noire de tokens via Redis
-- Modes Invités sécurisés pour les joueurs côté Mobile
-- Rôles et contrôles d'accès (RBAC) pour les collaborateurs LPO
+
+- ✅ Authentification **JWT** (Access Token 15 min + Refresh Token 6 mois)
+- ✅ **Blacklist Redis** : les tokens révoqués sont immédiatement invalides
+- ✅ Mode **Invité** : accès immédiat sans email pour les joueurs du dimanche
+- ✅ **RBAC** complet : `USER`, `EDITOR`, `ADMIN`, `SUPER_ADMIN`
+- ✅ Vérification **email obligatoire** avant connexion
+- ✅ Conformité **RGPD** : création de compte bloquée sans consentement explicite
+- ✅ Protection **path traversal** sur la médiathèque
+- ✅ Rate limiting (100 req / 15 min / IP)
+
+---
+
+## 🗄️ Base de données
+
+Le schéma Prisma couvre l'ensemble du domaine LPO :
+
+```
+User → Session, VerificationToken, OAuthAccount
+Agence → User[], Parcours[]
+Commune → Parcours[]
+Parcours → Etape[] → Jeu[]
+User → UserBadge[], UserParcours[], Observation[], Review[], Friendship[]
+```
+
+> **Seed initial** : `npx prisma db seed`  
+> Email : `superadmin@lpo.fr` | Mot de passe : `LpoAdmin123!` _(à changer en prod)_
+
+---
+
+## 🌿 Workflow Git
+
+- `main` → code stable & validé
+- `feat/sprint-X-*` → branches de fonctionnalités par sprint

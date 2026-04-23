@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email vérifié — Scrute La Nature</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(160deg, #e8f7ff 0%, #f4f6f8 60%, #fff8f0 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,159,227,0.12);
+      max-width: 480px;
+      width: 100%;
+      overflow: hidden;
+      text-align: center;
+    }
+    .card-top {
+      background: linear-gradient(135deg, #009FE3 0%, #0078b4 100%);
+      padding: 48px 40px 36px;
+    }
+    .checkmark {
+      width: 72px;
+      height: 72px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 36px;
+      animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .card-top h1 { color: #fff; font-size: 24px; font-weight: 700; }
+    .card-top p { color: rgba(255,255,255,0.85); font-size: 14px; margin-top: 8px; }
+
+    .card-body { padding: 36px 40px; }
+    .card-body p { color: #555; font-size: 15px; line-height: 1.7; margin-bottom: 24px; }
+    .card-body strong { color: #333; }
+
+    .btn-open {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #009FE3, #0078b4);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 16px rgba(0,159,227,0.3);
+      transition: opacity 0.2s;
+      margin-bottom: 12px;
+    }
+    .btn-open:hover { opacity: 0.9; }
+    .hint { font-size: 12px; color: #aaa; }
+
+    .footer {
+      background: #f8f9fa;
+      border-top: 3px solid #F5821F;
+      padding: 24px 40px;
+      text-align: center;
+    }
+    .footer img { height: 56px; width: auto; }
+  </style>
+  <script>
+    var appUrl = window.location.origin.replace('/api', '');
+    // Utilise l'origine du backend pour construire l'URL du logo
+    document.addEventListener('DOMContentLoaded', function() {
+      var logo = document.getElementById('logo-lpo');
+      if (logo) logo.src = appUrl + '/public/logo_lpo.png';
+
+      // Tente d'ouvrir l'app via deep link automatiquement après 1 seconde
+      var deepLink = 'scrutelanature://email-verified';
+      setTimeout(function() {
+        window.location.href = deepLink;
+      }, 1000);
+    });
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="card-top">
+      <div class="checkmark">✅</div>
+      <h1>Email vérifié !</h1>
+      <p>Votre compte Scrute La Nature est maintenant actif.</p>
+    </div>
+
+    <div class="card-body">
+      <p>
+        Bienvenue dans la communauté <strong>Scrute La Nature</strong> ! 🌿<br/>
+        Votre adresse email a été confirmée avec succès. Vous pouvez maintenant vous connecter et partir à la découverte des balades naturalistes de votre région.
+      </p>
+
+      <a href="scrutelanature://email-verified" class="btn-open">
+        🚀 Ouvrir l'application
+      </a>
+      <p class="hint">Si l'application ne s'ouvre pas automatiquement, appuyez sur le bouton ci-dessus.</p>
+    </div>
+
+    <div class="footer">
+      <img id="logo-lpo" src="" alt="Logo LPO Auvergne-Rhône-Alpes" />
+    </div>
+  </div>
+</body>
+</html>
