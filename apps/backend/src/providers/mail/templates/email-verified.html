@@ -81,8 +81,6 @@
     var appUrl = window.location.origin.replace('/api', '');
     // Utilise l'origine du backend pour construire l'URL du logo
     document.addEventListener('DOMContentLoaded', function() {
-      var logo = document.getElementById('logo-lpo');
-      if (logo) logo.src = appUrl + '/public/logo_lpo.png';
 
       // Tente d'ouvrir l'app via deep link automatiquement après 1 seconde
       var deepLink = 'scrutelanature://email-verified';
@@ -113,7 +111,7 @@
     </div>
 
     <div class="footer">
-      <img id="logo-lpo" src="" alt="Logo LPO Auvergne-Rhône-Alpes" />
+      <p style="color: #666; font-size: 14px;"><strong>Scrute La Nature</strong></p>
     </div>
   </div>
 </body>

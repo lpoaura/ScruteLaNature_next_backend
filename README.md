@@ -18,7 +18,7 @@ lpo-balades-web/
 ### `apps/backend` — Serveur principal
 - Framework : **NestJS** (TypeScript)
 - ORM : **Prisma** + PostgreSQL (via Docker)
-- Auth : **JWT** (Access 15 min + Refresh 6 mois) + **Redis** (blacklist tokens)
+- Auth : **JWT** (Access 15 min + Refresh 6 mois) + Révocation par session en base
 - Stockage fichiers : **Multer** (local, souverain, sans cloud GAFAM)
 - Documentation API : **Swagger** → `http://localhost:3000/api/docs`
 
@@ -40,7 +40,7 @@ lpo-balades-web/
 # 1. Installer toutes les dépendances
 npm install
 
-# 2. Démarrer PostgreSQL + Redis via Docker
+# 2. Démarrer PostgreSQL via Docker
 docker-compose up -d
 
 # 3. Appliquer les migrations Prisma
@@ -61,7 +61,7 @@ cd ../.. && npm run dev
 |---|---|---|
 | **Auth** | `POST /auth/register`, `/login`, `/guest`, `/logout`, `/refresh` | ✅ Sprint 1 |
 | **Users** | `GET/PATCH/DELETE /users/me`, `GET/POST /admin/users` | ✅ Sprint 1 |
-| **Agences** | `GET/POST/PATCH /admin/agences` | ✅ Sprint 1 |
+| **Structure (Zonage)** | `GET/POST/PATCH /admin/agences` | ✅ Sprint 1 |
 | **Communes** | `GET/POST /admin/communes`, `GET /admin/stats/communes` | ✅ Sprint 1 |
 | **Médias** | `POST /medias/upload`, `DELETE /medias/:filename` | ✅ Sprint 2 |
 | **Parcours** | `GET/POST/PATCH/DELETE /admin/parcours` + filtres | ✅ Sprint 2 |
@@ -75,7 +75,7 @@ cd ../.. && npm run dev
 ## 🔒 Sécurité
 
 - ✅ Authentification **JWT** (Access Token 15 min + Refresh Token 6 mois)
-- ✅ **Blacklist Redis** : les tokens révoqués sont immédiatement invalides
+- ✅ **Révocation de Session** : Les Refresh Tokens et sessions sont supprimés de la DB lors de la déconnexion.
 - ✅ Mode **Invité** : accès immédiat sans email pour les joueurs du dimanche
 - ✅ **RBAC** complet : `USER`, `EDITOR`, `ADMIN`, `SUPER_ADMIN`
 - ✅ Vérification **email obligatoire** avant connexion
@@ -91,7 +91,7 @@ Le schéma Prisma couvre l'ensemble du domaine LPO :
 
 ```
 User → Session, VerificationToken, OAuthAccount
-Agence → User[], Parcours[]
+Structure (Zonage) → User[], Parcours[]
 Commune → Parcours[]
 Parcours → Etape[] → Jeu[]
 User → UserBadge[], UserParcours[], Observation[], Review[], Friendship[]
