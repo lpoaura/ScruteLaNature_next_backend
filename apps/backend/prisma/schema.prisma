@@ -85,8 +85,8 @@ model User {
   isTwoFactorEnabled Boolean @default(false)
 
   // Métriques LPO
-  agenceId String?
-  agence   Agence? @relation(fields: [agenceId], references: [id])
+  organismeId String?
+  organisme   Organisme? @relation(fields: [organismeId], references: [id])
 
   analyticsConsent Boolean @default(false)
   pushToken        String?
@@ -112,7 +112,7 @@ model User {
   parcoursDone     UserParcours[]
   reviews          Review[]
 
-  @@index([agenceId])
+  @@index([organismeId])
   @@map("users")
 }
 
@@ -190,10 +190,10 @@ model Friendship {
 }
 
 // ======================================================
-// 🏙️ COMMUNES & AGENCES
+// 🏙️ COMMUNES & ORGANISMES
 // ======================================================
 
-model Agence {
+model Organisme {
   id        String     @id @default(uuid())
   nom       String     @unique
   employes  User[]
@@ -201,7 +201,7 @@ model Agence {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  @@map("agences")
+  @@map("organismes")
 }
 
 model Commune {
@@ -233,8 +233,8 @@ model Parcours {
   mascotteNom String?
   mascotteImg String?
 
-  agenceId String
-  agence   Agence @relation(fields: [agenceId], references: [id], onDelete: Cascade)
+  organismeId String
+  organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
 
   communeId String
   commune   Commune @relation(fields: [communeId], references: [id], onDelete: Restrict)
@@ -251,7 +251,7 @@ model Parcours {
   updatedAt DateTime @updatedAt
 
   @@index([communeId])
-  @@index([agenceId])
+  @@index([organismeId])
   @@map("parcours")
 }
 

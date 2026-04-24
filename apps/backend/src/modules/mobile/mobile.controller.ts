@@ -38,7 +38,7 @@ export class MobileController {
   @Get(':id/download')
   @ApiOperation({
     summary: 'Télécharger un parcours complet pour le mode hors-ligne (Chantier Critique)',
-    description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la commune et de l\'agence. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
+    description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la commune et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
   })
   @ApiResponse({
     status: 200,

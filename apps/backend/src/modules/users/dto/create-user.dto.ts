@@ -73,10 +73,10 @@ export class CreateUserDto {
   role: Role;
 
   @ApiPropertyOptional({
-    example: 'uuid-agence-1234',
-    description: "L'agence LPO de rattachement (si ADMIN ou EDITOR)",
+    example: 'uuid-organisme-1234',
+    description: "L'organisme LPO de rattachement (si ADMIN ou EDITOR)",
   })
   @IsOptional()
   @IsString()
-  agenceId?: string;
+  organismeId?: string;
 }

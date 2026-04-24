@@ -11,7 +11,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
 import { MailModule } from './providers/mail/mail.module';
-import { AgencesModule } from './modules/agences/agences.module';
+import { OrganismesModule } from './modules/organismes/organismes.module';
 import { CommunesModule } from './modules/communes/communes.module';
 import { MediasModule } from './modules/medias/medias.module';
 import { ParcoursModule } from './modules/parcours/parcours.module';
@@ -55,7 +55,7 @@ import { JeuxModule } from './modules/jeux/jeux.module';
     MailModule,
     UsersModule,
     AuthModule,
-    AgencesModule,
+    OrganismesModule,
     CommunesModule,
     MediasModule,
     ParcoursModule,

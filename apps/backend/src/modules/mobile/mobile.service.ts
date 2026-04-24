@@ -53,7 +53,7 @@ export class MobileService {
         commune: {
           select: { id: true, nom: true, codePostal: true },
         },
-        agence: {
+        organisme: {
           select: { id: true, nom: true },
         },
         _count: {
@@ -67,7 +67,7 @@ export class MobileService {
   /**
    * Chantier Critique (Tâche 3.3) : Mega-Export Mobile
    * Récupère un parcours PUBLISHED complet avec toutes ses étapes,
-   * tous ses jeux, son agence et sa commune, prêt à être téléchargé
+   * tous ses jeux, son organisme et sa commune, prêt à être téléchargé
    * pour le mode hors-ligne de l'application mobile.
    */
   async downloadParcours(id: string) {
@@ -77,7 +77,7 @@ export class MobileService {
         status: PublishStatus.PUBLISHED,
       },
       include: {
-        agence: {
+        organisme: {
           select: { id: true, nom: true },
         },
         commune: {

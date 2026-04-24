@@ -13,16 +13,16 @@ export class JeuxService {
   constructor(private readonly db: DatabaseService) {}
 
   /**
-   * Vérifie que l'étape (et donc le parcours) appartient à l'agence de l'utilisateur.
+   * Vérifie que l'étape (et donc le parcours) appartient à l'organisme de l'utilisateur.
    */
   private async ensureEtapeAccess(
     etapeId: string,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
     const etape = await this.db.etape.findUnique({
       where: { id: etapeId },
-      include: { parcours: { select: { agenceId: true } } },
+      include: { parcours: { select: { organismeId: true } } },
     });
 
     if (!etape) {
@@ -30,9 +30,9 @@ export class JeuxService {
     }
 
     if (userRole !== Role.SUPER_ADMIN) {
-      if (!userAgenceId || etape.parcours.agenceId !== userAgenceId) {
+      if (!userOrganismeId || etape.parcours.organismeId !== userOrganismeId) {
         throw new ForbiddenException(
-          "Vous n'avez pas le droit de modifier les jeux d'un parcours hors de votre agence.",
+          "Vous n'avez pas le droit de modifier les jeux d'un parcours hors de votre organisme.",
         );
       }
     }
@@ -41,9 +41,9 @@ export class JeuxService {
   async create(
     createJeuDto: CreateJeuDto,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.ensureEtapeAccess(createJeuDto.etapeId, userRole, userAgenceId);
+    await this.ensureEtapeAccess(createJeuDto.etapeId, userRole, userOrganismeId);
 
     // Prisma attend JsonValue (un type natif), Record<string, any> est compatible si non undefined
     // On convertit le DTO pour qu'il soit bien typé
@@ -58,9 +58,9 @@ export class JeuxService {
   async findAllByEtape(
     etapeId: string,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.ensureEtapeAccess(etapeId, userRole, userAgenceId);
+    await this.ensureEtapeAccess(etapeId, userRole, userOrganismeId);
 
     return this.db.jeu.findMany({
       where: { etapeId },
@@ -68,10 +68,10 @@ export class JeuxService {
     });
   }
 
-  async findOne(id: string, userRole: Role, userAgenceId: string | null) {
+  async findOne(id: string, userRole: Role, userOrganismeId: string | null) {
     const jeu = await this.db.jeu.findUnique({
       where: { id },
-      include: { etape: { include: { parcours: { select: { agenceId: true } } } } },
+      include: { etape: { include: { parcours: { select: { organismeId: true } } } } },
     });
 
     if (!jeu) {
@@ -79,7 +79,7 @@ export class JeuxService {
     }
 
     if (userRole !== Role.SUPER_ADMIN) {
-      if (!userAgenceId || jeu.etape.parcours.agenceId !== userAgenceId) {
+      if (!userOrganismeId || jeu.etape.parcours.organismeId !== userOrganismeId) {
         throw new ForbiddenException("Accès refusé à ce jeu.");
       }
     }
@@ -91,12 +91,12 @@ export class JeuxService {
     id: string,
     updateJeuDto: UpdateJeuDto,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.findOne(id, userRole, userAgenceId); // Vérifie l'accès
+    await this.findOne(id, userRole, userOrganismeId); // Vérifie l'accès
 
     if (updateJeuDto.etapeId) {
-      await this.ensureEtapeAccess(updateJeuDto.etapeId, userRole, userAgenceId);
+      await this.ensureEtapeAccess(updateJeuDto.etapeId, userRole, userOrganismeId);
     }
 
     return this.db.jeu.update({
@@ -108,8 +108,8 @@ export class JeuxService {
     });
   }
 
-  async remove(id: string, userRole: Role, userAgenceId: string | null) {
-    await this.findOne(id, userRole, userAgenceId);
+  async remove(id: string, userRole: Role, userOrganismeId: string | null) {
+    await this.findOne(id, userRole, userOrganismeId);
 
     return this.db.jeu.delete({
       where: { id },

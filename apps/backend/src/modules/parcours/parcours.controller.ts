@@ -32,7 +32,7 @@ export class ParcoursController {
   @Get()
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({
-    summary: 'Lister les parcours de l\'agence avec filtres (EDITOR/ADMIN/SUPER_ADMIN)',
+    summary: 'Lister les parcours de l\'organisme avec filtres (EDITOR/ADMIN/SUPER_ADMIN)',
   })
   @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] })
   @ApiQuery({ name: 'difficulty', required: false, enum: ['FACILE', 'MOYEN', 'DIFFICILE'] })
@@ -42,7 +42,7 @@ export class ParcoursController {
     return this.parcoursService.findAll(
       req.user.sub,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
       filters,
     );
   }
@@ -52,19 +52,19 @@ export class ParcoursController {
   @ApiOperation({ summary: 'Détail complet d\'un parcours avec étapes et jeux' })
   @ApiParam({ name: 'id', description: 'UUID du parcours' })
   @ApiResponse({ status: 200, description: 'Données complètes du parcours.' })
-  @ApiResponse({ status: 403, description: 'Parcours hors de votre agence.' })
+  @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
   findOne(@Param('id') id: string, @Request() req: any) {
-    return this.parcoursService.findOne(id, req.user.role, req.user.agenceId ?? null);
+    return this.parcoursService.findOne(id, req.user.role, req.user.organismeId ?? null);
   }
 
   @Post()
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Créer un nouveau parcours (rattaché à l\'agence du créateur)' })
+  @ApiOperation({ summary: 'Créer un nouveau parcours (rattaché à l\'organisme du créateur)' })
   @ApiResponse({ status: 201, description: 'Parcours créé en statut DRAFT.' })
   @ApiResponse({ status: 404, description: 'Commune introuvable.' })
   create(@Body() dto: CreateParcoursDto, @Request() req: any) {
-    return this.parcoursService.create(dto, req.user.role, req.user.agenceId ?? null);
+    return this.parcoursService.create(dto, req.user.role, req.user.organismeId ?? null);
   }
 
   @Patch(':id')
@@ -72,14 +72,14 @@ export class ParcoursController {
   @ApiOperation({ summary: 'Mettre à jour un parcours (titre, commune, mascotte, accessibilité, statut)' })
   @ApiParam({ name: 'id', description: 'UUID du parcours' })
   @ApiResponse({ status: 200, description: 'Parcours mis à jour.' })
-  @ApiResponse({ status: 403, description: 'Parcours hors de votre agence.' })
+  @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateParcoursDto,
     @Request() req: any,
   ) {
-    return this.parcoursService.update(id, dto, req.user.role, req.user.agenceId ?? null);
+    return this.parcoursService.update(id, dto, req.user.role, req.user.organismeId ?? null);
   }
 
   @Delete(':id')
@@ -90,6 +90,6 @@ export class ParcoursController {
   @ApiResponse({ status: 403, description: 'Accès refusé.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
   remove(@Param('id') id: string, @Request() req: any) {
-    return this.parcoursService.remove(id, req.user.role, req.user.agenceId ?? null);
+    return this.parcoursService.remove(id, req.user.role, req.user.organismeId ?? null);
   }
 }

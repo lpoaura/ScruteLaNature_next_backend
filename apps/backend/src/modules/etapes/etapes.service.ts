@@ -13,16 +13,16 @@ export class EtapesService {
   constructor(private readonly db: DatabaseService) {}
 
   /**
-   * Vérifie que le parcours appartient bien à l'agence de l'utilisateur (si pas SUPER_ADMIN)
+   * Vérifie que le parcours appartient bien à l'organisme de l'utilisateur (si pas SUPER_ADMIN)
    */
   private async ensureParcoursAccess(
     parcoursId: string,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
     const parcours = await this.db.parcours.findUnique({
       where: { id: parcoursId },
-      select: { agenceId: true },
+      select: { organismeId: true },
     });
 
     if (!parcours) {
@@ -30,9 +30,9 @@ export class EtapesService {
     }
 
     if (userRole !== Role.SUPER_ADMIN) {
-      if (!userAgenceId || parcours.agenceId !== userAgenceId) {
+      if (!userOrganismeId || parcours.organismeId !== userOrganismeId) {
         throw new ForbiddenException(
-          "Vous n'avez pas le droit de modifier les étapes d'un parcours hors de votre agence.",
+          "Vous n'avez pas le droit de modifier les étapes d'un parcours hors de votre organisme.",
         );
       }
     }
@@ -41,9 +41,9 @@ export class EtapesService {
   async create(
     createEtapeDto: CreateEtapeDto,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.ensureParcoursAccess(createEtapeDto.parcoursId, userRole, userAgenceId);
+    await this.ensureParcoursAccess(createEtapeDto.parcoursId, userRole, userOrganismeId);
 
     return this.db.etape.create({
       data: createEtapeDto,
@@ -53,9 +53,9 @@ export class EtapesService {
   async findAllByParcours(
     parcoursId: string,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.ensureParcoursAccess(parcoursId, userRole, userAgenceId);
+    await this.ensureParcoursAccess(parcoursId, userRole, userOrganismeId);
 
     return this.db.etape.findMany({
       where: { parcoursId },
@@ -63,10 +63,10 @@ export class EtapesService {
     });
   }
 
-  async findOne(id: string, userRole: Role, userAgenceId: string | null) {
+  async findOne(id: string, userRole: Role, userOrganismeId: string | null) {
     const etape = await this.db.etape.findUnique({
       where: { id },
-      include: { parcours: { select: { agenceId: true } } },
+      include: { parcours: { select: { organismeId: true } } },
     });
 
     if (!etape) {
@@ -74,7 +74,7 @@ export class EtapesService {
     }
 
     if (userRole !== Role.SUPER_ADMIN) {
-      if (!userAgenceId || etape.parcours.agenceId !== userAgenceId) {
+      if (!userOrganismeId || etape.parcours.organismeId !== userOrganismeId) {
         throw new ForbiddenException("Accès refusé à cette étape.");
       }
     }
@@ -86,13 +86,13 @@ export class EtapesService {
     id: string,
     updateEtapeDto: UpdateEtapeDto,
     userRole: Role,
-    userAgenceId: string | null,
+    userOrganismeId: string | null,
   ) {
-    await this.findOne(id, userRole, userAgenceId); // Vérifie l'accès
+    await this.findOne(id, userRole, userOrganismeId); // Vérifie l'accès
 
     // Si on change l'étape de parcours (rare, mais possible), on vérifie les droits sur le nouveau parcours
     if (updateEtapeDto.parcoursId) {
-      await this.ensureParcoursAccess(updateEtapeDto.parcoursId, userRole, userAgenceId);
+      await this.ensureParcoursAccess(updateEtapeDto.parcoursId, userRole, userOrganismeId);
     }
 
     return this.db.etape.update({
@@ -101,8 +101,8 @@ export class EtapesService {
     });
   }
 
-  async remove(id: string, userRole: Role, userAgenceId: string | null) {
-    await this.findOne(id, userRole, userAgenceId); // Vérifie l'accès
+  async remove(id: string, userRole: Role, userOrganismeId: string | null) {
+    await this.findOne(id, userRole, userOrganismeId); // Vérifie l'accès
 
     return this.db.etape.delete({
       where: { id },

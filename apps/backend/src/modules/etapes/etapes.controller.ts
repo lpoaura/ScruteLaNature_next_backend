@@ -31,13 +31,13 @@ export class EtapesController {
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Créer une nouvelle étape dans un parcours' })
   @ApiResponse({ status: 201, description: 'Étape créée avec succès.' })
-  @ApiResponse({ status: 403, description: 'Parcours hors de votre agence.' })
+  @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
   create(@Body() createEtapeDto: CreateEtapeDto, @Request() req: any) {
     return this.etapesService.create(
       createEtapeDto,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -50,7 +50,7 @@ export class EtapesController {
     return this.etapesService.findAllByParcours(
       parcoursId,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -64,7 +64,7 @@ export class EtapesController {
     return this.etapesService.findOne(
       id,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -84,7 +84,7 @@ export class EtapesController {
       id,
       updateEtapeDto,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -99,7 +99,7 @@ export class EtapesController {
     return this.etapesService.remove(
       id,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 }

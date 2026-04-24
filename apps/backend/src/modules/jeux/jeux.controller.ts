@@ -31,13 +31,13 @@ export class JeuxController {
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Créer un nouveau jeu associé à une étape' })
   @ApiResponse({ status: 201, description: 'Jeu créé avec succès.' })
-  @ApiResponse({ status: 403, description: 'Étape hors de votre agence.' })
+  @ApiResponse({ status: 403, description: 'Étape hors de votre organisme.' })
   @ApiResponse({ status: 404, description: 'Étape introuvable.' })
   create(@Body() createJeuDto: CreateJeuDto, @Request() req: any) {
     return this.jeuxService.create(
       createJeuDto,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -50,7 +50,7 @@ export class JeuxController {
     return this.jeuxService.findAllByEtape(
       etapeId,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -64,7 +64,7 @@ export class JeuxController {
     return this.jeuxService.findOne(
       id,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -84,7 +84,7 @@ export class JeuxController {
       id,
       updateJeuDto,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 
@@ -99,7 +99,7 @@ export class JeuxController {
     return this.jeuxService.remove(
       id,
       req.user.role,
-      req.user.agenceId ?? null,
+      req.user.organismeId ?? null,
     );
   }
 }
