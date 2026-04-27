@@ -13,8 +13,8 @@ export class FilterParcoursDto {
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
 
-  @ApiPropertyOptional({ description: 'Filtrer par communeId' })
+  @ApiPropertyOptional({ description: 'Filtrer par zonageId' })
   @IsOptional()
   @IsString()
-  communeId?: string;
+  zonageId?: string;
 }

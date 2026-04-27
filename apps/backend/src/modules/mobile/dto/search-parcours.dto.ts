@@ -4,12 +4,12 @@ import { Transform } from 'class-transformer';
 
 export class SearchParcoursDto {
   @ApiPropertyOptional({
-    description: 'Filtrer par commune (UUID)',
-    example: 'uuid-commune-1234',
+    description: 'Filtrer par zonage (UUID)',
+    example: 'uuid-zonage-1234',
   })
   @IsOptional()
   @IsString()
-  communeId?: string;
+  zonageId?: string;
 
   @ApiPropertyOptional({
     description: 'Accessible aux personnes à mobilité réduite (PMR)',

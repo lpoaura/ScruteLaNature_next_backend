@@ -77,10 +77,10 @@ export class CreateParcoursDto {
   @IsString()
   mascotteImg?: string;
 
-  @ApiProperty({ example: 'uuid-commune-1234', description: 'UUID de la commune rattachée' })
+  @ApiProperty({ example: 'uuid-zonage-1234', description: 'UUID de la zonage rattachée' })
   @IsUUID()
   @IsNotEmpty()
-  communeId: string;
+  zonageId: string;
 
   @ApiPropertyOptional({ example: false, description: 'Accessible aux personnes à mobilité réduite' })
   @IsOptional()

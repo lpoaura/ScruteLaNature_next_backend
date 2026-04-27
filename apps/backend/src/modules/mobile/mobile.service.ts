@@ -11,7 +11,7 @@ export class MobileService {
   /**
    * Recherche de parcours depuis l'app mobile.
    * - Uniquement les parcours PUBLISHED
-   * - Filtres : communeId, accessibilité (PMR, enfants, handicap mental)
+   * - Filtres : zonageId, accessibilité (PMR, enfants, handicap mental)
    * - Réponse allégée (pas des étapes, jeux, etc.) pour minimiser la bande passante
    */
   async searchParcours(filters: SearchParcoursDto) {
@@ -19,8 +19,8 @@ export class MobileService {
       status: PublishStatus.PUBLISHED,
     };
 
-    if (filters.communeId) {
-      where.communeId = filters.communeId;
+    if (filters.zonageId) {
+      where.zonageId = filters.zonageId;
     }
 
     if (filters.isPMRFriendly === true) {
@@ -50,7 +50,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
-        commune: {
+        zonage: {
           select: { id: true, nom: true, codePostal: true },
         },
         organisme: {
@@ -67,7 +67,7 @@ export class MobileService {
   /**
    * Chantier Critique (Tâche 3.3) : Mega-Export Mobile
    * Récupère un parcours PUBLISHED complet avec toutes ses étapes,
-   * tous ses jeux, son organisme et sa commune, prêt à être téléchargé
+   * tous ses jeux, son organisme et sa zonage, prêt à être téléchargé
    * pour le mode hors-ligne de l'application mobile.
    */
   async downloadParcours(id: string) {
@@ -80,7 +80,7 @@ export class MobileService {
         organisme: {
           select: { id: true, nom: true },
         },
-        commune: {
+        zonage: {
           select: { id: true, nom: true, codePostal: true },
         },
         etapes: {
@@ -127,7 +127,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
-        commune: { select: { nom: true } },
+        zonage: { select: { nom: true } },
         etapes: {
           orderBy: { order: 'asc' },
           take: 1, // Prendre uniquement la première étape (le départ)

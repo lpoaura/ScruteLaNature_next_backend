@@ -37,7 +37,7 @@ export class ParcoursService {
     // Application des filtres optionnels
     if (filters.status) where.status = filters.status;
     if (filters.difficulty) where.difficulty = filters.difficulty;
-    if (filters.communeId) where.communeId = filters.communeId;
+    if (filters.zonageId) where.zonageId = filters.zonageId;
 
     return this.db.parcours.findMany({
       where,
@@ -49,7 +49,7 @@ export class ParcoursService {
         distanceKm: true,
         durationMin: true,
         coverImage: true,
-        commune: { select: { id: true, nom: true } },
+        zonage: { select: { id: true, nom: true } },
         organisme: { select: { id: true, nom: true } },
         _count: { select: { etapes: true, reviews: true } },
         createdAt: true,
@@ -66,7 +66,7 @@ export class ParcoursService {
     const parcours = await this.db.parcours.findUnique({
       where: { id },
       include: {
-        commune: true,
+        zonage: true,
         organisme: true,
         etapes: {
           include: { jeux: { orderBy: { order: 'asc' } } },
@@ -89,9 +89,9 @@ export class ParcoursService {
    * Crée un nouveau parcours — l'organismeId est déduit du compte connecté
    */
   async create(dto: CreateParcoursDto, userRole: Role, userOrganismeId: string | null) {
-    // Vérification que la commune existe
-    const commune = await this.db.commune.findUnique({ where: { id: dto.communeId } });
-    if (!commune) throw new NotFoundException(`Commune #${dto.communeId} introuvable`);
+    // Vérification que la zonage existe
+    const zonage = await this.db.zonage.findUnique({ where: { id: dto.zonageId } });
+    if (!zonage) throw new NotFoundException(`Zonage #${dto.zonageId} introuvable`);
 
     // Détermination de l'organisme
     let organismeId: string;

@@ -4,28 +4,28 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { CreateCommuneDto } from './dto/create-commune.dto';
+import { CreateZonageDto } from './dto/create-zonage.dto';
 
 @Injectable()
-export class CommunesService {
+export class ZonagesService {
   constructor(private readonly db: DatabaseService) {}
 
   async findAll() {
-    return this.db.commune.findMany({
+    return this.db.zonage.findMany({
       select: { id: true, nom: true, codePostal: true },
       orderBy: { nom: 'asc' },
     });
   }
 
-  async create(dto: CreateCommuneDto) {
-    const existing = await this.db.commune.findUnique({ where: { nom: dto.nom } });
-    if (existing) throw new ConflictException(`La commune "${dto.nom}" existe déjà`);
-    return this.db.commune.create({ data: dto });
+  async create(dto: CreateZonageDto) {
+    const existing = await this.db.zonage.findUnique({ where: { nom: dto.nom } });
+    if (existing) throw new ConflictException(`La zonage "${dto.nom}" existe déjà`);
+    return this.db.zonage.create({ data: dto });
   }
 
   async getStatsForInvestors() {
-    // Tableau croisé : par commune → nb joueurs uniques + nb parcours terminés
-    const stats = await this.db.commune.findMany({
+    // Tableau croisé : par zonage → nb joueurs uniques + nb parcours terminés
+    const stats = await this.db.zonage.findMany({
       select: {
         id: true,
         nom: true,
@@ -43,18 +43,18 @@ export class CommunesService {
       orderBy: { nom: 'asc' },
     });
 
-    return stats.map((commune) => {
-      const totalParcours = commune.parcours.length;
-      const allPlayerIds = commune.parcours.flatMap((p) =>
+    return stats.map((zonage) => {
+      const totalParcours = zonage.parcours.length;
+      const allPlayerIds = zonage.parcours.flatMap((p) =>
         p.usersStats.map((s) => s.userId),
       );
       const uniquePlayers = new Set(allPlayerIds).size;
       const totalCompletions = allPlayerIds.length;
 
       return {
-        id: commune.id,
-        nom: commune.nom,
-        codePostal: commune.codePostal,
+        id: zonage.id,
+        nom: zonage.nom,
+        codePostal: zonage.codePostal,
         totalParcours,
         uniquePlayers,
         totalCompletions,
@@ -63,8 +63,8 @@ export class CommunesService {
   }
 
   async findOne(id: string) {
-    const commune = await this.db.commune.findUnique({ where: { id } });
-    if (!commune) throw new NotFoundException(`Commune #${id} introuvable`);
-    return commune;
+    const zonage = await this.db.zonage.findUnique({ where: { id } });
+    if (!zonage) throw new NotFoundException(`Zonage #${id} introuvable`);
+    return zonage;
   }
 }

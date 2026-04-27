@@ -36,7 +36,7 @@ export class ParcoursController {
   })
   @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] })
   @ApiQuery({ name: 'difficulty', required: false, enum: ['FACILE', 'MOYEN', 'DIFFICILE'] })
-  @ApiQuery({ name: 'communeId', required: false, type: String })
+  @ApiQuery({ name: 'zonageId', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Liste des parcours.' })
   findAll(@Request() req: any, @Query() filters: FilterParcoursDto) {
     return this.parcoursService.findAll(
@@ -62,14 +62,16 @@ export class ParcoursController {
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Créer un nouveau parcours (rattaché à l\'organisme du créateur)' })
   @ApiResponse({ status: 201, description: 'Parcours créé en statut DRAFT.' })
-  @ApiResponse({ status: 404, description: 'Commune introuvable.' })
-  create(@Body() dto: CreateParcoursDto, @Request() req: any) {
-    return this.parcoursService.create(dto, req.user.role, req.user.organismeId ?? null);
+  @ApiResponse({ status: 404, description: 'Zonage introuvable.' })
+  @ApiQuery({ name: 'organismeId', required: false, description: 'Obligatoire pour les SUPER_ADMIN. Ignoré pour les autres rôles.' })
+  create(@Body() dto: CreateParcoursDto, @Query('organismeId') queryOrganismeId: string, @Request() req: any) {
+    const orgId = req.user.role === Role.SUPER_ADMIN ? queryOrganismeId : (req.user.organismeId ?? null);
+    return this.parcoursService.create(dto, req.user.role, orgId);
   }
 
   @Patch(':id')
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Mettre à jour un parcours (titre, commune, mascotte, accessibilité, statut)' })
+  @ApiOperation({ summary: 'Mettre à jour un parcours (titre, zonage, mascotte, accessibilité, statut)' })
   @ApiParam({ name: 'id', description: 'UUID du parcours' })
   @ApiResponse({ status: 200, description: 'Parcours mis à jour.' })
   @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })

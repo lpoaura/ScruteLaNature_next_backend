@@ -19,11 +19,11 @@ export class MobileController {
   @Get('search')
   @ApiOperation({
     summary:
-      'Recherche de parcours publiés par commune et/ou accessibilité (joueur / invité)',
+      'Recherche de parcours publiés par zonage et/ou accessibilité (joueur / invité)',
     description:
       'Route accessible aux joueurs authentifiés (y compris mode Invité). Retourne uniquement les parcours au statut PUBLISHED.',
   })
-  @ApiQuery({ name: 'communeId', required: false, type: String })
+  @ApiQuery({ name: 'zonageId', required: false, type: String })
   @ApiQuery({ name: 'isPMRFriendly', required: false, type: Boolean })
   @ApiQuery({ name: 'isChildFriendly', required: false, type: Boolean })
   @ApiQuery({ name: 'isMentalHandicapFriendly', required: false, type: Boolean })
@@ -38,7 +38,7 @@ export class MobileController {
   @Get(':id/download')
   @ApiOperation({
     summary: 'Télécharger un parcours complet pour le mode hors-ligne (Chantier Critique)',
-    description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la commune et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
+    description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la zonage et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
   })
   @ApiResponse({
     status: 200,

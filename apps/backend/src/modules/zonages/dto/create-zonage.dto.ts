@@ -1,19 +1,19 @@
 import { IsNotEmpty, IsOptional, IsString, MaxLength, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CreateCommuneDto {
+export class CreateZonageDto {
   @ApiProperty({
     example: 'Rennes',
-    description: 'Nom officiel de la commune',
+    description: 'Nom officiel de la zonage',
   })
   @IsString()
-  @IsNotEmpty({ message: 'Le nom de la commune est obligatoire' })
+  @IsNotEmpty({ message: 'Le nom de la zonage est obligatoire' })
   @MaxLength(150)
   nom: string;
 
   @ApiPropertyOptional({
     example: '35000',
-    description: 'Code postal de la commune',
+    description: 'Code postal de la zonage',
   })
   @IsOptional()
   @IsString()

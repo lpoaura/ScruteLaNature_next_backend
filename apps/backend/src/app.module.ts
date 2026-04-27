@@ -12,7 +12,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 
 import { MailModule } from './providers/mail/mail.module';
 import { OrganismesModule } from './modules/organismes/organismes.module';
-import { CommunesModule } from './modules/communes/communes.module';
+import { ZonagesModule } from './modules/zonages/zonages.module';
 import { MediasModule } from './modules/medias/medias.module';
 import { ParcoursModule } from './modules/parcours/parcours.module';
 import { MobileModule } from './modules/mobile/mobile.module';
@@ -56,7 +56,7 @@ import { JeuxModule } from './modules/jeux/jeux.module';
     UsersModule,
     AuthModule,
     OrganismesModule,
-    CommunesModule,
+    ZonagesModule,
     MediasModule,
     ParcoursModule,
     MobileModule,

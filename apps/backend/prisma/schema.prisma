@@ -204,7 +204,7 @@ model Organisme {
   @@map("organismes")
 }
 
-model Commune {
+model Zonage {
   id         String     @id @default(uuid())
   nom        String     @unique
   codePostal String?
@@ -212,7 +212,7 @@ model Commune {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  @@map("communes")
+  @@map("zonages")
 }
 
 // ======================================================
@@ -236,8 +236,8 @@ model Parcours {
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
 
-  communeId String
-  commune   Commune @relation(fields: [communeId], references: [id], onDelete: Restrict)
+  zonageId String
+  zonage   Zonage @relation(fields: [zonageId], references: [id], onDelete: Restrict)
 
   isPMRFriendly            Boolean @default(false)
   isChildFriendly          Boolean @default(false)
@@ -250,7 +250,7 @@ model Parcours {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([communeId])
+  @@index([zonageId])
   @@index([organismeId])
   @@map("parcours")
 }
