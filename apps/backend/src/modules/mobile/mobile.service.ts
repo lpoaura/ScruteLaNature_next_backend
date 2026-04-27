@@ -1,12 +1,119 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SearchParcoursDto } from './dto/search-parcours.dto';
 import { NearbyParcoursDto } from './dto/nearby-parcours.dto';
+import { SyncMobileDto } from './dto/sync-mobile.dto';
 import { PublishStatus } from '@prisma/client';
 
 @Injectable()
 export class MobileService {
+  private readonly logger = new Logger(MobileService.name);
+
   constructor(private readonly db: DatabaseService) {}
+
+  /**
+   * Tâche 4.1 — Route de Synchronisation Hors-Ligne
+   * POST /mobile/sync
+   *
+   * Principe d'idempotence : si un syncId est déjà connu en base,
+   * on l'ignore silencieusement (évite les doubles insertions en cas
+   * de coupure réseau au moment de la confirmation).
+   */
+  async syncMobileData(userId: string, dto: SyncMobileDto) {
+    const results = {
+      parcoursCompleted: { synced: 0, skipped: 0 },
+      observations: { synced: 0, skipped: 0 },
+    };
+
+    // ── 1. Traitement des parcours terminés ──────────────────────────────────
+    if (dto.parcoursCompleted && dto.parcoursCompleted.length > 0) {
+      for (const event of dto.parcoursCompleted) {
+        const existing = await this.db.userParcours.findUnique({
+          where: { syncId: event.syncId },
+        });
+
+        if (existing) {
+          this.logger.log(`[SYNC] syncId déjà traité, ignoré: ${event.syncId}`);
+          results.parcoursCompleted.skipped++;
+          continue;
+        }
+
+        try {
+          await this.db.$transaction(async (tx) => {
+            await tx.userParcours.upsert({
+              where: { userId_parcoursId: { userId, parcoursId: event.parcoursId } },
+              create: {
+                syncId: event.syncId,
+                userId,
+                parcoursId: event.parcoursId,
+                score: event.score,
+                completedAt: new Date(event.completedAt),
+              },
+              update: {
+                score: { set: event.score },
+                completedAt: new Date(event.completedAt),
+              },
+            });
+
+            await tx.user.update({
+              where: { id: userId },
+              data: {
+                totalPoints: { increment: event.score },
+                co2Saved: { increment: event.co2Saved ?? 0 },
+              },
+            });
+          });
+
+          results.parcoursCompleted.synced++;
+        } catch (err) {
+          this.logger.error(`[SYNC] Erreur parcours ${event.parcoursId}:`, err.message);
+        }
+      }
+    }
+
+    // ── 2. Traitement des observations ────────────────────────────────────────
+    if (dto.observations && dto.observations.length > 0) {
+      for (const obs of dto.observations) {
+        const existing = await this.db.observation.findUnique({
+          where: { syncId: obs.syncId },
+        });
+
+        if (existing) {
+          this.logger.log(`[SYNC] Observation syncId déjà traitée, ignorée: ${obs.syncId}`);
+          results.observations.skipped++;
+          continue;
+        }
+
+        try {
+          await this.db.observation.create({
+            data: {
+              syncId: obs.syncId,
+              userId,
+              speciesName: obs.speciesName,
+              imageUrl: obs.imageUrl,
+              latitude: obs.latitude,
+              longitude: obs.longitude,
+              aiConfidence: obs.aiConfidence,
+              isOfflineSync: true,
+              createdAt: new Date(obs.timestamp),
+            },
+          });
+
+          results.observations.synced++;
+        } catch (err) {
+          this.logger.error(`[SYNC] Erreur observation ${obs.syncId}:`, err.message);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Synchronisation terminée.',
+      results,
+    };
+  }
+
+
 
   /**
    * Recherche de parcours depuis l'app mobile.

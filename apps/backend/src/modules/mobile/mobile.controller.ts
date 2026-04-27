@@ -1,22 +1,41 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { MobileService } from './mobile.service';
 import { SearchParcoursDto } from './dto/search-parcours.dto';
 import { NearbyParcoursDto } from './dto/nearby-parcours.dto';
+import { SyncMobileDto } from './dto/sync-mobile.dto';
 
 @ApiTags('Mobile')
 @ApiBearerAuth()
-@Controller('mobile/parcours')
+@Controller('mobile')
 export class MobileController {
   constructor(private readonly mobileService: MobileService) {}
 
-  @Get('search')
+  // ── Synchronisation Hors-Ligne (Tâche 4.1) ─────────────────────────────────
+
+  @Post('sync')
+  @ApiOperation({
+    summary: 'Synchroniser les données hors-ligne du mobile (Tâche 4.1)',
+    description:
+      'Endpoint idempotent. Le mobile envoie une liste de parcours terminés et d\'observations'
+      + ' faits sans connexion. Chaque événement possède un syncId unique (UUID généré par le mobile)'
+      + ' qui garantit qu\'il ne sera jamais traité deux fois même en cas de coupure réseau.',
+  })
+  @ApiBody({ type: SyncMobileDto })
+  @ApiResponse({ status: 200, description: 'Rapport de synchronisation avec compteurs synced/skipped.' })
+  sync(@Body() dto: SyncMobileDto, @Request() req: any) {
+    return this.mobileService.syncMobileData(req.user.id, dto);
+  }
+
+
+  @Get('parcours/search')
   @ApiOperation({
     summary:
       'Recherche de parcours publiés par zonage et/ou accessibilité (joueur / invité)',
@@ -35,7 +54,7 @@ export class MobileController {
     return this.mobileService.searchParcours(filters);
   }
 
-  @Get(':id/download')
+  @Get('parcours/:id/download')
   @ApiOperation({
     summary: 'Télécharger un parcours complet pour le mode hors-ligne (Chantier Critique)',
     description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la zonage et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
@@ -52,7 +71,7 @@ export class MobileController {
     return this.mobileService.downloadParcours(id);
   }
 
-  @Get('nearby')
+  @Get('parcours/nearby')
   @ApiOperation({
     summary: 'Trouver des parcours autour d\'une position GPS (Chantier 3.4)',
     description: 'Calcule la distance avec la première étape de chaque parcours publié et retourne ceux dans le rayon spécifié (par défaut 50km), triés du plus proche au plus éloigné.',
