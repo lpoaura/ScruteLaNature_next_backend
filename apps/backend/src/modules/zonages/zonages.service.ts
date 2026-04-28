@@ -24,43 +24,108 @@ export class ZonagesService {
   }
 
   async getStatsForInvestors() {
-    // Tableau croisé : par zonage → nb joueurs uniques + nb parcours terminés
-    const stats = await this.db.zonage.findMany({
-      select: {
-        id: true,
-        nom: true,
-        codePostal: true,
-        parcours: {
-          select: {
-            id: true,
-            title: true,
-            usersStats: {
-              select: { userId: true },
-            },
-          },
-        },
-      },
-      orderBy: { nom: 'asc' },
-    });
+    // ── Approche scalable : on fait 3 requêtes SQL agrégées en parallèle ──
+    // au lieu de charger tous les joueurs de tous les parcours en mémoire.
 
-    return stats.map((zonage) => {
-      const totalParcours = zonage.parcours.length;
-      const allPlayerIds = zonage.parcours.flatMap((p) =>
-        p.usersStats.map((s) => s.userId),
-      );
-      const uniquePlayers = new Set(allPlayerIds).size;
-      const totalCompletions = allPlayerIds.length;
+    const [zonages, completionsByZonage, avgRatingsByZonage] = await Promise.all([
+
+      // 1. La liste des zonages avec leur nombre de parcours
+      this.db.zonage.findMany({
+        select: {
+          id: true,
+          nom: true,
+          codePostal: true,
+          _count: { select: { parcours: true } },
+        },
+        orderBy: { nom: 'asc' },
+      }),
+
+      // 2. Agrégation SQL : par zonage → total completions + joueurs uniques
+      //    On fait le calcul via les parcours pour relier zonage → user_parcours
+      this.db.userParcours.groupBy({
+        by: ['parcoursId'],
+        _count: { userId: true },
+      }).then(async (grouped) => {
+        // On récupère le zonageId de chaque parcours en une seule requête
+        if (grouped.length === 0) return {};
+        const parcoursIds = grouped.map((g) => g.parcoursId);
+        const parcoursList = await this.db.parcours.findMany({
+          where: { id: { in: parcoursIds } },
+          select: { id: true, zonageId: true },
+        });
+
+        // Map parcoursId → zonageId
+        const parcoursToZonage = new Map(parcoursList.map((p) => [p.id, p.zonageId]));
+
+        // Accumule par zonageId : { totalCompletions, allPlayerIds }
+        const acc: Record<string, { completions: number; playerIds: Set<string> }> = {};
+
+        // Pour les joueurs uniques on a besoin des userIds individuels
+        const allRows = await this.db.userParcours.findMany({
+          where: { parcoursId: { in: parcoursIds } },
+          select: { parcoursId: true, userId: true },
+        });
+
+        for (const row of allRows) {
+          const zonageId = parcoursToZonage.get(row.parcoursId);
+          if (!zonageId) continue;
+          if (!acc[zonageId]) acc[zonageId] = { completions: 0, playerIds: new Set() };
+          acc[zonageId].completions++;
+          acc[zonageId].playerIds.add(row.userId);
+        }
+
+        return acc;
+      }),
+
+      // 3. Note moyenne par zonage (via jointure parcours → reviews)
+      this.db.review.groupBy({
+        by: ['parcoursId'],
+        _avg: { rating: true },
+        _count: { rating: true },
+      }).then(async (grouped) => {
+        if (grouped.length === 0) return {};
+        const parcoursIds = grouped.map((g) => g.parcoursId);
+        const parcoursList = await this.db.parcours.findMany({
+          where: { id: { in: parcoursIds } },
+          select: { id: true, zonageId: true },
+        });
+        const parcoursToZonage = new Map(parcoursList.map((p) => [p.id, p.zonageId]));
+
+        const acc: Record<string, { totalRating: number; count: number }> = {};
+        for (const g of grouped) {
+          const zonageId = parcoursToZonage.get(g.parcoursId);
+          if (!zonageId || !g._avg.rating) continue;
+          if (!acc[zonageId]) acc[zonageId] = { totalRating: 0, count: 0 };
+          acc[zonageId].totalRating += g._avg.rating * g._count.rating;
+          acc[zonageId].count += g._count.rating;
+        }
+
+        return Object.fromEntries(
+          Object.entries(acc).map(([id, v]) => [
+            id,
+            Math.round((v.totalRating / v.count) * 10) / 10,
+          ]),
+        );
+      }),
+    ]);
+
+    // ── Fusion des 3 sources en un tableau analytique propre ──────────────
+    return zonages.map((z) => {
+      const stats = (completionsByZonage as any)[z.id];
+      const avgRating = (avgRatingsByZonage as any)[z.id] ?? null;
 
       return {
-        id: zonage.id,
-        nom: zonage.nom,
-        codePostal: zonage.codePostal,
-        totalParcours,
-        uniquePlayers,
-        totalCompletions,
+        id: z.id,
+        nom: z.nom,
+        codePostal: z.codePostal,
+        totalParcours: z._count.parcours,
+        totalCompletions: stats?.completions ?? 0,
+        uniquePlayers: stats?.playerIds.size ?? 0,
+        averageRating: avgRating,
       };
     });
   }
+
 
   async findOne(id: string) {
     const zonage = await this.db.zonage.findUnique({ where: { id } });

@@ -271,6 +271,35 @@ async function runTests() {
     const deleteReview = await fetchApi(`/social/reviews/${reviewId}`, 'DELETE', null, headers);
     console.log('✅', deleteReview.message);
 
+    // ── Stats investisseurs (Tâche 4.4 — Le besoin de Béatrice) ──────────────
+    console.log('\n--- Stats Investisseurs (Tâche 4.4) ---');
+
+    console.log('\n[21] GET /admin/stats/zonages — Tableau analytique...');
+    const statsData = await fetchApi('/admin/stats/zonages', 'GET', null, headers);
+
+    if (!Array.isArray(statsData)) {
+      throw new Error('La réponse devrait être un tableau');
+    }
+    console.log('✅ Nombre de zonages dans les stats:', statsData.length);
+
+    const lyonStats = statsData.find(z => z.nom === 'Lyon');
+    if (lyonStats) {
+      console.log('✅ Stats pour Lyon:');
+      console.log('   - Parcours:', lyonStats.totalParcours);
+      console.log('   - Completions totales:', lyonStats.totalCompletions);
+      console.log('   - Joueurs uniques:', lyonStats.uniquePlayers);
+      console.log('   - Note moyenne:', lyonStats.averageRating ?? 'Aucun avis');
+
+      // Vérifier la structure
+      const expectedKeys = ['id', 'nom', 'codePostal', 'totalParcours', 'totalCompletions', 'uniquePlayers', 'averageRating'];
+      const missingKeys = expectedKeys.filter(k => !(k in lyonStats));
+      if (missingKeys.length === 0) {
+        console.log('✅ Structure complète validée (tous les champs présents)');
+      } else {
+        console.error('❌ Champs manquants:', missingKeys.join(', '));
+      }
+    }
+
     console.log('\n--- TOUS LES TESTS SONT PASSES AVEC SUCCES 🚀 ---');
 
   } catch (error) {
