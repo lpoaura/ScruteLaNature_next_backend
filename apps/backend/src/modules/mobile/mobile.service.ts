@@ -22,7 +22,6 @@ export class MobileService {
   async syncMobileData(userId: string, dto: SyncMobileDto) {
     const results = {
       parcoursCompleted: { synced: 0, skipped: 0 },
-      observations: { synced: 0, skipped: 0 },
       errors: [] as { syncId: string; reason: string }[],
     };
 
@@ -104,41 +103,22 @@ export class MobileService {
       }
     }
 
-    // ── 2. Traitement des observations ────────────────────────────────────────
-    if (dto.observations && dto.observations.length > 0) {
-      for (const obs of dto.observations) {
-        const existing = await this.db.observation.findUnique({
-          where: { syncId: obs.syncId },
-        });
-
-        if (existing) {
-          this.logger.log(`[SYNC] Observation syncId déjà traitée, ignorée: ${obs.syncId}`);
-          results.observations.skipped++;
-          continue;
-        }
-
-        try {
-          await this.db.observation.create({
-            data: {
-              syncId: obs.syncId,
-              userId,
-              speciesName: obs.speciesName,
-              imageUrl: obs.imageUrl,
-              latitude: obs.latitude,
-              longitude: obs.longitude,
-              aiConfidence: obs.aiConfidence,
-              isOfflineSync: true,
-              createdAt: new Date(obs.timestamp),
-            },
-          });
-
-          results.observations.synced++;
-        } catch (err) {
-          this.logger.error(`[SYNC] Erreur observation ${obs.syncId}:`, err.message);
-          results.errors.push({ syncId: obs.syncId, reason: err.message });
-        }
-      }
-    }
+    // NOTE : La synchronisation des observations (photos terrain) est volontairement
+    // désactivée en attente de confirmation du budget de stockage cloud.
+    // Pour réactiver :
+    //   1. Ajouter ObservationEventDto + le champ observations[] dans SyncMobileDto
+    //   2. Décommenter le bloc ci-dessous
+    //
+    // if (dto.observations && dto.observations.length > 0) {
+    //   for (const obs of dto.observations) {
+    //     const existing = await this.db.observation.findUnique({ where: { syncId: obs.syncId } });
+    //     if (existing) { results.observations.skipped++; continue; }
+    //     try {
+    //       await this.db.observation.create({ data: { ...obs, userId, isOfflineSync: true, createdAt: new Date(obs.timestamp) } });
+    //       results.observations.synced++;
+    //     } catch (err) { results.errors.push({ syncId: obs.syncId, reason: err.message }); }
+    //   }
+    // }
 
     return {
       success: results.errors.length === 0,

@@ -110,7 +110,6 @@ async function runTests() {
 
     console.log('\n[9] Test API Mobile - Sync hors-ligne (T\u00e2che 4.1)...');
     const fakeSyncId1 = 'aaaaaaaa-0000-4000-8000-000000000001';
-    const fakeSyncId2 = 'aaaaaaaa-0000-4000-8000-000000000002';
     const syncPayload = {
       parcoursCompleted: [
         {
@@ -121,27 +120,15 @@ async function runTests() {
           co2Saved: 1.2,
         }
       ],
-      observations: [
-        {
-          syncId: fakeSyncId2,
-          speciesName: 'Canard colvert',
-          imageUrl: 'test-oiseau.jpg',
-          latitude: 45.764043,
-          longitude: 4.835659,
-          aiConfidence: 0.92,
-          timestamp: new Date().toISOString(),
-        }
-      ]
+      // NOTE : observations[] volontairement absent (budget de stockage en attente).
     };
 
     const syncResult = await fetchApi('/mobile/sync', 'POST', syncPayload, headers);
     console.log('✅ Sync 1ère fois - Parcours synced:', syncResult.results.parcoursCompleted.synced);
-    console.log('✅ Sync 1ère fois - Observations synced:', syncResult.results.observations.synced);
 
-    // Test idempotence : renvoyer les m\u00eames syncIds -> doit \u00eatre skipp\u00e9
+    // Test idempotence : renvoyer les mêmes syncIds → doit être skippé
     const syncResult2 = await fetchApi('/mobile/sync', 'POST', syncPayload, headers);
-    console.log('✅ Sync 2\u00e8me fois (idempotence) - Parcours skipped:', syncResult2.results.parcoursCompleted.skipped);
-    console.log('✅ Sync 2\u00e8me fois (idempotence) - Observations skipped:', syncResult2.results.observations.skipped);
+    console.log('✅ Sync 2ème fois (idempotence) - Parcours skipped:', syncResult2.results.parcoursCompleted.skipped);
 
     // ── Tests de sécurité ──────────────────────────────────────────────────────
     console.log('\n[10] TEST SÉCURITÉ — Escalade de rôle bloquée...');

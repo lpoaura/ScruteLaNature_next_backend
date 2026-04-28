@@ -6,16 +6,14 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
-  IsString,
   IsUUID,
-  Max,
   Min,
   ArrayMaxSize,
   ValidateNested,
 } from 'class-validator';
 
 export class ParcoursCompletedEventDto {
-  @ApiProperty({ description: 'ID unique généré par le mobile pour éviter les doublons' })
+  @ApiProperty({ description: 'ID unique généré par le mobile pour éviter les doublons (UUID v4)' })
   @IsUUID()
   syncId: string;
 
@@ -39,54 +37,21 @@ export class ParcoursCompletedEventDto {
   co2Saved?: number;
 }
 
-export class ObservationEventDto {
-  @ApiProperty({ description: 'ID unique généré par le mobile pour éviter les doublons' })
-  @IsUUID()
-  syncId: string;
-
-  @ApiPropertyOptional({ description: 'Nom de l\'espèce' })
-  @IsString()
-  @IsOptional()
-  speciesName?: string;
-
-  @ApiProperty({ description: 'Nom du fichier image déjà uploadé (retourné par POST /medias/upload)' })
-  @IsString()
-  imageUrl: string;
-
-  @ApiProperty({ description: 'Latitude' })
-  @IsNumber()
-  latitude: number;
-
-  @ApiProperty({ description: 'Longitude' })
-  @IsNumber()
-  longitude: number;
-
-  @ApiPropertyOptional({ description: 'Confiance de l\'IA (entre 0 et 1)' })
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  @IsOptional()
-  aiConfidence?: number;
-
-  @ApiProperty({ description: 'Date de l\'observation en ISO 8601 (ex: 2026-04-27T14:00:00.000Z)' })
-  @IsISO8601()
-  timestamp: string;
-}
-
 export class SyncMobileDto {
-  @ApiPropertyOptional({ type: [ParcoursCompletedEventDto], description: 'Parcours terminés hors-ligne (max 100 par requête)' })
+  @ApiPropertyOptional({
+    type: [ParcoursCompletedEventDto],
+    description: 'Parcours terminés hors-ligne (max 100 par requête)',
+  })
   @IsArray()
   @ArrayMaxSize(100, { message: 'Maximum 100 événements de parcours par synchronisation' })
   @ValidateNested({ each: true })
   @Type(() => ParcoursCompletedEventDto)
   @IsOptional()
   parcoursCompleted?: ParcoursCompletedEventDto[];
-
-  @ApiPropertyOptional({ type: [ObservationEventDto], description: 'Observations faites hors-ligne (max 200 par requête)' })
-  @IsArray()
-  @ArrayMaxSize(200, { message: 'Maximum 200 observations par synchronisation' })
-  @ValidateNested({ each: true })
-  @Type(() => ObservationEventDto)
-  @IsOptional()
-  observations?: ObservationEventDto[];
 }
+
+// NOTE : La synchronisation des observations (photos terrain) est volontairement
+// non implémentée en attente de confirmation du budget de stockage.
+// Le modèle Prisma `Observation` est conservé en base de données.
+// Pour réactiver : ajouter ObservationEventDto + le champ observations[] dans ce DTO,
+// et décommenter le bloc correspondant dans MobileService.syncMobileData().
