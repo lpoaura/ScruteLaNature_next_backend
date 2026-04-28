@@ -14,9 +14,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { SocialService } from './social.service';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
 
 @ApiTags('Social — Amis')
 @ApiBearerAuth()
@@ -37,9 +39,7 @@ export class SocialController {
   }
 
   @Get('requests')
-  @ApiOperation({
-    summary: 'Voir les demandes d\'ami reçues (statut PENDING)',
-  })
+  @ApiOperation({ summary: 'Voir les demandes d\'ami reçues (statut PENDING)' })
   @ApiResponse({ status: 200, description: 'Liste des demandes en attente.' })
   getPendingRequests(@Request() req: any) {
     return this.socialService.getPendingRequests(req.user.id);
@@ -75,5 +75,47 @@ export class SocialController {
   @ApiResponse({ status: 200, description: 'Relation supprimée.' })
   remove(@Param('id') id: string, @Request() req: any) {
     return this.socialService.removeFriendship(id, req.user.id);
+  }
+}
+
+// ── Avis & Notes ─────────────────────────────────────────────────────────────
+
+@ApiTags('Social — Avis')
+@ApiBearerAuth()
+@Controller('social/reviews')
+export class ReviewsController {
+  constructor(private readonly socialService: SocialService) {}
+
+  @Post()
+  @ApiOperation({
+    summary: 'Laisser un avis sur un parcours (1 seul avis par parcours)',
+    description: 'Le joueur doit être connecté. Un seul avis par parcours par utilisateur.',
+  })
+  @ApiBody({ type: CreateReviewDto })
+  @ApiResponse({ status: 201, description: 'Avis enregistré.' })
+  @ApiResponse({ status: 409, description: 'Avis déjà existant pour ce parcours.' })
+  createReview(@Body() dto: CreateReviewDto, @Request() req: any) {
+    return this.socialService.createReview(req.user.id, dto);
+  }
+
+  @Get('parcours/:parcoursId')
+  @ApiOperation({
+    summary: 'Lister les avis d\'un parcours avec note moyenne',
+  })
+  @ApiParam({ name: 'parcoursId', description: 'ID du parcours' })
+  @ApiResponse({ status: 200, description: 'Liste des avis + note moyenne.' })
+  getReviews(@Param('parcoursId') parcoursId: string) {
+    return this.socialService.getReviewsByParcours(parcoursId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Supprimer un avis (auteur ou modérateur ADMIN/SUPER_ADMIN)',
+  })
+  @ApiParam({ name: 'id', description: 'ID de l\'avis' })
+  @ApiResponse({ status: 200, description: 'Avis supprimé.' })
+  @ApiResponse({ status: 403, description: 'Vous ne pouvez supprimer que vos propres avis.' })
+  deleteReview(@Param('id') id: string, @Request() req: any) {
+    return this.socialService.deleteReview(id, req.user.id, req.user.role);
   }
 }

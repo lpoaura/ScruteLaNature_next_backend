@@ -237,6 +237,40 @@ async function runTests() {
     const friendsBefore = await fetchApi('/social/friends', 'GET', null, headers);
     console.log('✅ Amis actuels:', friendsBefore.length);
 
+    // ── Tests Avis & Notes (Tâche 4.3) ────────────────────────────────────────
+    console.log('\n--- Tests Avis & Notes (Tâche 4.3) ---');
+
+    console.log('\n[17] Laisser un avis sur le parcours...');
+    const reviewData = await fetchApi('/social/reviews', 'POST', {
+      parcoursId: parcoursId,
+      rating: 5,
+      comment: 'Superbe balade, les jeux sont vraiment fun !',
+    }, headers);
+    console.log('✅ Avis créé. Note:', reviewData.rating, '/ ID:', reviewData.id);
+    const reviewId = reviewData.id;
+
+    console.log('\n[18] Tentative de doublon (même parcours) — doit échouer...');
+    try {
+      await fetchApi('/social/reviews', 'POST', {
+        parcoursId: parcoursId,
+        rating: 3,
+        comment: 'Deuxième avis',
+      }, headers);
+      console.error('❌ Le doublon aurait dû être rejeté !');
+    } catch (err) {
+      if (err.status === 409) {
+        console.log('✅ Doublon rejeté (409 Conflict)');
+      }
+    }
+
+    console.log('\n[19] Récupérer les avis avec note moyenne...');
+    const reviewsData = await fetchApi(`/social/reviews/parcours/${parcoursId}`, 'GET', null, headers);
+    console.log('✅ Note moyenne:', reviewsData.averageRating, '/ Total avis:', reviewsData.totalReviews);
+
+    console.log('\n[20] Supprimer l\'avis (modération admin)...');
+    const deleteReview = await fetchApi(`/social/reviews/${reviewId}`, 'DELETE', null, headers);
+    console.log('✅', deleteReview.message);
+
     console.log('\n--- TOUS LES TESTS SONT PASSES AVEC SUCCES 🚀 ---');
 
   } catch (error) {

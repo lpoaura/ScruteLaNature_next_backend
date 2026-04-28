@@ -6,8 +6,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { FriendshipStatus } from '@prisma/client';
+import { FriendshipStatus, Role } from '@prisma/client';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
 
 // Projection minimale pour ne jamais exposer de données sensibles (email, password, etc.)
 const PUBLIC_USER_SELECT = {
@@ -193,5 +194,99 @@ export class SocialService {
 
     await this.db.friendship.delete({ where: { id: friendshipId } });
     return { message: 'Relation supprimée.' };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // AVIS & NOTES (Reviews) — Tâche 4.3
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── 7. Laisser un avis sur un parcours ────────────────────────────────────
+
+  async createReview(userId: string, dto: CreateReviewDto) {
+    // Le parcours doit exister et être PUBLISHED
+    const parcours = await this.db.parcours.findUnique({
+      where: { id: dto.parcoursId },
+      select: { id: true, title: true, status: true },
+    });
+
+    if (!parcours) {
+      throw new NotFoundException(`Parcours introuvable.`);
+    }
+
+    if (parcours.status !== 'PUBLISHED') {
+      throw new BadRequestException('Vous ne pouvez noter que des parcours publiés.');
+    }
+
+    // Un joueur ne peut laisser qu'un seul avis par parcours (@@unique dans le schema)
+    const existing = await this.db.review.findUnique({
+      where: { userId_parcoursId: { userId, parcoursId: dto.parcoursId } },
+    });
+
+    if (existing) {
+      throw new ConflictException('Vous avez déjà laissé un avis pour ce parcours.');
+    }
+
+    const review = await this.db.review.create({
+      data: {
+        userId,
+        parcoursId: dto.parcoursId,
+        rating: dto.rating,
+        comment: dto.comment,
+      },
+      include: {
+        user: { select: { id: true, pseudo: true, firstName: true } },
+      },
+    });
+
+    return review;
+  }
+
+  // ── 8. Lister les avis d'un parcours (public) ────────────────────────────
+
+  async getReviewsByParcours(parcoursId: string) {
+    const [reviews, aggregate] = await Promise.all([
+      this.db.review.findMany({
+        where: { parcoursId },
+        include: {
+          user: { select: { id: true, pseudo: true, firstName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.db.review.aggregate({
+        where: { parcoursId },
+        _avg: { rating: true },
+        _count: { rating: true },
+      }),
+    ]);
+
+    return {
+      averageRating: aggregate._avg.rating
+        ? Math.round(aggregate._avg.rating * 10) / 10
+        : null,
+      totalReviews: aggregate._count.rating,
+      reviews,
+    };
+  }
+
+  // ── 9. Supprimer un avis (auteur ou modérateur ADMIN/SUPER_ADMIN) ─────────
+
+  async deleteReview(reviewId: string, userId: string, userRole: Role) {
+    const review = await this.db.review.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Avis introuvable.');
+    }
+
+    const isAdmin = userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
+    const isOwner = review.userId === userId;
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException('Vous ne pouvez supprimer que vos propres avis.');
+    }
+
+    await this.db.review.delete({ where: { id: reviewId } });
+    return { message: 'Avis supprimé.' };
   }
 }
