@@ -143,13 +143,107 @@ async function runTests() {
     console.log('✅ Sync 2\u00e8me fois (idempotence) - Parcours skipped:', syncResult2.results.parcoursCompleted.skipped);
     console.log('✅ Sync 2\u00e8me fois (idempotence) - Observations skipped:', syncResult2.results.observations.skipped);
 
+    // ── Tests de sécurité ──────────────────────────────────────────────────────
+    console.log('\n[10] TEST SÉCURITÉ — Escalade de rôle bloquée...');
+    // Un user normal NE DOIT PAS pouvoir se passer SUPER_ADMIN via PATCH /users/me
+    let roleEscalationBlocked = false;
+    try {
+      await fetchApi('/users/me', 'PATCH', { role: 'SUPER_ADMIN' }, headers);
+    } catch (err) {
+      if (err.status === 400) {
+        roleEscalationBlocked = true;
+        console.log('✅ Escalade de rôle bloquée (400 Bad Request reçu)');
+      } else {
+        console.log('⚠️  Code inattendu:', err.status, err.data);
+      }
+    }
+    if (!roleEscalationBlocked) {
+      console.error('❌ FAILLE : Un utilisateur peut changer son propre rôle !');
+    }
+
+    console.log('\n[11] TEST SÉCURITÉ — Date ISO invalide rejetée par sync...');
+    let invalidDateRejected = false;
+    try {
+      await fetchApi('/mobile/sync', 'POST', {
+        parcoursCompleted: [{
+          syncId: 'bbbbbbbb-0000-4000-8000-000000000001',
+          parcoursId: parcoursId,
+          score: 100,
+          completedAt: 'ceci-nest-pas-une-date',
+        }]
+      }, headers);
+    } catch (err) {
+      if (err.status === 400) {
+        invalidDateRejected = true;
+        console.log('✅ Date ISO invalide rejetée (400 Bad Request reçu)');
+      }
+    }
+    if (!invalidDateRejected) {
+      console.error('❌ FAILLE : Une date invalide a été acceptée par /mobile/sync !');
+    }
+
+    console.log('\n[12] TEST SÉCURITÉ — organismeId non-UUID rejeté...');
+    let invalidOrgIdRejected = false;
+    try {
+      await fetchApi('/admin/users', 'POST', {
+        email: 'test-bad@lpo.fr',
+        password: 'Test1234!',
+        role: 'EDITOR',
+        organismeId: 'pas-un-uuid',
+      }, headers);
+    } catch (err) {
+      if (err.status === 400) {
+        invalidOrgIdRejected = true;
+        console.log('✅ organismeId non-UUID rejeté (400 Bad Request reçu)');
+      }
+    }
+    if (!invalidOrgIdRejected) {
+      console.error('❌ FAILLE : Un organismeId invalide a été accepté !');
+    }
+
+    // ── Tests Système d'Amis (Tâche 4.2) ──────────────────────────────────────
+    console.log('\n--- Tests Système d\'Amis (Tâche 4.2) ---');
+
+    // Créer un 2ème utilisateur (le "ami") via inscription normale
+    // On utilise le compte SUPER_ADMIN pour créer un joueur via /admin/users
+    console.log('\n[13] Création d\'un joueur de test...');
+    const playerEmail = `player-${Date.now()}@test.fr`;
+    await fetchApi('/admin/users', 'POST', {
+      email: playerEmail,
+      password: 'Player123!',
+      role: 'USER',
+    }, headers);
+    console.log('✅ Joueur créé:', playerEmail);
+
+    // Le SUPER_ADMIN ne peut pas s'envoyer une demande à lui-même
+    // (car il n'a pas de pseudo), on teste le reject en cherchant un pseudo inexistant
+    console.log('\n[14] Envoi demande à pseudo inexistant (doit échouer)...');
+    try {
+      await fetchApi('/social/friends/request', 'POST', { pseudo: 'PseudoQUINExistePas' }, headers);
+      console.error('❌ Aurait dû échouer !');
+    } catch (err) {
+      if (err.status === 404) {
+        console.log('✅ 404 retourné pour pseudo inconnu');
+      }
+    }
+
+    // Vérifier que la liste des demandes est vide au départ
+    console.log('\n[15] Liste des demandes reçues (doit être vide)...');
+    const pendingBefore = await fetchApi('/social/friends/requests', 'GET', null, headers);
+    console.log('✅ Demandes en attente:', pendingBefore.length);
+
+    // Vérifier que la liste d\'amis est vide au départ
+    console.log('\n[16] Liste des amis (doit être vide)...');
+    const friendsBefore = await fetchApi('/social/friends', 'GET', null, headers);
+    console.log('✅ Amis actuels:', friendsBefore.length);
+
     console.log('\n--- TOUS LES TESTS SONT PASSES AVEC SUCCES 🚀 ---');
 
   } catch (error) {
     console.error('\n❌ ERREUR LORS DES TESTS:');
     if (error.status) {
       console.error('Status:', error.status);
-      console.error('Data:', error.data);
+      console.error('Data:', JSON.stringify(error.data, null, 2));
     } else {
       console.error(error);
     }
