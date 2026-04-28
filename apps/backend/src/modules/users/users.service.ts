@@ -71,12 +71,11 @@ export class UsersService {
       where: { id },
     });
 
-    if (user) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    }
-    return null;
+    if (!user) return null; // Retourner null est intentionnel (auth utilise ce cas)
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   // Cette méthode est utilisée pour l'auth interne (Login) car elle doit récupérer le password
@@ -101,13 +100,19 @@ export class UsersService {
     return userWithoutPassword;
   }
 
+  /**
+   * Suppression RGPD : supprime toutes les données personnelles liées au compte.
+   * Exigé par Apple et Google pour accéder aux stores.
+   * Prisma gère la cascade sur les sessions, tokens OAuth, observations, badges, etc.
+   * (via onDelete: Cascade défini dans le schema Prisma)
+   */
   async remove(id: string) {
-    const deletedUser = await this.databaseService.user.delete({
-      where: { id },
-    });
+    const user = await this.databaseService.user.findUnique({ where: { id } });
+    if (!user) {
+      return { message: 'Compte déjà supprimé' };
+    }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = deletedUser;
-    return userWithoutPassword;
+    await this.databaseService.user.delete({ where: { id } });
+    return { message: 'Votre compte et toutes vos données ont été supprimés définitivement.' };
   }
 }

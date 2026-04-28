@@ -11,6 +11,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -36,10 +37,10 @@ export class UsersController {
   }
 
   @Patch('users/me')
-  @ApiOperation({ summary: 'Mettre à jour son profil' })
+  @ApiOperation({ summary: 'Mettre à jour son profil (prénom, pseudo, pushToken, analyticsConsent)' })
   @ApiResponse({ status: 200, description: 'Profil mis à jour.' })
-  updateMe(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(req.user.sub || req.user.id, updateUserDto);
+  updateMe(@Request() req: any, @Body() dto: UpdateMeDto) {
+    return this.usersService.update(req.user.sub || req.user.id, dto);
   }
 
   @Delete('users/me')
