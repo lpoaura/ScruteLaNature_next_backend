@@ -23,11 +23,13 @@ export class MobileService {
     const results = {
       parcoursCompleted: { synced: 0, skipped: 0 },
       observations: { synced: 0, skipped: 0 },
+      errors: [] as { syncId: string; reason: string }[],
     };
 
     // ── 1. Traitement des parcours terminés ──────────────────────────────────
     if (dto.parcoursCompleted && dto.parcoursCompleted.length > 0) {
       for (const event of dto.parcoursCompleted) {
+        // Vérification idempotence via syncId
         const existing = await this.db.userParcours.findUnique({
           where: { syncId: event.syncId },
         });
@@ -40,33 +42,64 @@ export class MobileService {
 
         try {
           await this.db.$transaction(async (tx) => {
-            await tx.userParcours.upsert({
+            // Vérifier si c'est un premier passage ou une mise à jour (parcours déjà fait en ligne)
+            const alreadyDoneInline = await tx.userParcours.findUnique({
               where: { userId_parcoursId: { userId, parcoursId: event.parcoursId } },
-              create: {
-                syncId: event.syncId,
-                userId,
-                parcoursId: event.parcoursId,
-                score: event.score,
-                completedAt: new Date(event.completedAt),
-              },
-              update: {
-                score: { set: event.score },
-                completedAt: new Date(event.completedAt),
-              },
+              select: { id: true, score: true },
             });
 
-            await tx.user.update({
-              where: { id: userId },
-              data: {
-                totalPoints: { increment: event.score },
-                co2Saved: { increment: event.co2Saved ?? 0 },
-              },
-            });
+            if (alreadyDoneInline) {
+              // Mise à jour uniquement si le nouveau score est meilleur
+              if (event.score > alreadyDoneInline.score) {
+                const scoreDiff = event.score - alreadyDoneInline.score;
+                await tx.userParcours.update({
+                  where: { userId_parcoursId: { userId, parcoursId: event.parcoursId } },
+                  data: {
+                    syncId: event.syncId,
+                    score: event.score,
+                    completedAt: new Date(event.completedAt),
+                  },
+                });
+                // Incrémenter seulement la différence pour éviter le double-comptage
+                await tx.user.update({
+                  where: { id: userId },
+                  data: {
+                    totalPoints: { increment: scoreDiff },
+                    co2Saved: { increment: event.co2Saved ?? 0 },
+                  },
+                });
+              } else {
+                // Score inférieur ou égal : on enregistre juste le syncId pour l'idempotence
+                await tx.userParcours.update({
+                  where: { userId_parcoursId: { userId, parcoursId: event.parcoursId } },
+                  data: { syncId: event.syncId },
+                });
+              }
+            } else {
+              // Première fois que ce parcours est complété
+              await tx.userParcours.create({
+                data: {
+                  syncId: event.syncId,
+                  userId,
+                  parcoursId: event.parcoursId,
+                  score: event.score,
+                  completedAt: new Date(event.completedAt),
+                },
+              });
+              await tx.user.update({
+                where: { id: userId },
+                data: {
+                  totalPoints: { increment: event.score },
+                  co2Saved: { increment: event.co2Saved ?? 0 },
+                },
+              });
+            }
           });
 
           results.parcoursCompleted.synced++;
         } catch (err) {
           this.logger.error(`[SYNC] Erreur parcours ${event.parcoursId}:`, err.message);
+          results.errors.push({ syncId: event.syncId, reason: err.message });
         }
       }
     }
@@ -102,16 +135,21 @@ export class MobileService {
           results.observations.synced++;
         } catch (err) {
           this.logger.error(`[SYNC] Erreur observation ${obs.syncId}:`, err.message);
+          results.errors.push({ syncId: obs.syncId, reason: err.message });
         }
       }
     }
 
     return {
-      success: true,
-      message: 'Synchronisation terminée.',
+      success: results.errors.length === 0,
+      message: results.errors.length === 0
+        ? 'Synchronisation complète.'
+        : `Synchronisation partielle : ${results.errors.length} événement(s) en erreur.`,
       results,
     };
   }
+
+
 
 
 
