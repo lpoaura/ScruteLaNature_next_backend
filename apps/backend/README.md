@@ -1,132 +1,295 @@
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <img src="https://nestjs.com/img/logo-small.svg" width="80" alt="NestJS" />
 </p>
 
-# 🚀 Ultimate NestJS Auth Boilerplate
+# 🌿 Scrute La Nature — API Backend (NestJS)
 
-Ce projet est un "Boilerplate" robuste et sécurisé construit sur **NestJS**, prêt à l'emploi. Il intègre toutes les meilleures pratiques modernes concernant l'authentification, la gestion des sessions, la sécurité et les autorisations.
-
-Oubliez les configurations répétitives, tout ce dont vous avez besoin pour démarrer une plateforme solide est déjà là.
-
-## 🎯 Fonctionnalités Incluses (Étapes 1 à 6 terminées)
-
-### 1. Base Project & Base de données 🐘
-* Initialisation NestJS avec Typescript strict.
-* **PostgreSQL** + **Prisma ORM** : Modélisation des tables `User`, `Session`, et `VerificationToken` prête à scaler.
-* Variables d'environnement configurées via `@nestjs/config`.
-
-### 2. Documentation Automatique 📚
-* Intégration de **Swagger UI** (accessible sur `/api/docs`).
-* Documentation complète de chaque Endpoint (Responses, Body, Bearer Token) avec `@nestjs/swagger`.
-
-### 3. Première Couche de Sécurité Globale 🛡️
-* **Helmet** pour la protection avancée des Headers HTTP.
-* **Express-Rate-Limit** pour limiter le nombre de requêtes et contrer le _Brute Force_.
-* Validation stricte des données entrantes (`class-validator` & `class-transformer` sur DTOs).
-* Hachage puissant des mots de passe grâce à **Bcrypt** (Salt: 12).
-
-### 4. Authentification (JWT & Refresh Tokens avec Redis) 🔑
-* Architecture Login / Logout / Refresh Token.
-* **Access Tokens** de courte durée pour l'accès aux API sécurisées.
-* **Refresh Tokens** persistés dans la BDD (hashés) pour le renouvellement.
-* Invalidations intelligentes à la déconnexion : Le Refresh Token est détruit en base, et **Redis** agit en barrière instantanée pour ajouter l'Access Token (encore valide mais dont l'utilisateur ne veut plus) dans une **Blacklist** !
-
-### 5. Self-Service Utilisateurs & Emails 📧
-* Envoi automatique d'email via `@nestjs-modules/mailer` & **Mailtrap**.
-* Inscription -> Envoi d'un lien de **Validation d'E-mail**.
-* Oubli de mot de passe -> Envoi d'un **Lien de Réinitialisation**.
-* Vraies templates interactives et responsives générées grâce à **EJS** (`.ejs`).
-
-### 6. Autorisations et Système de Rôles (RBAC) 👮
-* Accès universel par défaut restreint (toutes les routes API sont verrouillées, sauf exception via `@Public()`).
-* Décorateur conditionnel `@Roles(Role.ADMIN)` pour sécuriser les routes en fonction de l'échelle des utilisateurs.
-* **RolesGuard** mis en place derrière l'Authentification (JWT) pour garantir un deuxième contrôle intransigeant des Permissions (`USER`, `MODERATOR`, `ADMIN`).
-
-### 7. Double Authentification (2FA) Google Authenticator 📱
-* Intégration de librairie `otplib` pour respecter le standard TOTP.
-* L'API génère un QR code à configurer dans Authy/Google Authenticator.
-* Si le porteur du compte a activé la 2FA, l'API intercepte sa connexion et lui délivre un _Partial Token_ de 5 min qui lui permet d'accéder au check d'authentification 2FA pour être connecté avec succès !
-
-### 8. Authentification Sociale OAuth 2.0 (Google) 🌐
-* Intégration de Passport Google.
-* Si l'e-mail a fuité ou s'il connait déjà votre site: Fusion parfaite ("Find-Or-Create") des anciens comptes avec le profil OAuth dans Postgres !
+> API REST du projet *Scrute La Nature* pour la **LPO Auvergne-Rhône-Alpes**.  
+> Gère l'authentification, le contenu des parcours, la synchronisation mobile hors-ligne et les fonctionnalités sociales.
 
 ---
 
-## 💻 Tech Stack Principale
+## 📚 Documentation interactive
 
-* [NestJS](https://nestjs.com/)
-* [PostgreSQL](https://www.postgresql.org/)
-* [Prisma](https://www.prisma.io/)
-* [Redis](https://redis.io/)
-* [Passport](https://www.passportjs.org/)
-* [Swagger](https://swagger.io/)
-* Moteur EJS (Templates d'e-mail)
+Une fois le serveur démarré, la documentation Swagger complète est disponible :
+
+```
+http://localhost:3000/api/docs
+```
+
+Tous les endpoints y sont documentés avec leurs corps de requête, réponses, codes d'erreur et le Bearer Token nécessaire.
 
 ---
 
-## 🛠️ Configuration & Installation
+## 🛠️ Installation & Lancement
 
-### 1. Récupérer le projet
+> ℹ️ Ce projet fait partie d'un monorepo npm workspaces. Lancer depuis la racine `lpo-balades-web/` est recommandé.
 
 ```bash
-git clone <votre-depot>
-cd nestjs-boilerplate
+# Depuis la racine du monorepo
 npm install
-```
+docker-compose up -d        # Lance PostgreSQL sur le port 5434
 
-### 2. Configuration Environnement
-
-Créez un fichier `.env` à la racine (clonez `.env.example` s'il existe) et adaptez-le :
-```env
-# PostgreSQL
-DATABASE_URL="postgresql://postgres:password@localhost:5432/nest-auth"
-
-# JWT Auth
-JWT_SECRET="supers3cr3t"
-JWT_EXPIRATION="15m"
-JWT_REFRESH_SECRET="anoth3rsup3rs3cr3t"
-JWT_REFRESH_EXPIRATION="7d"
-
-# Redis Server (Obligatoire pour la Blacklist - Logout)
-REDIS_HOST="localhost"
-REDIS_PORT=6379
-REDIS_PASSWORD=""
-
-# SMTP Mailtrap
-MAIL_HOST="live.smtp.mailtrap.io"
-MAIL_PORT=587
-MAIL_USER="api"
-MAIL_PASSWORD="<votre_token>"
-MAIL_FROM="hello@demomailtrap.co"
-```
-
-### 3. Exécuter les Migrations (Base de de données)
-
-```bash
-# Push le schéma Prisma sur le serveur SQL
-npx prisma db push
-# Ou via migrate dev si vous désirez versionner la table Postgres
+# Migrations & seed
+cd apps/backend
 npx prisma migrate dev
+npx prisma db seed          # Crée le compte superadmin@lpo.fr
+
+# Lancement (depuis la racine)
+cd ../..
+npm run dev                 # Backend port 3000 + Backoffice port 3001
 ```
 
-### 4. Lancement de l'Application
+### Variables d'environnement (`.env` dans `apps/backend/`)
 
-```bash
-# Mode développement avec auto-reload
-npm run start:dev
+```env
+# Base de données
+DATABASE_URL="postgresql://lpo_user:lpo_password@localhost:5434/lpo_db"
 
-# Compilation pour la production
-npm run build
-npm run start:prod
+# JWT
+JWT_SECRET="change-me-in-production"
+JWT_EXPIRATION="15m"
+JWT_REFRESH_SECRET="change-me-too"
+JWT_REFRESH_EXPIRATION="180d"
+
+# Serveur mail (Mailtrap en dev)
+MAIL_HOST="sandbox.smtp.mailtrap.io"
+MAIL_PORT=587
+MAIL_USER="<votre_user_mailtrap>"
+MAIL_PASSWORD="<votre_mdp_mailtrap>"
+MAIL_FROM="noreply@scrutelanature.fr"
+
+# Application
+APP_URL="http://localhost:3000"
+APP_NAME="Scrute La Nature"
+PORT=3000
 ```
-
-L'API est accessible immédiatement en local sur `http://localhost:3000/api`.
-Découvrez toute la documentation API sur `http://localhost:3000/api/docs`.
 
 ---
 
-## 🚀 Fin du Projet (Boilerplate Ultime)
+## 🏗️ Architecture des modules
 
-Ce projet dispose du meilleur état de l'art de l'authentification et de la sécurité des API NestJS. Il est structuré, modulaire et peut accueillir l'ensemble de votre architecture métier en quelques secondes !
-# boilerplate_nestjs_ultime
+```
+src/
+├── modules/
+│   ├── auth/           → Auth JWT, 2FA, OAuth Google, register, login, refresh
+│   ├── users/          → Profil utilisateur, gestion admin, suppression RGPD
+│   ├── organismes/     → Structures LPO régionales
+│   ├── zonages/        → Référentiel géographique + stats investisseurs
+│   ├── parcours/       → CRUD parcours avec cloisonnement par organisme
+│   ├── etapes/         → Points d'arrêt GPS des parcours
+│   ├── jeux/           → Mécaniques ludiques attachées aux étapes
+│   ├── medias/         → Upload/delete de fichiers (images, audio, GPX)
+│   ├── mobile/         → Endpoints dédiés à l'app mobile (search, nearby, download, sync)
+│   └── social/         → Système d'amis + avis/notes sur les parcours
+├── common/
+│   ├── guards/         → JwtAuthGuard, RolesGuard
+│   └── decorators/     → @Public(), @Roles()
+├── config/             → AppConfigService (variables d'env typées)
+├── database/           → DatabaseService (Prisma client singleton)
+└── providers/
+    └── mail/           → MailService + templates EJS
+```
+
+---
+
+## 📡 Référence des endpoints
+
+### 🔐 Auth — `/api/auth`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/register` | Public | Création de compte (RGPD requis) |
+| `POST` | `/auth/login` | Public | Connexion → `access_token` + `refresh_token` |
+| `POST` | `/auth/guest` | Public | Connexion anonyme (joueur invité) |
+| `POST` | `/auth/logout` | JWT | Invalide la session courante |
+| `POST` | `/auth/refresh` | JWT Refresh | Renouvelle les tokens |
+| `GET` | `/auth/profile` | JWT | Renvoie le profil du token courant |
+| `GET` | `/auth/verify-email` | Public | Vérifie l'email via token |
+| `POST` | `/auth/forgot-password` | Public | Envoie un email de reset |
+| `POST` | `/auth/reset-password` | Public | Réinitialise le mot de passe |
+
+### 👤 Utilisateurs — `/api/users`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/users/me` | JWT | Profil de l'utilisateur connecté |
+| `PATCH` | `/users/me` | JWT | Mise à jour (prénom, pseudo, pushToken, analyticsConsent) |
+| `DELETE` | `/users/me` | JWT | Suppression RGPD complète (cascade) |
+| `GET` | `/admin/users` | ADMIN | Liste tous les employés |
+| `POST` | `/admin/users` | ADMIN | Crée un compte employé (EDITOR/ADMIN) |
+
+### 🏢 Organismes — `/api/admin/organismes`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/admin/organismes` | ADMIN | Liste les organismes LPO |
+| `GET` | `/admin/organismes/:id` | ADMIN | Détail + liste des employés |
+| `POST` | `/admin/organismes` | SUPER_ADMIN | Créer un organisme |
+| `PATCH` | `/admin/organismes/:id` | SUPER_ADMIN | Mettre à jour |
+
+### 🗺️ Zonages — `/api/admin/zonages`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/admin/zonages` | ADMIN | Référentiel des zonages |
+| `POST` | `/admin/zonages` | ADMIN | Ajouter une zonage |
+| `GET` | `/admin/stats/zonages` | ADMIN | Stats investisseurs : joueurs uniques, completions, note moyenne par zonage |
+
+### 🖼️ Médias — `/api/medias`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/medias/upload` | JWT | Upload fichier (image/audio/gpx) — retourne l'URL publique |
+| `DELETE` | `/medias/:filename` | ADMIN | Supprime un fichier du disque |
+
+### 🏕️ Parcours — `/api/admin/parcours`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/admin/parcours` | ADMIN | Liste (cloison par organisme) — filtres : statut, difficulté, zonage |
+| `GET` | `/admin/parcours/:id` | ADMIN | Détail complet avec étapes & jeux |
+| `POST` | `/admin/parcours` | EDITOR | Créer un parcours |
+| `PATCH` | `/admin/parcours/:id` | EDITOR | Mettre à jour |
+| `DELETE` | `/admin/parcours/:id` | ADMIN | Supprimer (cascade étapes & jeux) |
+
+### 🚩 Étapes — `/api/admin/etapes`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/admin/etapes` | EDITOR | Créer une étape GPS |
+| `GET` | `/admin/etapes/parcours/:parcoursId` | EDITOR | Lister les étapes d'un parcours |
+| `GET` | `/admin/etapes/:id` | EDITOR | Détail d'une étape |
+| `PATCH` | `/admin/etapes/:id` | EDITOR | Mettre à jour |
+| `DELETE` | `/admin/etapes/:id` | EDITOR | Supprimer |
+
+### 🎮 Jeux — `/api/admin/jeux`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/admin/jeux` | EDITOR | Créer un jeu (QCM, texte, photo…) |
+| `GET` | `/admin/jeux/etape/:etapeId` | EDITOR | Lister les jeux d'une étape |
+| `GET` | `/admin/jeux/:id` | EDITOR | Détail d'un jeu |
+| `PATCH` | `/admin/jeux/:id` | EDITOR | Mettre à jour |
+| `DELETE` | `/admin/jeux/:id` | EDITOR | Supprimer |
+
+### 📱 Mobile — `/api/mobile`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/mobile/parcours/search` | JWT | Recherche par zonage + filtres d'accessibilité (PMR, enfants…) |
+| `GET` | `/mobile/parcours/nearby` | JWT | Parcours dans un rayon GPS (Haversine, défaut 50 km) |
+| `GET` | `/mobile/parcours/:id/download` | JWT | Export complet (étapes + jeux) pour le mode offline SQLite |
+| `POST` | `/mobile/sync` | JWT | **Synchronisation hors-ligne idempotente** — envoie les parcours complétés offline |
+
+#### Format de réponse `POST /mobile/sync`
+
+```json
+{
+  "success": true,
+  "message": "Synchronisation complète.",
+  "results": {
+    "parcoursCompleted": { "synced": 1, "skipped": 0 },
+    "errors": []
+  }
+}
+```
+
+> **Idempotence** : chaque événement est identifié par un `syncId` (UUID v4) généré côté mobile. Un `syncId` déjà connu est ignoré silencieusement → pas de double-comptage de points même en cas de micro-coupure réseau.
+
+### 🤝 Social — Amis — `/api/social/friends`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/social/friends/request` | JWT | Envoyer une demande d'ami **par pseudo** |
+| `GET` | `/social/friends/requests` | JWT | Voir les demandes reçues (PENDING) |
+| `GET` | `/social/friends` | JWT | Voir sa liste d'amis (ACCEPTED) |
+| `PATCH` | `/social/friends/:id/accept` | JWT | Accepter une demande (destinataire uniquement) |
+| `PATCH` | `/social/friends/:id/block` | JWT | Bloquer un utilisateur |
+| `DELETE` | `/social/friends/:id` | JWT | Supprimer un ami / refuser / annuler |
+
+### ⭐ Social — Avis — `/api/social/reviews`
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/social/reviews` | JWT | Laisser un avis (1 à 5 ⭐, commentaire optionnel) — 1 seul par parcours |
+| `GET` | `/social/reviews/parcours/:id` | JWT | Avis d'un parcours + note moyenne calculée |
+| `DELETE` | `/social/reviews/:id` | JWT | Supprimer (auteur ou ADMIN — modération) |
+
+---
+
+## 🔒 Sécurité
+
+| Mesure | Implémentation |
+|---|---|
+| **JWT** | Access Token 15 min + Refresh Token 6 mois (haché bcrypt en DB) |
+| **RBAC** | `USER` · `EDITOR` · `ADMIN` · `SUPER_ADMIN` via `@Roles()` + `RolesGuard` |
+| **Cloisonnement organisme** | Chaque ADMIN/EDITOR ne voit que les données de son propre organisme |
+| **Escalade de rôle bloquée** | `PATCH /users/me` utilise `UpdateMeDto` (pas de champ `role` ni `organismeId`) |
+| **RGPD** | Inscription bloquée sans consentement · Suppression de compte avec cascade totale |
+| **Validation stricte** | `@IsUUID()` `@IsISO8601()` `@Min/@Max` `@ArrayMaxSize()` sur tous les DTOs |
+| **Path traversal** | Protection sur `MediasService.deleteFile()` |
+| **Rate limiting** | 100 req / 15 min / IP |
+
+---
+
+## 🧪 Tests API
+
+Un script de test end-to-end est inclus dans `apps/backend/test-api.js`.  
+Il couvre 21 scénarios sur un serveur en cours d'exécution :
+
+```bash
+# Lancer le serveur en arrière-plan, puis :
+node apps/backend/test-api.js
+```
+
+**Couverture :**
+- Login → création organisme/zonage/parcours/étape/jeu
+- Download offline + recherche géographique Nearby
+- Sync hors-ligne + idempotence (même syncId → skippé)
+- Sécurité : escalade de rôle, date ISO invalide, UUID invalide
+- Système d'amis (pseudo inconnu → 404)
+- Avis : création, doublon rejeté (409), note moyenne, suppression
+- Stats investisseurs : structure et données vérifiées
+
+---
+
+## 🗄️ Base de données
+
+Schéma Prisma dans `prisma/schema.prisma`.
+
+```
+User → Session[], VerificationToken[], OAuthAccount[]
+User → UserBadge[], UserParcours[], Observation[]*, Review[], Friendship[]
+Organisme → User[] (employes), Parcours[]
+Zonage → Parcours[]
+Parcours → Etape[] → Jeu[]
+Parcours → Review[], UserParcours[]
+```
+
+> \* `Observation` : table conservée en DB, routes non activées (budget stockage cloud en attente).
+
+### Commandes utiles
+
+```bash
+# Créer une migration après modification du schéma
+npx prisma migrate dev --name ma_migration
+
+# Réinitialiser la DB + reseed (dev uniquement)
+npx prisma migrate reset --force && npx prisma db seed
+
+# Ouvrir Prisma Studio (GUI base de données)
+npx prisma studio
+```
+
+---
+
+## 🌿 Workflow Git
+
+| Branche | Usage |
+|---|---|
+| `main` | Code stable validé par Fred (PR obligatoire) |
+| `feat/sprint-X-*` | Feature branches par sprint |
+
+Sprint actuel : **`feat/sprint-4-social-sync`** — Sprint 4 terminé ✅  
+Prochain : `feat/sprint-5-backoffice`
