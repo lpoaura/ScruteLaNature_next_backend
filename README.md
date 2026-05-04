@@ -109,7 +109,7 @@ Password : LpoAdmin123!
 | **Avis** | `POST /social/reviews` · `GET /social/reviews/parcours/:id` · `DELETE /social/reviews/:id` |
 | **Stats investisseurs** | `GET /admin/stats/zonages` (tableau croisé : joueurs uniques, completions, note moyenne) |
 
-> **Note — Galerie d'observations :** La synchronisation des photos terrain (`observations[]`) est volontairement désactivée en attente de confirmation du budget de stockage cloud. Le modèle Prisma `Observation` est conservé en base. Réactivation : 2 étapes documentées dans le code.
+> **Note — Galerie d'observations :** La synchronisation des photos terrain (`observations[]`) est volontairement désactivée en attente de confirmation. Le modèle Prisma `Observation` est conservé en base. Réactivation : 2 étapes documentées dans le code.
 
 ---
 
