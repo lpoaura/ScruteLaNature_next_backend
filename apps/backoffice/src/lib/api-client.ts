@@ -103,7 +103,9 @@ export async function apiClient<T = unknown>(
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token && !endpoint.includes('/auth/login')) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     return fetch(`${BACKEND_URL}${endpoint}`, { ...options, headers });
   };
@@ -111,8 +113,8 @@ export async function apiClient<T = unknown>(
   let token = await getAccessToken();
   let response = await makeRequest(token);
 
-  // 401 → tenter un refresh automatique
-  if (response.status === 401) {
+  // 401 → tenter un refresh automatique (sauf si on est déjà en train de se logguer)
+  if (response.status === 401 && !endpoint.includes('/auth/login')) {
     const newToken = await tryRefreshToken();
     if (newToken) {
       token = newToken;
