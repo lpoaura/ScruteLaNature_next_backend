@@ -4,46 +4,60 @@
  *  - L'injection du Bearer token dans chaque requête
  *  - Le rafraîchissement du token (refresh) si le access token est expiré (401)
  *  - La sérialisation/désérialisation JSON
+ *
+ * Stratégie de stockage :
+ *  - localStorage : pour l'accès côté client (requêtes fetch)
+ *  - cookie (non-httpOnly) : pour que le proxy Next.js (server-side) puisse
+ *    vérifier si l'utilisateur est connecté et protéger les routes
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000/api';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 jours
 
-/**
- * Récupère l'accessToken depuis le localStorage (côté client uniquement).
- */
-function getAccessToken(): string | null {
+// ── Helpers cookie ────────────────────────────────────────────────────────────
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict`;
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0`;
+}
+
+// ── Helpers token ─────────────────────────────────────────────────────────────
+
+export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('accessToken');
 }
 
-/**
- * Récupère le refreshToken depuis le localStorage.
- */
 function getRefreshToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('refreshToken');
 }
 
 /**
- * Sauvegarde les tokens dans le localStorage.
+ * Sauvegarde les tokens en localStorage ET en cookie.
+ * Le cookie est lu par le proxy Next.js pour protéger les routes côté serveur.
  */
 export function saveTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
+  // Cookie lisible par le proxy pour la protection des routes
+  setCookie('accessToken', accessToken);
 }
 
 /**
- * Supprime les tokens (déconnexion).
+ * Supprime les tokens partout (déconnexion).
  */
 export function clearTokens() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
+  deleteCookie('accessToken');
 }
 
-/**
- * Tente de renouveler l'accessToken via le refreshToken.
- * Retourne le nouvel accessToken, ou null si le refresh échoue.
- */
+// ── Refresh ───────────────────────────────────────────────────────────────────
+
 async function tryRefreshToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
@@ -52,7 +66,7 @@ async function tryRefreshToken(): Promise<string | null> {
     const response = await fetch(`${BACKEND_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!response.ok) {
@@ -61,18 +75,19 @@ async function tryRefreshToken(): Promise<string | null> {
     }
 
     const data = await response.json();
-    saveTokens(data.accessToken, data.refreshToken);
-    return data.accessToken;
+    // Le backend retourne access_token / refresh_token (snake_case)
+    const newAccess = data.access_token ?? data.accessToken;
+    const newRefresh = data.refresh_token ?? data.refreshToken;
+    if (newAccess) saveTokens(newAccess, newRefresh);
+    return newAccess ?? null;
   } catch {
     clearTokens();
     return null;
   }
 }
 
-/**
- * Fonction principale de requête — wrappeur autour de fetch.
- * Usage : apiClient('/admin/zonages') ou apiClient('/auth/login', { method: 'POST', body: ... })
- */
+// ── Client principal ──────────────────────────────────────────────────────────
+
 export async function apiClient<T = unknown>(
   endpoint: string,
   options: RequestInit = {},
@@ -82,31 +97,22 @@ export async function apiClient<T = unknown>(
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    return fetch(`${BACKEND_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    return fetch(`${BACKEND_URL}${endpoint}`, { ...options, headers });
   };
 
   let token = getAccessToken();
   let response = await makeRequest(token);
 
-  // Si 401 → tenter un refresh automatique
+  // 401 → tenter un refresh automatique
   if (response.status === 401) {
     const newToken = await tryRefreshToken();
     if (newToken) {
       token = newToken;
       response = await makeRequest(token);
     } else {
-      // Refresh aussi échoué → rediriger vers le login
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      if (typeof window !== 'undefined') window.location.href = '/login';
       throw new Error('Session expirée. Veuillez vous reconnecter.');
     }
   }
@@ -120,10 +126,6 @@ export async function apiClient<T = unknown>(
     );
   }
 
-  // 204 No Content → pas de body JSON
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
