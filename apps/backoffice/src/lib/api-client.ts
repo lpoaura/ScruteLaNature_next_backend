@@ -26,12 +26,18 @@ function deleteCookie(name: string) {
 
 // ── Helpers token ─────────────────────────────────────────────────────────────
 
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
+export async function getAccessToken(): Promise<string | null> {
+  if (typeof window === 'undefined') {
+    // Côté serveur : on lit le cookie
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    return cookieStore.get('accessToken')?.value ?? null;
+  }
+  // Côté client : on lit le localStorage
   return localStorage.getItem('accessToken');
 }
 
-function getRefreshToken(): string | null {
+async function getRefreshToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('refreshToken');
 }
@@ -59,7 +65,7 @@ export function clearTokens() {
 // ── Refresh ───────────────────────────────────────────────────────────────────
 
 async function tryRefreshToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
+  const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
   try {
@@ -102,7 +108,7 @@ export async function apiClient<T = unknown>(
     return fetch(`${BACKEND_URL}${endpoint}`, { ...options, headers });
   };
 
-  let token = getAccessToken();
+  let token = await getAccessToken();
   let response = await makeRequest(token);
 
   // 401 → tenter un refresh automatique
