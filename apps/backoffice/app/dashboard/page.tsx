@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     parcours: { actifs: 0, brouillons: 0 },
     joueurs: { total: 0, invites: 0 },
     co2: 0,
-    communes: 0,
+    zonages: 0,
   }));
 
   const KPI_CARDS = [
@@ -69,8 +69,8 @@ export default async function DashboardPage() {
       bg: 'bg-emerald-50',
     },
     {
-      label: 'Communes couvertes',
-      value: stats.communes.toString(),
+      label: 'Zonages couverts',
+      value: stats.zonages.toString(),
       sub: 'dans votre secteur',
       icon: MapPin,
       color: 'text-orange-500',

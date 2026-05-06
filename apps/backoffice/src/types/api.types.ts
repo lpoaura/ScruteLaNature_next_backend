@@ -35,7 +35,7 @@ export interface Organisme {
   createdAt: string;
 }
 
-// ── Zonage (Commune) ──────────────────────────────────────────────────────────
+// ── Zonage ────────────────────────────────────────────────────────────────────
 
 export interface Zonage {
   id: string;

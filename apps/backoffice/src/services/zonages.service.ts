@@ -9,7 +9,7 @@ export interface DashboardStats {
   parcours: { actifs: number; brouillons: number };
   joueurs: { total: number; invites: number };
   co2: number;
-  communes: number;
+  zonages: number;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

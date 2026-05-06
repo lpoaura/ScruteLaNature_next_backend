@@ -32,7 +32,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Parcours', href: '/dashboard/parcours', icon: Map },
-  { label: 'Communes', href: '/dashboard/communes', icon: MapPin },
+  { label: 'Zonages', href: '/dashboard/zonages', icon: MapPin },
   { label: 'Médiathèque', href: '/dashboard/medias', icon: Image },
   { label: 'Avis & Modération', href: '/dashboard/moderation', icon: MessageSquare },
   { label: 'Statistiques', href: '/dashboard/stats', icon: BarChart2 },

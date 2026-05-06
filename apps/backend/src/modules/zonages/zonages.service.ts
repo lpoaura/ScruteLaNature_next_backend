@@ -149,7 +149,7 @@ export class ZonagesService {
         invites: guestPlayers,
       },
       co2: co2._sum.co2Saved ?? 0,
-      communes: statsZonages,
+      zonages: statsZonages,
     };
   }
 

@@ -6,7 +6,7 @@ import { getZonages, createZonage, deleteZonage } from '@/src/services/zonages.s
 import type { Zonage } from '@/src/types/api.types';
 import { cn } from '@/lib/utils';
 
-export default function CommunesClient() {
+export default function ZonagesClient() {
   const [zonages, setZonages] = useState<Zonage[]>([]);
   const [filtered, setFiltered] = useState<Zonage[]>([]);
   const [search, setSearch] = useState('');
@@ -27,7 +27,7 @@ export default function CommunesClient() {
         setZonages(data);
         setFiltered(data);
       })
-      .catch(() => setError('Impossible de charger les communes.'))
+      .catch(() => setError('Impossible de charger les zonages.'))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -64,11 +64,11 @@ export default function CommunesClient() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Supprimer la commune « ${name} » ? Cette action est irréversible.`)) return;
+    if (!confirm(`Supprimer le zonage « ${name} » ? Cette action est irréversible.`)) return;
 
     deleteZonage(id)
       .then(() => setZonages((prev) => prev.filter((z) => z.id !== id)))
-      .catch(() => alert('Impossible de supprimer cette commune.'));
+      .catch(() => alert('Impossible de supprimer ce zonage.'));
   };
 
   return (
@@ -82,7 +82,7 @@ export default function CommunesClient() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher une commune…"
+            placeholder="Rechercher un zonage…"
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
@@ -98,18 +98,18 @@ export default function CommunesClient() {
           )}
         >
           <Plus className="h-4 w-4" />
-          Ajouter une commune
+          Ajouter un zonage
         </button>
       </div>
 
       {/* Formulaire d'ajout (accordéon) */}
       {showForm && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Nouvelle commune</h3>
+          <h3 className="mb-4 text-sm font-semibold text-foreground">Nouveau zonage</h3>
           <form onSubmit={handleCreate} className="flex items-end gap-3">
             <div className="flex-1 space-y-1">
               <label htmlFor="nom" className="text-xs font-medium text-muted-foreground">
-                Nom de la commune
+                Nom du zonage
               </label>
               <input
                 id="nom"
@@ -170,7 +170,7 @@ export default function CommunesClient() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Commune
+                  Zonage
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                   Code postal
@@ -189,8 +189,8 @@ export default function CommunesClient() {
                   <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                     <MapPin className="mx-auto mb-2 h-8 w-8 opacity-30" />
                     {search
-                      ? 'Aucune commune ne correspond à votre recherche.'
-                      : 'Aucune commune enregistrée. Ajoutez-en une !'}
+                      ? 'Aucun zonage ne correspond à votre recherche.'
+                      : 'Aucun zonage enregistré. Ajoutez-en un !'}
                   </td>
                 </tr>
               ) : (
@@ -220,7 +220,7 @@ export default function CommunesClient() {
           {filtered.length > 0 && (
             <div className="border-t border-border bg-muted/30 px-4 py-2">
               <p className="text-xs text-muted-foreground">
-                {filtered.length} commune{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''}
+                {filtered.length} zonage{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}
               </p>
             </div>
           )}
