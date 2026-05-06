@@ -61,7 +61,7 @@ db-generate:
 
 .PHONY: db-seed
 db-seed:
-	@echo "🌱 Remplissage de la base de données (Seed)..."
+	@echo "🌱 creation du compte super admin "
 	cd apps/backend && npx prisma db seed
 
 .PHONY: db-studio

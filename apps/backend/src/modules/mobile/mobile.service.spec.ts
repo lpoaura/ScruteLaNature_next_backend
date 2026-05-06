@@ -43,9 +43,11 @@ describe('MobileService', () => {
     }).compile();
 
     service = module.get<MobileService>(MobileService);
+    // On mock le logger pour ne pas polluer la sortie des tests
+    jest.spyOn((service as any).logger, 'error').mockImplementation(() => {});
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => jest.restoreAllMocks());
 
   // ── syncMobileData ──────────────────────────────────────────────────────────
 
