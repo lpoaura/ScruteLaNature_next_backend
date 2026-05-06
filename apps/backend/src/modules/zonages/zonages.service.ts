@@ -145,7 +145,7 @@ export class ZonagesService {
         brouillons: draftsCount,
       },
       joueurs: {
-        total: totalPlayers + totalInscrits,
+        total: totalPlayers,
         invites: guestPlayers,
       },
       co2: co2._sum.co2Saved ?? 0,
