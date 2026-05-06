@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Delete,
   Param,
@@ -62,6 +63,16 @@ export class MediasController {
   @ApiResponse({ status: 400, description: 'Type de fichier non supporté ou aucun fichier.' })
   uploadFile(@UploadedFile() file: Express.Multer.File) {
     return this.mediasService.buildUploadResponse(file);
+  }
+
+  @Get()
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Lister tous les médias uploadés sur le serveur',
+  })
+  @ApiResponse({ status: 200, description: 'Liste des fichiers.' })
+  findAll() {
+    return this.mediasService.findAllFiles();
   }
 
   @Delete(':filename')

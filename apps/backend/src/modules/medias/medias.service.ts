@@ -72,4 +72,42 @@ export class MediasService {
     fs.unlinkSync(filePath);
     return { message: `Fichier "${filename}" supprimé avec succès` };
   }
+
+  /**
+   * Liste tous les fichiers présents dans les sous-dossiers
+   */
+  async findAllFiles() {
+    const subfolders = ['images', 'audio', 'gpx'] as const;
+    const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date }[] = [];
+
+    for (const sub of subfolders) {
+      const dirPath = join(process.cwd(), 'uploads', sub);
+      if (!fs.existsSync(dirPath)) continue;
+
+      const files = fs.readdirSync(dirPath);
+      for (const file of files) {
+        if (file === '.gitkeep') continue;
+        const stats = fs.statSync(join(dirPath, file));
+        
+        // Determiner le mimetype approx à partir de l'extension
+        const ext = file.split('.').pop()?.toLowerCase() || '';
+        let mimetype = 'application/octet-stream';
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) mimetype = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        if (['mp3', 'wav', 'ogg'].includes(ext)) mimetype = `audio/${ext}`;
+        if (ext === 'gpx') mimetype = 'application/gpx+xml';
+
+        allFiles.push({
+          filename: file,
+          originalName: file, // On n'a pas gardé l'original sur disque, on renvoie le nom actuel
+          mimetype,
+          size: stats.size,
+          url: this.getFileUrl(file, sub),
+          createdAt: stats.mtime,
+        });
+      }
+    }
+
+    // Trier du plus récent au plus ancien
+    return allFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
 }

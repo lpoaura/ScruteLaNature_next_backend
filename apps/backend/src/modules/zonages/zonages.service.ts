@@ -131,13 +131,13 @@ export class ZonagesService {
     const [totalParcours, draftsCount, totalPlayers, guestPlayers, statsZonages, co2] = await Promise.all([
       this.db.parcours.count({ where: { status: { not: 'ARCHIVED' } } }),
       this.db.parcours.count({ where: { status: 'DRAFT' } }),
-      this.db.user.count({ where: { role: 'GUEST' } }), // For now, all players might be guests, or we count all non-admin
+      this.db.user.count({ where: { role: 'USER' } }), 
       this.db.user.count({ where: { isGuest: true } }),
       this.db.zonage.count(),
       this.db.user.aggregate({ _sum: { co2Saved: true } }),
     ]);
 
-    const totalInscrits = await this.db.user.count({ where: { role: 'GUEST', isGuest: false } });
+    const totalInscrits = await this.db.user.count({ where: { role: 'USER', isGuest: false } });
 
     return {
       parcours: {
