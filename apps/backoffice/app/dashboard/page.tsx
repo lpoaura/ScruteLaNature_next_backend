@@ -9,43 +9,9 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { getDashboardStats } from '@/src/services/zonages.service';
 
 export const metadata: Metadata = { title: 'Tableau de bord' };
-
-const KPI_CARDS = [
-  {
-    label: 'Parcours actifs',
-    value: '—',
-    sub: 'dont — en brouillon',
-    icon: Map,
-    color: 'text-blue-500',
-    bg: 'bg-blue-50',
-  },
-  {
-    label: 'Joueurs inscrits',
-    value: '—',
-    sub: '— invités',
-    icon: Users,
-    color: 'text-violet-500',
-    bg: 'bg-violet-50',
-  },
-  {
-    label: 'CO₂ économisé',
-    value: '— kg',
-    sub: 'par la communauté locale',
-    icon: Leaf,
-    color: 'text-emerald-500',
-    bg: 'bg-emerald-50',
-  },
-  {
-    label: 'Communes couvertes',
-    value: '—',
-    sub: 'dans votre secteur',
-    icon: MapPin,
-    color: 'text-orange-500',
-    bg: 'bg-orange-50',
-  },
-];
 
 const QUICK_ACTIONS = [
   {
@@ -68,7 +34,50 @@ const QUICK_ACTIONS = [
   },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Fetch from the backend securely (using the token injected via the cookie in apiClient)
+  const stats = await getDashboardStats().catch(() => ({
+    parcours: { actifs: 0, brouillons: 0 },
+    joueurs: { total: 0, invites: 0 },
+    co2: 0,
+    communes: 0,
+  }));
+
+  const KPI_CARDS = [
+    {
+      label: 'Parcours actifs',
+      value: stats.parcours.actifs.toString(),
+      sub: `dont ${stats.parcours.brouillons} en brouillon`,
+      icon: Map,
+      color: 'text-blue-500',
+      bg: 'bg-blue-50',
+    },
+    {
+      label: 'Joueurs inscrits',
+      value: stats.joueurs.total.toString(),
+      sub: `${stats.joueurs.invites} invités`,
+      icon: Users,
+      color: 'text-violet-500',
+      bg: 'bg-violet-50',
+    },
+    {
+      label: 'CO₂ économisé',
+      value: `${stats.co2.toString()} kg`,
+      sub: 'par la communauté locale',
+      icon: Leaf,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-50',
+    },
+    {
+      label: 'Communes couvertes',
+      value: stats.communes.toString(),
+      sub: 'dans votre secteur',
+      icon: MapPin,
+      color: 'text-orange-500',
+      bg: 'bg-orange-50',
+    },
+  ];
+
   return (
     <>
       <Header title="Tableau de bord" />
@@ -128,16 +137,6 @@ export default function DashboardPage() {
               );
             })}
           </div>
-        </section>
-
-        {/* Placeholder contenu futur */}
-        <section className="rounded-xl border border-dashed border-border bg-muted/30 p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            📊 Les données seront affichées ici une fois le backend connecté.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Sprint 2 — Branchement des APIs de statistiques
-          </p>
         </section>
       </div>
     </>

@@ -45,4 +45,17 @@ export class ZonagesController {
   getStats() {
     return this.zonagesService.getStatsForInvestors();
   }
+
+  @Get('admin/stats/dashboard')
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Stats globales pour le dashboard (EDITOR/ADMIN/SUPER_ADMIN)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'KPIs globaux (parcours, joueurs, co2, communes).',
+  })
+  getDashboardStats() {
+    return this.zonagesService.getGlobalDashboardStats();
+  }
 }

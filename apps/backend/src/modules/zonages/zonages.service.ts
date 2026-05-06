@@ -127,6 +127,32 @@ export class ZonagesService {
   }
 
 
+  async getGlobalDashboardStats() {
+    const [totalParcours, draftsCount, totalPlayers, guestPlayers, statsZonages, co2] = await Promise.all([
+      this.db.parcours.count({ where: { status: { not: 'ARCHIVED' } } }),
+      this.db.parcours.count({ where: { status: 'DRAFT' } }),
+      this.db.user.count({ where: { role: 'GUEST' } }), // For now, all players might be guests, or we count all non-admin
+      this.db.user.count({ where: { isGuest: true } }),
+      this.db.zonage.count(),
+      this.db.user.aggregate({ _sum: { co2Saved: true } }),
+    ]);
+
+    const totalInscrits = await this.db.user.count({ where: { role: 'GUEST', isGuest: false } });
+
+    return {
+      parcours: {
+        actifs: totalParcours - draftsCount,
+        brouillons: draftsCount,
+      },
+      joueurs: {
+        total: totalPlayers + totalInscrits,
+        invites: guestPlayers,
+      },
+      co2: co2._sum.co2Saved ?? 0,
+      communes: statsZonages,
+    };
+  }
+
   async findOne(id: string) {
     const zonage = await this.db.zonage.findUnique({ where: { id } });
     if (!zonage) throw new NotFoundException(`Zonage #${id} introuvable`);
