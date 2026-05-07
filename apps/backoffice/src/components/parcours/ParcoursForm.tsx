@@ -211,7 +211,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                 >
                   <option value="" disabled>Sélectionner un zonage</option>
                   {zonages.map(z => (
-                    <option key={z.id} value={z.id}>{z.nom} ({z.codePostal})</option>
+                    <option key={z.id} value={z.id}>{z.nom} ({z.code})</option>
                   ))}
                 </select>
               </div>

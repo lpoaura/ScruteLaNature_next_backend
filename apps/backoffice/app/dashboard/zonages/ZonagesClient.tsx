@@ -16,7 +16,7 @@ export default function ZonagesClient() {
   // Formulaire d'ajout
   const [showForm, setShowForm] = useState(false);
   const [nom, setNom] = useState('');
-  const [codePostal, setCodePostal] = useState('');
+  const [code, setCode] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -36,7 +36,7 @@ export default function ZonagesClient() {
     const q = search.toLowerCase();
     setFiltered(
       zonages.filter(
-        (z) => z.nom.toLowerCase().includes(q) || z.codePostal.includes(q),
+        (z) => z.nom.toLowerCase().includes(q) || z.code?.toLowerCase().includes(q),
       ),
     );
   }, [search, zonages]);
@@ -45,17 +45,17 @@ export default function ZonagesClient() {
     e.preventDefault();
     setFormError(null);
 
-    if (!nom.trim() || !codePostal.trim()) {
-      setFormError('Nom et code postal sont obligatoires.');
+    if (!nom.trim() || !code.trim()) {
+      setFormError('Nom et code sont obligatoires.');
       return;
     }
 
     startTransition(async () => {
       try {
-        const created = await createZonage({ nom: nom.trim(), codePostal: codePostal.trim() });
+        const created = await createZonage({ nom: nom.trim(), code: code.trim() });
         setZonages((prev) => [...prev, created]);
         setNom('');
-        setCodePostal('');
+        setCode('');
         setShowForm(false);
       } catch (err: unknown) {
         setFormError(err instanceof Error ? err.message : 'Erreur lors de la création.');
@@ -122,14 +122,14 @@ export default function ZonagesClient() {
             </div>
             <div className="w-36 space-y-1">
               <label htmlFor="cp" className="text-xs font-medium text-muted-foreground">
-                Code postal
+                Code
               </label>
               <input
                 id="cp"
-                value={codePostal}
-                onChange={(e) => setCodePostal(e.target.value)}
-                placeholder="42000"
-                maxLength={5}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="ex: 07"
+                maxLength={10}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 disabled={isPending}
               />
@@ -156,7 +156,7 @@ export default function ZonagesClient() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Zonage</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Code postal</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Code</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Parcours</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -192,7 +192,7 @@ export default function ZonagesClient() {
                   Zonage
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Code postal
+                  Code
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                   Parcours
@@ -216,7 +216,7 @@ export default function ZonagesClient() {
                 filtered.map((z) => (
                   <tr key={z.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-foreground">{z.nom}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{z.codePostal}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{z.code}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {z._count?.parcours ?? '—'} parcours
                     </td>

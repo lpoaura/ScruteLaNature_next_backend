@@ -40,7 +40,7 @@ export interface Organisme {
 export interface Zonage {
   id: string;
   nom: string;
-  codePostal: string;
+  code: string;
   createdAt: string;
   _count?: {
     parcours: number;
@@ -49,7 +49,7 @@ export interface Zonage {
 
 export interface CreateZonageDto {
   nom: string;
-  codePostal: string;
+  code: string;
 }
 
 // ── Parcours ──────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ export interface Parcours {
 export interface ZonageStats {
   id: string;
   nom: string;
-  codePostal: string;
+  code: string;
   totalParcours: number;
   totalCompletions: number;
   uniquePlayers: number;

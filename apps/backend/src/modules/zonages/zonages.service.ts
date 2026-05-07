@@ -12,7 +12,7 @@ export class ZonagesService {
 
   async findAll() {
     return this.db.zonage.findMany({
-      select: { id: true, nom: true, codePostal: true },
+      select: { id: true, nom: true, code: true },
       orderBy: { nom: 'asc' },
     });
   }
@@ -34,7 +34,7 @@ export class ZonagesService {
         select: {
           id: true,
           nom: true,
-          codePostal: true,
+          code: true,
           _count: { select: { parcours: true } },
         },
         orderBy: { nom: 'asc' },
@@ -117,7 +117,7 @@ export class ZonagesService {
       return {
         id: z.id,
         nom: z.nom,
-        codePostal: z.codePostal,
+        code: z.code,
         totalParcours: z._count.parcours,
         totalCompletions: stats?.completions ?? 0,
         uniquePlayers: stats?.playerIds.size ?? 0,

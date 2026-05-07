@@ -12,11 +12,11 @@ export class CreateZonageDto {
   nom: string;
 
   @ApiPropertyOptional({
-    example: '35000',
-    description: 'Code postal de la zonage',
+    example: '07',
+    description: 'Code du zonage (ex: code département)',
   })
   @IsOptional()
   @IsString()
-  @Matches(/^\d{5}$/, { message: 'Le code postal doit être composé de 5 chiffres' })
-  codePostal?: string;
+  @MaxLength(10)
+  code?: string;
 }

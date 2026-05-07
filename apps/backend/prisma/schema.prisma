@@ -205,12 +205,12 @@ model Organisme {
 }
 
 model Zonage {
-  id         String     @id @default(uuid())
-  nom        String     @unique
-  codePostal String?
-  parcours   Parcours[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  code      String?
+  parcours  Parcours[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@map("zonages")
 }
