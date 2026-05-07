@@ -176,7 +176,7 @@ export class MobileService {
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
         zonage: {
-          select: { id: true, nom: true, codePostal: true },
+          select: { id: true, nom: true, code: true },
         },
         organisme: {
           select: { id: true, nom: true },
@@ -206,7 +206,7 @@ export class MobileService {
           select: { id: true, nom: true },
         },
         zonage: {
-          select: { id: true, nom: true, codePostal: true },
+          select: { id: true, nom: true, code: true },
         },
         etapes: {
           orderBy: { order: 'asc' },
