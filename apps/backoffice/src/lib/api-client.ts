@@ -38,7 +38,11 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 async function getRefreshToken(): Promise<string | null> {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    return cookieStore.get('refreshToken')?.value ?? null;
+  }
   return localStorage.getItem('refreshToken');
 }
 
@@ -47,19 +51,24 @@ async function getRefreshToken(): Promise<string | null> {
  * Le cookie est lu par le proxy Next.js pour protéger les routes côté serveur.
  */
 export function saveTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem('accessToken', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
-  // Cookie lisible par le proxy pour la protection des routes
-  setCookie('accessToken', accessToken);
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    setCookie('accessToken', accessToken);
+    setCookie('refreshToken', refreshToken);
+  }
 }
 
 /**
  * Supprime les tokens partout (déconnexion).
  */
 export function clearTokens() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  deleteCookie('accessToken');
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    deleteCookie('accessToken');
+    deleteCookie('refreshToken');
+  }
 }
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
@@ -113,15 +122,20 @@ export async function apiClient<T = unknown>(
   let token = await getAccessToken();
   let response = await makeRequest(token);
 
-  // 401 → tenter un refresh automatique (sauf si on est déjà en train de se logguer)
+  // 401 → tenter un refresh automatique (uniquement côté client, le proxy gère le serveur)
   if (response.status === 401 && !endpoint.includes('/auth/login')) {
-    const newToken = await tryRefreshToken();
-    if (newToken) {
-      token = newToken;
-      response = await makeRequest(token);
+    if (typeof window !== 'undefined') {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        token = newToken;
+        response = await makeRequest(token);
+      } else {
+        window.location.href = '/login';
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
     } else {
-      if (typeof window !== 'undefined') window.location.href = '/login';
-      throw new Error('Session expirée. Veuillez vous reconnecter.');
+      // Côté serveur : le proxy était censé le gérer. Si ça fail, on throw.
+      throw new Error('Non autorisé.');
     }
   }
 
