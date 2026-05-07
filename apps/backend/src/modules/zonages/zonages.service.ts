@@ -158,4 +158,17 @@ export class ZonagesService {
     if (!zonage) throw new NotFoundException(`Zonage #${id} introuvable`);
     return zonage;
   }
+
+  async remove(id: string) {
+    const zonage = await this.findOne(id);
+    
+    // Empêcher la suppression si des parcours y sont rattachés
+    const count = await this.db.parcours.count({ where: { zonageId: id } });
+    if (count > 0) {
+      throw new ConflictException(`Impossible de supprimer "${zonage.nom}" car il contient ${count} parcours.`);
+    }
+
+    await this.db.zonage.delete({ where: { id } });
+    return { message: `Zonage "${zonage.nom}" supprimé avec succès` };
+  }
 }

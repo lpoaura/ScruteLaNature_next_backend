@@ -68,7 +68,7 @@ export default function ZonagesClient() {
 
     deleteZonage(id)
       .then(() => setZonages((prev) => prev.filter((z) => z.id !== id)))
-      .catch(() => alert('Impossible de supprimer ce zonage.'));
+      .catch((err: any) => alert(err?.message || 'Impossible de supprimer ce zonage.'));
   };
 
   return (

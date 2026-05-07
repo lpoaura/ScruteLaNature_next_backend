@@ -3,8 +3,10 @@ import {
   Get,
   Post,
   Body,
+  Delete,
+  Param,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { ZonagesService } from './zonages.service';
 import { CreateZonageDto } from './dto/create-zonage.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -31,6 +33,17 @@ export class ZonagesController {
   @ApiResponse({ status: 409, description: 'Cette zonage existe déjà.' })
   create(@Body() dto: CreateZonageDto) {
     return this.zonagesService.create(dto);
+  }
+
+  @Delete('admin/zonages/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Supprimer un zonage (ADMIN/SUPER_ADMIN)' })
+  @ApiParam({ name: 'id', description: 'ID du zonage à supprimer' })
+  @ApiResponse({ status: 200, description: 'Zonage supprimé.' })
+  @ApiResponse({ status: 404, description: 'Zonage introuvable.' })
+  @ApiResponse({ status: 409, description: 'Impossible de supprimer car rattaché à des parcours.' })
+  remove(@Param('id') id: string) {
+    return this.zonagesService.remove(id);
   }
 
   @Get('admin/stats/zonages')
