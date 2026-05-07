@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import LoginForm from './LoginForm';
 import { Bird } from 'lucide-react';
 
@@ -26,7 +27,9 @@ export default function LoginPage() {
         <p className="mb-6 text-sm text-muted-foreground">
           Entrez vos identifiants pour accéder au backoffice.
         </p>
-        <LoginForm />
+        <Suspense fallback={<div className="h-40 w-full animate-pulse bg-muted rounded-md" />}>
+          <LoginForm />
+        </Suspense>
       </div>
 
       <p className="mt-6 text-center text-xs text-muted-foreground">
