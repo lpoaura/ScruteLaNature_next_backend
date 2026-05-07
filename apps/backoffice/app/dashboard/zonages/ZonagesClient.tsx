@@ -149,10 +149,29 @@ export default function ZonagesClient() {
         </div>
       )}
 
-      {/* État de chargement */}
+      {/* État de chargement (Skeleton) */}
       {isLoading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Zonage</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Code postal</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Parcours</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-muted"></div></td>
+                  <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-muted"></div></td>
+                  <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted"></div></td>
+                  <td className="px-4 py-3 text-right"><div className="ml-auto h-6 w-24 rounded bg-muted"></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

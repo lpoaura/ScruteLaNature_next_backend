@@ -168,8 +168,19 @@ export default function MediasClient() {
 
       {/* Grille des médias */}
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm animate-pulse">
+              <div className="aspect-square bg-muted"></div>
+              <div className="p-3 space-y-2">
+                <div className="h-3 w-3/4 rounded bg-muted"></div>
+                <div className="flex justify-between">
+                  <div className="h-2 w-8 rounded bg-muted"></div>
+                  <div className="h-2 w-12 rounded bg-muted"></div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredMedias.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
