@@ -101,12 +101,23 @@ export class MediasService {
     return { message: `Fichier "${filename}" supprimé avec succès` };
   }
 
-  /**
-   * Liste tous les fichiers présents dans les sous-dossiers
-   */
   async findAllFiles() {
     const subfolders = ['images', 'audio', 'gpx'] as const;
-    const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date }[] = [];
+    const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date; isUsed: boolean }[] = [];
+
+    // 1. Récupérer tous les fichiers utilisés
+    const parcours = await this.db.parcours.findMany({ select: { coverImage: true, mascotteImg: true }});
+    const jeux = await this.db.jeu.findMany({ select: { imageUrl: true, audioUrl: true }});
+    
+    const usedFilenames = new Set<string>();
+    parcours.forEach(p => {
+      if (p.coverImage) usedFilenames.add(p.coverImage.split('/').pop() || '');
+      if (p.mascotteImg) usedFilenames.add(p.mascotteImg.split('/').pop() || '');
+    });
+    jeux.forEach(j => {
+      if (j.imageUrl) usedFilenames.add(j.imageUrl.split('/').pop() || '');
+      if (j.audioUrl) usedFilenames.add(j.audioUrl.split('/').pop() || '');
+    });
 
     for (const sub of subfolders) {
       const dirPath = join(process.cwd(), 'uploads', sub);
@@ -124,6 +135,8 @@ export class MediasService {
         if (['mp3', 'wav', 'ogg'].includes(ext)) mimetype = `audio/${ext}`;
         if (ext === 'gpx') mimetype = 'application/gpx+xml';
 
+        const isUsed = usedFilenames.has(file);
+
         allFiles.push({
           filename: file,
           originalName: file, // On n'a pas gardé l'original sur disque, on renvoie le nom actuel
@@ -131,6 +144,7 @@ export class MediasService {
           size: stats.size,
           url: this.getFileUrl(file, sub),
           createdAt: stats.mtime,
+          isUsed,
         });
       }
     }

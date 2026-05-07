@@ -13,8 +13,8 @@ export default function MediasClient() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter tabs: 'all', 'image', 'audio', 'gpx'
-  const [activeTab, setActiveTab] = useState<'all' | 'image' | 'audio' | 'gpx'>('all');
+  // Filter tabs: 'all', 'image', 'audio', 'gpx', 'unused'
+  const [activeTab, setActiveTab] = useState<'all' | 'image' | 'audio' | 'gpx' | 'unused'>('all');
 
   const fetchMedias = useCallback(() => {
     setIsLoading(true);
@@ -88,6 +88,7 @@ export default function MediasClient() {
     if (activeTab === 'image') return m.mimetype.startsWith('image/');
     if (activeTab === 'audio') return m.mimetype.startsWith('audio/');
     if (activeTab === 'gpx') return m.mimetype.includes('gpx');
+    if (activeTab === 'unused') return !m.isUsed;
     return true;
   });
 
@@ -144,18 +145,19 @@ export default function MediasClient() {
       )}
 
       {/* Filtres */}
-      <div className="flex items-center gap-2 border-b border-border pb-4">
+      <div className="flex items-center gap-2 border-b border-border pb-4 overflow-x-auto">
         {[
           { id: 'all', label: 'Tous les fichiers' },
           { id: 'image', label: 'Images' },
           { id: 'audio', label: 'Audio' },
           { id: 'gpx', label: 'Tracés GPX' },
+          { id: 'unused', label: 'Non rattachés' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap",
               activeTab === tab.id 
                 ? "bg-primary text-primary-foreground" 
                 : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
@@ -206,13 +208,30 @@ export default function MediasClient() {
                   ) : (
                     <MapPin className="h-10 w-10 text-muted-foreground/50" />
                   )}
+
+                  {/* Badge Utilisé / Non utilisé */}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    {media.isUsed ? (
+                      <span className="bg-primary/90 text-primary-foreground text-[9px] font-bold px-2 py-0.5 rounded shadow-sm backdrop-blur-md">
+                        UTILISÉ
+                      </span>
+                    ) : (
+                      <span className="bg-destructive/90 text-destructive-foreground text-[9px] font-bold px-2 py-0.5 rounded shadow-sm backdrop-blur-md">
+                        NON RATTACHÉ
+                      </span>
+                    )}
+                  </div>
                   
                   {/* Bouton supprimer (visible au hover) */}
                   <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button 
                       onClick={() => handleDelete(media.filename)}
-                      className="p-2 bg-destructive text-destructive-foreground rounded-full hover:scale-110 transition-transform"
-                      title="Supprimer"
+                      className={cn(
+                        "p-2 rounded-full transition-transform hover:scale-110",
+                        media.isUsed ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed" : "bg-destructive text-destructive-foreground shadow-md"
+                      )}
+                      title={media.isUsed ? "Impossible de supprimer une image utilisée" : "Supprimer"}
+                      disabled={media.isUsed}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

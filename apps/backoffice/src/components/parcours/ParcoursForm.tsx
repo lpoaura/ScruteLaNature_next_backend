@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { createParcours, updateParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
-import { getMedias } from '@/src/services/medias.service';
+import { getMedias, uploadMedia } from '@/src/services/medias.service';
 import type { Parcours, Zonage, PublishStatus } from '@/src/types/api.types';
 import type { Media } from '@/src/services/medias.service';
 import { cn } from '@/lib/utils';
@@ -119,6 +119,35 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
   const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | 'mascotte' | null>(null);
   const [gallerySearch, setGallerySearch] = useState('');
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadInGallery = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadMedia(file);
+      // Ajouter à la liste locale
+      setMedias(prev => [uploaded, ...prev]);
+      
+      // Auto-sélectionner l'image uploadée
+      if (isGalleryOpen) {
+        setFormData(prev => ({ 
+          ...prev, 
+          [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: uploaded.url 
+        }));
+        setIsGalleryOpen(null);
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de l\'upload');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   if (isLoadingRefs) {
     return (
@@ -457,6 +486,24 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                   onChange={(e) => setGallerySearch(e.target.value)}
                   className="flex-1 sm:w-64 px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
                 />
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleUploadInGallery} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium hover:bg-primary/90 flex items-center gap-2 flex-shrink-0"
+                >
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="hidden sm:inline">Uploader</span>
+                </button>
+
                 <button 
                   type="button" 
                   onClick={() => setIsGalleryOpen(null)} 

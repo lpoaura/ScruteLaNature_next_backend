@@ -7,6 +7,7 @@ export interface Media {
   size: number;
   url: string;
   createdAt?: string;
+  isUsed?: boolean;
 }
 
 /**
