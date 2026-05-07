@@ -18,7 +18,7 @@ export class MediasService {
   /**
    * Retourne l'URL publique absolue du fichier uploadé
    */
-  getFileUrl(filename: string, subfolder: 'images' | 'audio' | 'gpx'): string {
+  getFileUrl(filename: string, subfolder: 'images' | 'audio' | 'gpx' | string): string {
     return this.appConfig.buildMediaUrl(subfolder, filename);
   }
 
@@ -30,14 +30,11 @@ export class MediasService {
       throw new BadRequestException('Aucun fichier reçu');
     }
 
-    // Détermine le sous-dossier à partir du chemin de destination
-    const subfolder = file.destination.includes('images')
-      ? 'images'
-      : file.destination.includes('audio')
-        ? 'audio'
-        : 'gpx';
+    // Détermine le sous-dossier exact à partir du chemin de destination
+    const pathParts = file.destination.split(/[/\\]/);
+    const subfolder = pathParts[pathParts.length - 1];
 
-    const url = this.getFileUrl(file.filename, subfolder as any);
+    const url = this.getFileUrl(file.filename, subfolder);
 
     return {
       filename: file.filename,
@@ -81,8 +78,8 @@ export class MediasService {
       throw new BadRequestException('Ce fichier est actuellement rattaché à un parcours ou un jeu. Impossible de le supprimer.');
     }
 
-    // On cherche dans tous les sous-dossiers
-    const subfolders = ['images', 'audio', 'gpx'];
+    // On cherche dans tous les sous-dossiers (génériques et spécifiques)
+    const subfolders = ['images', 'audio', 'gpx', 'specific_images', 'specific_audio', 'specific_gpx'];
     let filePath: string | null = null;
 
     for (const sub of subfolders) {

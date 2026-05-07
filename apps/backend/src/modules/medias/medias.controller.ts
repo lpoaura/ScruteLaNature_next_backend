@@ -16,6 +16,7 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { MediasService } from './medias.service';
 import { multerConfig } from './multer.config';
@@ -34,6 +35,7 @@ export class MediasController {
   @ApiOperation({
     summary: 'Uploader un fichier (image, audio mp3, fichier GPX) — EDITOR/ADMIN/SUPER_ADMIN',
   })
+  @ApiQuery({ name: 'context', required: false, description: 'Utiliser "specific" pour cacher le fichier de la galerie générale' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

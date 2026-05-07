@@ -21,14 +21,18 @@ export async function getMedias(): Promise<Media[]> {
  * Upload un fichier (multipart/form-data).
  * Utilise fetch directement car apiClient stringify le body par défaut.
  */
-export async function uploadMedia(file: File): Promise<Media> {
+export async function uploadMedia(file: File, context?: 'specific'): Promise<Media> {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000/api';
   const token = await getAccessToken();
 
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${BACKEND_URL}/medias/upload`, {
+  const url = context === 'specific' 
+    ? `${BACKEND_URL}/medias/upload?context=specific` 
+    : `${BACKEND_URL}/medias/upload`;
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,

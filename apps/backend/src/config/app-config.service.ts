@@ -40,7 +40,7 @@ export class AppConfigService {
 
   // ─── URLs Médias (Fichiers statiques) ──────────────────────────────────────
 
-  buildMediaUrl(subfolder: 'images' | 'audio' | 'gpx', filename: string): string {
+  buildMediaUrl(subfolder: 'images' | 'audio' | 'gpx' | string, filename: string): string {
     return `${this.appUrl}/uploads/${subfolder}/${filename}`;
   }
 

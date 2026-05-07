@@ -129,9 +129,8 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     
     setIsUploading(true);
     try {
-      const uploaded = await uploadMedia(file);
-      // Ajouter à la liste locale
-      setMedias(prev => [uploaded, ...prev]);
+      const uploaded = await uploadMedia(file, 'specific');
+      // On ne l'ajoute plus à la liste locale des médias de la galerie puisque c'est spécifique
       
       // Auto-sélectionner l'image uploadée
       if (isGalleryOpen) {

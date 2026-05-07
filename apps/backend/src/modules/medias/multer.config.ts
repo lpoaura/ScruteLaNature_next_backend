@@ -2,6 +2,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException } from '@nestjs/common';
+import * as fs from 'fs';
 
 // Types MIME autorisés par catégorie
 const ALLOWED_TYPES = {
@@ -16,8 +17,14 @@ const ALL_ALLOWED = [
   ...ALLOWED_TYPES.gpx,
 ];
 
-// Détermine le sous-dossier selon le type MIME
-function getSubFolder(mimetype: string): 'images' | 'audio' | 'gpx' {
+// Détermine le sous-dossier selon le type MIME et le contexte
+function getSubFolder(mimetype: string, context?: string): string {
+  if (context === 'specific') {
+    if (ALLOWED_TYPES.images.includes(mimetype)) return 'specific_images';
+    if (ALLOWED_TYPES.audio.includes(mimetype)) return 'specific_audio';
+    return 'specific_gpx';
+  }
+  
   if (ALLOWED_TYPES.images.includes(mimetype)) return 'images';
   if (ALLOWED_TYPES.audio.includes(mimetype)) return 'audio';
   return 'gpx';
@@ -26,8 +33,14 @@ function getSubFolder(mimetype: string): 'images' | 'audio' | 'gpx' {
 export const multerConfig = {
   storage: diskStorage({
     destination: (req, file, cb) => {
-      const sub = getSubFolder(file.mimetype);
+      const context = req.query.context as string | undefined;
+      const sub = getSubFolder(file.mimetype, context);
       const dest = join(process.cwd(), 'uploads', sub);
+      
+      // Créer le dossier s'il n'existe pas
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
       cb(null, dest);
     },
     filename: (req, file, cb) => {
