@@ -31,9 +31,25 @@ export const multerConfig = {
       cb(null, dest);
     },
     filename: (req, file, cb) => {
-      const unique = uuidv4();
+      const unique = uuidv4().substring(0, 8); // Just a short 8-char ID to keep it clean
       const ext = extname(file.originalname).toLowerCase();
-      cb(null, `${unique}${ext}`);
+      
+      // Récupérer le nom sans extension
+      let baseName = file.originalname.substring(0, file.originalname.lastIndexOf('.')) || file.originalname;
+      
+      // Nettoyer le nom (remplacer les caractères spéciaux par des tirets)
+      baseName = baseName
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Enlever les accents
+        .replace(/[^a-zA-Z0-9]/g, '-') // Garder juste lettres et chiffres
+        .replace(/-+/g, '-') // Éviter les tirets multiples
+        .replace(/^-|-$/g, '') // Enlever tirets au début/fin
+        .toLowerCase()
+        .substring(0, 40); // Limiter la longueur pour ne pas avoir de noms trop longs
+        
+      // Si le nom est vide après nettoyage, on met juste 'media'
+      if (!baseName) baseName = 'media';
+
+      cb(null, `${baseName}-${unique}${ext}`);
     },
   }),
   fileFilter: (req: any, file: any, cb: any) => {

@@ -118,6 +118,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   };
 
   const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | 'mascotte' | null>(null);
+  const [gallerySearch, setGallerySearch] = useState('');
 
   if (isLoadingRefs) {
     return (
@@ -181,6 +182,10 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       </div>
     );
   };
+
+  const filteredMedias = medias.filter(m => 
+    m.originalName.toLowerCase().includes(gallerySearch.toLowerCase())
+  );
 
   return (
     <>
@@ -439,69 +444,92 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       {isGalleryOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-card w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-5 border-b border-border">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-border gap-4">
               <h3 className="font-semibold text-lg text-foreground">
-                Choisir une image pour {isGalleryOpen === 'cover' ? 'la couverture' : 'la mascotte'}
+                Choisir {isGalleryOpen === 'cover' ? 'la couverture' : 'la mascotte'}
               </h3>
-              <button 
-                type="button" 
-                onClick={() => setIsGalleryOpen(null)} 
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
-              >
-                Fermer
-              </button>
+              
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <input 
+                  type="text" 
+                  placeholder="Rechercher une image..." 
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                  className="flex-1 sm:w-64 px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setIsGalleryOpen(null)} 
+                  className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors flex-shrink-0"
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
             
-            <div className="p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 bg-muted/20">
-              {medias.length === 0 ? (
-                <div className="col-span-full py-16 text-center text-muted-foreground">
+            <div className="p-5 overflow-y-auto flex-1 bg-muted/20">
+              {filteredMedias.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground">
                   <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>Aucune image disponible.</p>
-                  <Link href="/dashboard/medias" className="text-primary hover:underline mt-2 inline-block">
-                    Aller à la médiathèque pour en ajouter
-                  </Link>
+                  <p>{medias.length === 0 ? "Aucune image disponible." : "Aucun résultat pour cette recherche."}</p>
+                  {medias.length === 0 && (
+                    <Link href="/dashboard/medias" className="text-primary hover:underline mt-2 inline-block">
+                      Aller à la médiathèque pour en ajouter
+                    </Link>
+                  )}
                 </div>
               ) : (
-                medias.map(m => {
-                  const currentValue = isGalleryOpen === 'cover' ? formData.coverImage : formData.mascotteImg;
-                  const isSelected = currentValue === m.url;
-                  
-                  return (
-                    <button
-                      key={m.filename}
-                      type="button"
-                      onClick={() => { 
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: m.url 
-                        }));
-                        setIsGalleryOpen(null); 
-                      }}
-                      className={cn(
-                        "aspect-square rounded-lg overflow-hidden border-2 transition-all relative group bg-background shadow-sm",
-                        isSelected 
-                          ? "border-primary ring-4 ring-primary/20" 
-                          : "border-transparent hover:border-primary/50"
-                      )}
-                    >
-                      <img src={m.url} alt={m.originalName} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">Sélectionner</span>
-                      </div>
-                      {isSelected && (
-                        <div className="absolute top-2 right-2 h-5 w-5 bg-primary rounded-full flex items-center justify-center shadow-md">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {filteredMedias.map(m => {
+                    const currentValue = isGalleryOpen === 'cover' ? formData.coverImage : formData.mascotteImg;
+                    const isSelected = currentValue === m.url;
+                    
+                    return (
+                      <button
+                        key={m.filename}
+                        type="button"
+                        onClick={() => { 
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: m.url 
+                          }));
+                          setIsGalleryOpen(null); 
+                          setGallerySearch(''); // reset search
+                        }}
+                        title={m.originalName}
+                        className={cn(
+                          "aspect-square rounded-lg overflow-hidden border-2 transition-all relative group bg-background shadow-sm flex flex-col",
+                          isSelected 
+                            ? "border-primary ring-4 ring-primary/20" 
+                            : "border-transparent hover:border-primary/50"
+                        )}
+                      >
+                        <img src={m.url} alt={m.originalName} className="w-full h-[80%] object-cover" />
+                        <div className="h-[20%] w-full bg-card flex items-center justify-center px-2">
+                          <span className="text-[10px] text-muted-foreground truncate w-full text-center">
+                            {m.originalName}
+                          </span>
                         </div>
-                      )}
-                    </button>
-                  );
-                })
+                        
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">Sélectionner</span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 h-5 w-5 bg-primary rounded-full flex items-center justify-center shadow-md z-10">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
+            
             {isGalleryOpen === 'mascotte' && formData.mascotteImg && (
-              <div className="p-4 border-t border-border bg-muted/10 flex justify-end">
+              <div className="p-4 border-t border-border bg-card flex justify-end">
                 <button 
                   type="button"
                   onClick={() => {
