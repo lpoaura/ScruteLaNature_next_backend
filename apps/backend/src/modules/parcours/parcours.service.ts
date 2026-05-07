@@ -8,6 +8,8 @@ import { CreateParcoursDto } from './dto/create-parcours.dto';
 import { FilterParcoursDto } from './dto/filter-parcours.dto';
 import { PartialType } from '@nestjs/mapped-types';
 import { Role } from '@prisma/client';
+import * as fs from 'fs';
+import { join } from 'path';
 
 export class UpdateParcoursDto extends PartialType(CreateParcoursDto) {}
 
@@ -113,6 +115,32 @@ export class ParcoursService {
   }
 
   /**
+   * Nettoie physiquement une image spécifique si elle est remplacée ou supprimée.
+   */
+  private cleanupOldSpecificImage(oldUrl: string | null, newUrl?: string | null) {
+    if (!oldUrl || oldUrl === newUrl) return;
+    
+    // Si l'ancienne image était une image spécifique, on la supprime
+    if (oldUrl.includes('/specific_')) {
+      const filename = oldUrl.split('/').pop();
+      if (filename) {
+        const subfolders = ['specific_images', 'specific_audio', 'specific_gpx'];
+        for (const sub of subfolders) {
+          const filePath = join(process.cwd(), 'uploads', sub, filename);
+          if (fs.existsSync(filePath)) {
+            try {
+              fs.unlinkSync(filePath);
+            } catch (err) {
+              console.error(`Erreur lors de la suppression de ${filePath}`, err);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Met à jour un parcours (avec vérification de propriété)
    */
   async update(
@@ -121,21 +149,36 @@ export class ParcoursService {
     userRole: Role,
     userOrganismeId: string | null,
   ) {
-    await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
+    const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
 
-    return this.db.parcours.update({
+    const updated = await this.db.parcours.update({
       where: { id },
       data: dto,
     });
+
+    // Nettoyage des anciennes images spécifiques si elles ont été modifiées
+    if (dto.coverImage !== undefined) {
+      this.cleanupOldSpecificImage(existing.coverImage, dto.coverImage);
+    }
+    if (dto.mascotteImg !== undefined) {
+      this.cleanupOldSpecificImage(existing.mascotteImg, dto.mascotteImg);
+    }
+
+    return updated;
   }
 
   /**
    * Supprime un parcours (cascade sur étapes & jeux via Prisma)
    */
   async remove(id: string, userRole: Role, userOrganismeId: string | null) {
-    await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
+    const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
 
     await this.db.parcours.delete({ where: { id } });
+
+    // Nettoyage des images spécifiques associées au parcours supprimé
+    this.cleanupOldSpecificImage(existing.coverImage, null);
+    this.cleanupOldSpecificImage(existing.mascotteImg, null);
+
     return { message: `Parcours #${id} supprimé avec succès` };
   }
 }
