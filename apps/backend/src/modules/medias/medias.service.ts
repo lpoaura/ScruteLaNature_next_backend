@@ -4,12 +4,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AppConfigService } from '../../config/app-config.service';
+import { DatabaseService } from '../../database/database.service';
 import * as fs from 'fs';
 import { join } from 'path';
 
 @Injectable()
 export class MediasService {
-  constructor(private readonly appConfig: AppConfigService) {}
+  constructor(
+    private readonly appConfig: AppConfigService,
+    private readonly db: DatabaseService,
+  ) {}
 
   /**
    * Retourne l'URL publique absolue du fichier uploadé
@@ -51,6 +55,30 @@ export class MediasService {
     // Sécurité : empêcher la traversée de répertoire (path traversal)
     if (filename.includes('..') || filename.includes('/')) {
       throw new BadRequestException('Nom de fichier invalide');
+    }
+
+    // Vérifier si le fichier est utilisé dans un parcours
+    const isUsedInParcours = await this.db.parcours.findFirst({
+      where: {
+        OR: [
+          { coverImage: { contains: filename } },
+          { mascotteImg: { contains: filename } },
+        ],
+      },
+    });
+
+    // Vérifier si le fichier est utilisé dans un jeu
+    const isUsedInJeu = await this.db.jeu.findFirst({
+      where: {
+        OR: [
+          { audioUrl: { contains: filename } },
+          { imageUrl: { contains: filename } },
+        ],
+      },
+    });
+
+    if (isUsedInParcours || isUsedInJeu) {
+      throw new BadRequestException('Ce fichier est actuellement rattaché à un parcours ou un jeu. Impossible de le supprimer.');
     }
 
     // On cherche dans tous les sous-dossiers
