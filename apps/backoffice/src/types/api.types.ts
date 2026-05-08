@@ -70,12 +70,45 @@ export interface Parcours {
   coverImage: string | null;
   mascotteNom: string | null;
   mascotteImg: string | null;
+  pathGeoJSON?: string | null;
   organismeId: string;
   zonageId: string;
   zonage?: Zonage;
   organisme?: Organisme;
+  etapes?: Etape[];
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Etapes & Jeux ─────────────────────────────────────────────────────────────
+
+export interface Etape {
+  id: string;
+  parcoursId: string;
+  order: number;
+  latitude: number;
+  longitude: number;
+  title: string;
+  description: string | null;
+  transitionText: string | null;
+  jeux?: Jeu[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type JeuType = 'INFO' | 'QCM' | 'CHARADE' | 'CODE_CAESAR' | 'CALCUL_PYRAMIDAL' | 'VALIDATION_LIEU' | 'ECO_GESTE';
+
+export interface Jeu {
+  id: string;
+  etapeId: string;
+  order: number;
+  type: JeuType;
+  question: string;
+  explication: string | null;
+  audioUrl: string | null;
+  imageUrl: string | null;
+  donneesJeu: any | null;
+  reponse: string | null;
 }
 
 // ── Stats investisseurs ───────────────────────────────────────────────────────

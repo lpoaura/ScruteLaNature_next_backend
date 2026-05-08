@@ -27,12 +27,12 @@ async function bootstrap() {
   // Helmet pour sécuriser les en-têtes HTTP
   app.use(helmet());
 
-  // Rate Limiting (100 requêtes par fenêtre de 15 minutes par IP)
+  // Rate Limiting (1000 requêtes par fenêtre de 15 minutes par IP en dev)
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 100,
-      message: 'Too many requests from this IP, please try again later.',
+      max: 1000,
+      message: { message: 'Too many requests from this IP, please try again later.', statusCode: 429 },
     }),
   );
 

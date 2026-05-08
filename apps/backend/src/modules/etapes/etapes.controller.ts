@@ -68,6 +68,21 @@ export class EtapesController {
     );
   }
 
+  @Patch('reorder')
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Réordonner les étapes d\'un parcours en lot' })
+  @ApiResponse({ status: 200, description: 'Étapes réordonnées avec succès.' })
+  reorder(
+    @Body() reorderDto: { etapes: { id: string, order: number }[] },
+    @Request() req: any,
+  ) {
+    return this.etapesService.reorder(
+      reorderDto.etapes,
+      req.user.role,
+      req.user.organismeId ?? null,
+    );
+  }
+
   @Patch(':id')
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Mettre à jour une étape (titre, GPS, ordre, etc.)' })

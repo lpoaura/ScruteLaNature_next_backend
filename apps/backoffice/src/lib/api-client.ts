@@ -140,7 +140,14 @@ export async function apiClient<T = unknown>(
   }
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({ message: 'Erreur réseau' }));
+    let errorBody;
+    const text = await response.text();
+    try {
+      errorBody = JSON.parse(text);
+    } catch {
+      errorBody = { message: text || `Erreur ${response.status}` };
+    }
+    
     throw new Error(
       Array.isArray(errorBody.message)
         ? errorBody.message.join(', ')

@@ -10,6 +10,8 @@ import { getMedias, uploadMedia } from '@/src/services/medias.service';
 import type { Parcours, Zonage, PublishStatus } from '@/src/types/api.types';
 import type { Media } from '@/src/services/medias.service';
 import { cn } from '@/lib/utils';
+import ParcoursMapEditor from './ParcoursMapEditor';
+import MediaGalleryModal from './MediaGalleryModal';
 
 interface ParcoursFormProps {
   initialData?: Parcours;
@@ -119,6 +121,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
   const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | 'mascotte' | null>(null);
   const [gallerySearch, setGallerySearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'info' | 'map'>('info');
   
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -217,379 +220,301 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl mx-auto pb-10">
+      <div className="space-y-8 max-w-5xl mx-auto pb-10">
+      
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/dashboard/parcours"
+            className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isEdit ? 'Modifier le parcours' : 'Créer un parcours'}
+          </h1>
+        </div>
         
-        {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/dashboard/parcours"
-              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors text-muted-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="text-2xl font-bold text-foreground">
-              {isEdit ? 'Modifier le parcours' : 'Créer un parcours'}
-            </h1>
-          </div>
-          
+        {activeTab === 'info' && (
           <button
             type="submit"
+            form="parcours-form"
             disabled={isPending}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Enregistrer
           </button>
-        </div>
-
-        {error && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive font-medium">
-            {error}
-          </div>
         )}
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Colonne de gauche (2/3) : Informations principales */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
-              <h2 className="text-lg font-semibold border-b border-border pb-3">Informations générales</h2>
-              
-              <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">Titre du parcours <span className="text-destructive">*</span></label>
-                <input
-                  id="title"
-                  name="title"
-                  type="text"
-                  required
-                  maxLength={200}
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Ex: La forêt des oiseaux"
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">Description complète <span className="text-destructive">*</span></label>
-                <textarea
-                  id="description"
-                  name="description"
-                  required
-                  rows={5}
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Décrivez ce que les visiteurs vont découvrir..."
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none resize-y"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="zonageId" className="text-sm font-medium">Zonage associé <span className="text-destructive">*</span></label>
-                  <select
-                    id="zonageId"
-                    name="zonageId"
-                    required
-                    value={formData.zonageId}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                  >
-                    <option value="" disabled>Sélectionner un zonage</option>
-                    {zonages.map(z => (
-                      <option key={z.id} value={z.id}>{z.nom} ({z.code})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="status" className="text-sm font-medium">Statut de publication</label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                  >
-                    <option value="DRAFT">Brouillon (invisible)</option>
-                    <option value="PUBLISHED">Publié (visible dans l'app)</option>
-                    <option value="ARCHIVED">Archivé</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section Mascotte */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
-              <h2 className="text-lg font-semibold border-b border-border pb-3">Mascotte du parcours</h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label htmlFor="mascotteNom" className="text-sm font-medium">Nom de la mascotte</label>
-                  <input
-                    id="mascotteNom"
-                    name="mascotteNom"
-                    type="text"
-                    maxLength={100}
-                    value={formData.mascotteNom}
-                    onChange={handleChange}
-                    placeholder="Ex: Hector le Castor"
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                  />
-                </div>
-
-                <ImagePicker 
-                  type="mascotte" 
-                  label="Image de la mascotte" 
-                  value={formData.mascotteImg} 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Colonne de droite (1/3) : Paramètres techniques & Visuels */}
-          <div className="space-y-6">
-            
-            {/* Image de couverture */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-lg font-semibold border-b border-border pb-3">Visuel</h2>
-              
-              <ImagePicker 
-                type="cover" 
-                label="Image de couverture" 
-                value={formData.coverImage} 
-                required 
-              />
-              <p className="text-[11px] text-muted-foreground pt-1">
-                L'image doit d'abord être uploadée dans l'onglet Médiathèque.
-              </p>
-            </div>
-
-            {/* Paramètres d'activité */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-lg font-semibold border-b border-border pb-3">Données de l'activité</h2>
-              
-              <div className="space-y-2">
-                <label htmlFor="difficulty" className="text-sm font-medium">Difficulté</label>
-                <div className="flex gap-2">
-                  {['FACILE', 'MOYEN', 'DIFFICILE'].map((diff) => (
-                    <button
-                      key={diff}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, difficulty: diff as any }))}
-                      className={cn(
-                        "flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors",
-                        formData.difficulty === diff 
-                          ? "bg-primary text-primary-foreground border-primary" 
-                          : "bg-background text-muted-foreground border-border hover:bg-muted"
-                      )}
-                    >
-                      {diff.charAt(0) + diff.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-2">
-                  <label htmlFor="distanceKm" className="text-sm font-medium">Distance (km)</label>
-                  <input
-                    id="distanceKm"
-                    name="distanceKm"
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    required
-                    value={formData.distanceKm}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none text-center font-mono"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="durationMin" className="text-sm font-medium">Durée (min)</label>
-                  <input
-                    id="durationMin"
-                    name="durationMin"
-                    type="number"
-                    step="5"
-                    min="5"
-                    required
-                    value={formData.durationMin}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none text-center font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Accessibilité */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-lg font-semibold border-b border-border pb-3">Accessibilité</h2>
-              
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
-                  <input
-                    type="checkbox"
-                    name="isPMRFriendly"
-                    checked={formData.isPMRFriendly}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-foreground">Adapté PMR</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
-                  <input
-                    type="checkbox"
-                    name="isChildFriendly"
-                    checked={formData.isChildFriendly}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-foreground">Adapté aux enfants</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
-                  <input
-                    type="checkbox"
-                    name="isMentalHandicapFriendly"
-                    checked={formData.isMentalHandicapFriendly}
-                    onChange={handleChange}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-foreground">Adapté handicap mental</span>
-                </label>
-              </div>
-            </div>
-
-          </div>
+      {isEdit && initialData && (
+        <div className="flex space-x-4 border-b border-border">
+          <button 
+            onClick={() => setActiveTab('info')} 
+            className={cn(
+              "px-1 py-3 text-sm font-medium border-b-2 transition-colors", 
+              activeTab === 'info' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            Informations générales
+          </button>
+          <button 
+            onClick={() => setActiveTab('map')} 
+            className={cn(
+              "px-1 py-3 text-sm font-medium border-b-2 transition-colors", 
+              activeTab === 'map' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            Tracé & Étapes
+          </button>
         </div>
-      </form>
+      )}
+
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive font-medium">
+          {error}
+        </div>
+      )}
+
+      {activeTab === 'info' ? (
+        <form id="parcours-form" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            {/* Colonne de gauche (2/3) : Informations principales */}
+            <div className="md:col-span-2 space-y-6">
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
+                <h2 className="text-lg font-semibold border-b border-border pb-3">Informations générales</h2>
+                
+                <div className="space-y-2">
+                  <label htmlFor="title" className="text-sm font-medium">Titre du parcours <span className="text-destructive">*</span></label>
+                  <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    required
+                    maxLength={200}
+                    value={formData.title}
+                    onChange={handleChange}
+                    placeholder="Ex: La forêt des oiseaux"
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="description" className="text-sm font-medium">Description complète <span className="text-destructive">*</span></label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    required
+                    rows={5}
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Décrivez ce que les visiteurs vont découvrir..."
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none resize-y"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="zonageId" className="text-sm font-medium">Zonage associé <span className="text-destructive">*</span></label>
+                    <select
+                      id="zonageId"
+                      name="zonageId"
+                      required
+                      value={formData.zonageId}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                    >
+                      <option value="" disabled>Sélectionner un zonage</option>
+                      {zonages.map(z => (
+                        <option key={z.id} value={z.id}>{z.nom} ({z.code})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="status" className="text-sm font-medium">Statut de publication</label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                    >
+                      <option value="DRAFT">Brouillon (invisible)</option>
+                      <option value="PUBLISHED">Publié (visible dans l'app)</option>
+                      <option value="ARCHIVED">Archivé</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Mascotte */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
+                <h2 className="text-lg font-semibold border-b border-border pb-3">Mascotte du parcours</h2>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label htmlFor="mascotteNom" className="text-sm font-medium">Nom de la mascotte</label>
+                    <input
+                      id="mascotteNom"
+                      name="mascotteNom"
+                      type="text"
+                      maxLength={100}
+                      value={formData.mascotteNom}
+                      onChange={handleChange}
+                      placeholder="Ex: Hector le Castor"
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+
+                  <ImagePicker 
+                    type="mascotte" 
+                    label="Image de la mascotte" 
+                    value={formData.mascotteImg} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne de droite (1/3) : Paramètres techniques & Visuels */}
+            <div className="space-y-6">
+              
+              {/* Image de couverture */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+                <h2 className="text-lg font-semibold border-b border-border pb-3">Visuel</h2>
+                
+                <ImagePicker 
+                  type="cover" 
+                  label="Image de couverture" 
+                  value={formData.coverImage} 
+                  required 
+                />
+                <p className="text-[11px] text-muted-foreground pt-1">
+                  L'image doit d'abord être uploadée dans l'onglet Médiathèque.
+                </p>
+              </div>
+
+              {/* Paramètres d'activité */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+                <h2 className="text-lg font-semibold border-b border-border pb-3">Données de l'activité</h2>
+                
+                <div className="space-y-2">
+                  <label htmlFor="difficulty" className="text-sm font-medium">Difficulté</label>
+                  <div className="flex gap-2">
+                    {['FACILE', 'MOYEN', 'DIFFICILE'].map((diff) => (
+                      <button
+                        key={diff}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, difficulty: diff as any }))}
+                        className={cn(
+                          "flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                          formData.difficulty === diff 
+                            ? "bg-primary text-primary-foreground border-primary" 
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        )}
+                      >
+                        {diff.charAt(0) + diff.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label htmlFor="distanceKm" className="text-sm font-medium">Distance (km)</label>
+                    <input
+                      id="distanceKm"
+                      name="distanceKm"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={formData.distanceKm}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none text-center font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="durationMin" className="text-sm font-medium">Durée (min)</label>
+                    <input
+                      id="durationMin"
+                      name="durationMin"
+                      type="number"
+                      step="5"
+                      min="5"
+                      required
+                      value={formData.durationMin}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none text-center font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Accessibilité */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+                <h2 className="text-lg font-semibold border-b border-border pb-3">Accessibilité</h2>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
+                    <input
+                      type="checkbox"
+                      name="isPMRFriendly"
+                      checked={formData.isPMRFriendly}
+                      onChange={handleChange}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-foreground">Adapté PMR</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
+                    <input
+                      type="checkbox"
+                      name="isChildFriendly"
+                      checked={formData.isChildFriendly}
+                      onChange={handleChange}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-foreground">Adapté aux enfants</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
+                    <input
+                      type="checkbox"
+                      name="isMentalHandicapFriendly"
+                      checked={formData.isMentalHandicapFriendly}
+                      onChange={handleChange}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm text-foreground">Adapté handicap mental</span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </form>
+      ) : (
+        <ParcoursMapEditor parcours={initialData!} />
+      )}
+    </div>
 
       {/* Galerie Modale */}
       {isGalleryOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-border gap-4">
-              <h3 className="font-semibold text-lg text-foreground">
-                Choisir {isGalleryOpen === 'cover' ? 'la couverture' : 'la mascotte'}
-              </h3>
-              
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <input 
-                  type="text" 
-                  placeholder="Rechercher une image..." 
-                  value={gallerySearch}
-                  onChange={(e) => setGallerySearch(e.target.value)}
-                  className="flex-1 sm:w-64 px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
-                />
-                
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={handleUploadInGallery} 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium hover:bg-primary/90 flex items-center gap-2 flex-shrink-0"
-                >
-                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  <span className="hidden sm:inline">Uploader</span>
-                </button>
-
-                <button 
-                  type="button" 
-                  onClick={() => setIsGalleryOpen(null)} 
-                  className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors flex-shrink-0"
-                >
-                  Fermer
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-5 overflow-y-auto flex-1 bg-muted/20">
-              {filteredMedias.length === 0 ? (
-                <div className="py-16 text-center text-muted-foreground">
-                  <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>{medias.length === 0 ? "Aucune image disponible." : "Aucun résultat pour cette recherche."}</p>
-                  {medias.length === 0 && (
-                    <Link href="/dashboard/medias" className="text-primary hover:underline mt-2 inline-block">
-                      Aller à la médiathèque pour en ajouter
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {filteredMedias.map(m => {
-                    const currentValue = isGalleryOpen === 'cover' ? formData.coverImage : formData.mascotteImg;
-                    const isSelected = currentValue === m.url;
-                    
-                    return (
-                      <button
-                        key={m.filename}
-                        type="button"
-                        onClick={() => { 
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: m.url 
-                          }));
-                          setIsGalleryOpen(null); 
-                          setGallerySearch(''); // reset search
-                        }}
-                        title={m.originalName}
-                        className={cn(
-                          "aspect-square rounded-lg overflow-hidden border-2 transition-all relative group bg-background shadow-sm flex flex-col",
-                          isSelected 
-                            ? "border-primary ring-4 ring-primary/20" 
-                            : "border-transparent hover:border-primary/50"
-                        )}
-                      >
-                        <img src={m.url} alt={m.originalName} className="w-full h-[80%] object-cover" />
-                        <div className="h-[20%] w-full bg-card flex items-center justify-center px-2">
-                          <span className="text-[10px] text-muted-foreground truncate w-full text-center">
-                            {m.originalName}
-                          </span>
-                        </div>
-                        
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white text-xs font-medium bg-black/50 px-2 py-1 rounded">Sélectionner</span>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 h-5 w-5 bg-primary rounded-full flex items-center justify-center shadow-md z-10">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M10 3L4.5 8.5L2 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            
-            {isGalleryOpen === 'mascotte' && formData.mascotteImg && (
-              <div className="p-4 border-t border-border bg-card flex justify-end">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, mascotteImg: '' }));
-                    setIsGalleryOpen(null);
-                  }}
-                  className="text-sm text-destructive hover:underline font-medium px-4 py-2"
-                >
-                  Retirer l'image de la mascotte
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <MediaGalleryModal 
+          type="image"
+          onClose={() => setIsGalleryOpen(null)}
+          onSelect={(url) => {
+            setFormData(prev => ({ 
+              ...prev, 
+              [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: url 
+            }));
+          }}
+        />
       )}
     </>
   );

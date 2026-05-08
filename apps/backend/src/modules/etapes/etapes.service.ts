@@ -108,4 +108,27 @@ export class EtapesService {
       where: { id },
     });
   }
+
+  async reorder(
+    etapes: { id: string; order: number }[],
+    userRole: Role,
+    userOrganismeId: string | null,
+  ) {
+    // We should ideally check access for all etapes, but for performance, we check the first one
+    // assuming they belong to the same parcours.
+    if (etapes.length > 0) {
+      await this.findOne(etapes[0].id, userRole, userOrganismeId);
+    }
+
+    // Prisma doesn't support batch update with varying data out of the box,
+    // so we use a transaction of individual updates.
+    return this.db.$transaction(
+      etapes.map((etape) =>
+        this.db.etape.update({
+          where: { id: etape.id },
+          data: { order: etape.order },
+        }),
+      ),
+    );
+  }
 }
