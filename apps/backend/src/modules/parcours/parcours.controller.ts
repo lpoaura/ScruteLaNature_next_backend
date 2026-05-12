@@ -39,6 +39,7 @@ export class ParcoursController {
   @ApiQuery({ name: 'zonageId', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Liste des parcours.' })
   findAll(@Request() req: any, @Query() filters: FilterParcoursDto) {
+    console.log('--- DEBUG USER IN PARCOURS CONTROLLER ---', req.user);
     return this.parcoursService.findAll(
       req.user.sub,
       req.user.role,

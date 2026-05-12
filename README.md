@@ -64,10 +64,19 @@ npm run dev
 | Documentation Swagger | `http://localhost:3000/api/docs` |
 | Backoffice Admin | `http://localhost:3001` |
 
-### Compte Super Admin (seed)
+### Comptes par défaut (seed)
 ```
+[SUPER ADMIN]
 Email    : superadmin@lpo.fr
 Password : LpoAdmin123!
+
+[ADMIN RÉGIONAL]
+Email    : admin@lpo.fr
+Password : LpoAdmin123!
+
+[ANIMATEUR / ÉDITEUR]
+Email    : editor@lpo.fr
+Password : LpoEditor123!
 ```
 > ⚠️ Changer ce mot de passe avant tout déploiement en production.
 

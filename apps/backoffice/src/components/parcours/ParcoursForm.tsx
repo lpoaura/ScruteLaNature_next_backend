@@ -7,7 +7,10 @@ import Link from 'next/link';
 import { createParcours, updateParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
 import { getMedias, uploadMedia } from '@/src/services/medias.service';
-import type { Parcours, Zonage, PublishStatus } from '@/src/types/api.types';
+import { getOrganismes } from '@/src/services/organismes.service';
+import { useAuth } from '@/src/hooks/use-auth';
+import { useRoles } from '@/src/hooks/use-roles';
+import type { Parcours, Zonage, Organisme, PublishStatus } from '@/src/types/api.types';
 import type { Media } from '@/src/services/medias.service';
 import { cn } from '@/lib/utils';
 import ParcoursMapEditor from './ParcoursMapEditor';
@@ -21,9 +24,13 @@ interface ParcoursFormProps {
 export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { user } = useAuth();
+  const { isSuperAdmin } = useRoles(user);
 
   // Données de base de données pour les selects
   const [zonages, setZonages] = useState<Zonage[]>([]);
+  const [organismes, setOrganismes] = useState<Organisme[]>([]);
+  const [selectedOrganismeId, setSelectedOrganismeId] = useState<string>('');
   const [medias, setMedias] = useState<Media[]>([]);
   const [isLoadingRefs, setIsLoadingRefs] = useState(true);
 
@@ -49,12 +56,18 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   useEffect(() => {
     const fetchRefs = async () => {
       try {
-        const [zData, mData] = await Promise.all([getZonages(), getMedias()]);
+        const fetches: Promise<any>[] = [getZonages(), getMedias()];
+        if (isSuperAdmin) fetches.push(getOrganismes());
+
+        const [zData, mData, orgData] = await Promise.all(fetches);
         setZonages(zData);
-        // Filtrer uniquement les images pour la sélection
-        setMedias(mData.filter(m => m.mimetype.startsWith('image/')));
-        
-        // Si c'est une création et qu'aucun zonage n'est sélectionné, prendre le premier par défaut
+        setMedias(mData.filter((m: any) => m.mimetype.startsWith('image/')));
+
+        if (isSuperAdmin && orgData) {
+          setOrganismes(orgData);
+          if (orgData.length > 0) setSelectedOrganismeId(orgData[0].id);
+        }
+
         if (!isEdit && !initialData?.zonageId && zData.length > 0) {
           setFormData(prev => ({ ...prev, zonageId: zData[0].id }));
         }
@@ -65,7 +78,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       }
     };
     fetchRefs();
-  }, [isEdit, initialData]);
+  }, [isEdit, initialData, isSuperAdmin]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -95,6 +108,10 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       setError('Veuillez sélectionner un zonage.');
       return;
     }
+    if (isSuperAdmin && !selectedOrganismeId) {
+      setError('Veuillez sélectionner un organisme.');
+      return;
+    }
     if (!formData.coverImage) {
       setError('L\'image de couverture est requise. Veuillez en sélectionner une depuis la médiathèque.');
       return;
@@ -105,7 +122,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
         if (isEdit && initialData) {
           await updateParcours(initialData.id, formData);
         } else {
-          await createParcours(formData);
+          await createParcours(formData, isSuperAdmin ? selectedOrganismeId : undefined);
         }
         router.push('/dashboard/parcours');
         router.refresh();
@@ -315,6 +332,26 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none resize-y"
                   />
                 </div>
+
+                {isSuperAdmin && !isEdit && (
+                  <div className="space-y-2">
+                    <label htmlFor="organismeId" className="text-sm font-medium">
+                      Organisme <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      id="organismeId"
+                      value={selectedOrganismeId}
+                      onChange={e => setSelectedOrganismeId(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                    >
+                      <option value="" disabled>Sélectionner un organisme</option>
+                      {organismes.map(o => (
+                        <option key={o.id} value={o.id}>{o.nom}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

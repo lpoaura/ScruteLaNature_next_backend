@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Zonages', href: '/dashboard/zonages', icon: MapPin },
   { label: 'Médiathèque', href: '/dashboard/medias', icon: Image },
   { label: 'Avis & Modération', href: '/dashboard/moderation', icon: MessageSquare },
-  { label: 'Statistiques', href: '/dashboard/stats', icon: BarChart2 },
+  { label: 'Statistiques', href: '/dashboard/statistiques', icon: BarChart2, adminOnly: true },
   { label: 'Mon Équipe', href: '/dashboard/equipe', icon: Users, adminOnly: true },
   { label: 'Réseau National', href: '/dashboard/organismes', icon: Building2, superAdminOnly: true },
   { label: 'Paramètres', href: '/dashboard/settings', icon: Settings },

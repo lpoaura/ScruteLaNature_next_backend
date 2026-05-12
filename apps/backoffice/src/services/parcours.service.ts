@@ -27,9 +27,11 @@ export async function getParcoursById(id: string): Promise<Parcours> {
 
 /**
  * Crée un nouveau parcours.
+ * @param organismeId — obligatoire si l'utilisateur est SUPER_ADMIN (passé en query param)
  */
-export async function createParcours(dto: Partial<Parcours>): Promise<Parcours> {
-  return apiClient<Parcours>('/admin/parcours', {
+export async function createParcours(dto: Partial<Parcours>, organismeId?: string): Promise<Parcours> {
+  const query = organismeId ? `?organismeId=${organismeId}` : '';
+  return apiClient<Parcours>(`/admin/parcours${query}`, {
     method: 'POST',
     body: JSON.stringify(dto),
   });

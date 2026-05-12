@@ -33,7 +33,7 @@ docker-compose up -d        # Lance PostgreSQL sur le port 5434
 # Migrations & seed
 cd apps/backend
 npx prisma migrate dev
-npx prisma db seed          # Crée le compte superadmin@lpo.fr
+npx prisma db seed          # Crée les comptes superadmin, admin et editor rattachés à LPO AURA
 
 # Lancement (depuis la racine)
 cd ../..
@@ -128,13 +128,15 @@ src/
 | `POST` | `/admin/organismes` | SUPER_ADMIN | Créer un organisme |
 | `PATCH` | `/admin/organismes/:id` | SUPER_ADMIN | Mettre à jour |
 
-### 🗺️ Zonages — `/api/admin/zonages`
+### 🗺️ Zonages & Statistiques — `/api/admin/zonages` & `/api/admin/stats`
 
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
-| `GET` | `/admin/zonages` | ADMIN | Référentiel des zonages |
+| `GET` | `/admin/zonages` | EDITOR/ADMIN | Référentiel des zonages (filtres de recherche) |
 | `POST` | `/admin/zonages` | ADMIN | Ajouter une zonage |
-| `GET` | `/admin/stats/zonages` | ADMIN | Stats investisseurs : joueurs uniques, completions, note moyenne par zonage |
+| `GET` | `/admin/stats/zonages` | ADMIN | Stats investisseurs : joueurs uniques, completions, note moyenne |
+| `GET` | `/admin/stats` | ADMIN | Dashboard global (KPIs, Tableau croisé des organismes) |
+| `GET` | `/admin/stats/export/csv` | ADMIN | Export complet des statistiques en fichier CSV |
 
 ### 🖼️ Médias — `/api/medias`
 
@@ -222,9 +224,9 @@ src/
 
 | Mesure | Implémentation |
 |---|---|
-| **JWT** | Access Token 15 min + Refresh Token 6 mois (haché bcrypt en DB) |
+| **JWT Dynamique** | Access Token 15 min + Refresh Token 6 mois. Validation par vérification BDD (injection de `organismeId` à jour). |
 | **RBAC** | `USER` · `EDITOR` · `ADMIN` · `SUPER_ADMIN` via `@Roles()` + `RolesGuard` |
-| **Cloisonnement organisme** | Chaque ADMIN/EDITOR ne voit que les données de son propre organisme |
+| **Cloisonnement organisme** | Chaque ADMIN/EDITOR ne voit et n'agit que sur les données de son propre organisme (Parcours, Stats) |
 | **Escalade de rôle bloquée** | `PATCH /users/me` utilise `UpdateMeDto` (pas de champ `role` ni `organismeId`) |
 | **RGPD** | Inscription bloquée sans consentement · Suppression de compte avec cascade totale |
 | **Validation stricte** | `@IsUUID()` `@IsISO8601()` `@Min/@Max` `@ArrayMaxSize()` sur tous les DTOs |

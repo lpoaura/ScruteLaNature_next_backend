@@ -4,11 +4,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { JwtPayload } from '../auth.service';
+import { DatabaseService } from '../../../database/database.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
+    private db: DatabaseService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,8 +27,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    const user = await this.db.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true, organismeId: true },
+    });
 
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur introuvable');
+    }
 
-    return { id: payload.sub, email: payload.email, role: payload.role };
+    return user;
   }
 }

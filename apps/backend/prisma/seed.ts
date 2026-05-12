@@ -46,6 +46,63 @@ async function main() {
     console.log(`➡️  Mot de passe : ${superAdminPassword}`);
     console.log(`⚠️  Pensez à le changer rapidement en production !`);
   }
+
+  // --- Création de l'organisme par défaut ---
+  const organisme = await prisma.organisme.upsert({
+    where: { nom: 'LPO Auvergne-Rhône-Alpes' },
+    update: {},
+    create: {
+      nom: 'LPO Auvergne-Rhône-Alpes',
+    },
+  });
+  console.log(`🏢 Organisme par défaut prêt : ${organisme.nom}`);
+
+  // --- Création du compte ADMIN (Administrateur régional) ---
+  const adminEmail = 'admin@lpo.fr';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'LpoAdmin123!';
+  const saltRounds = 12;
+  const adminHashedPassword = await bcrypt.hash(adminPassword, saltRounds);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      organismeId: organisme.id, // S'assure que l'admin est bien rattaché
+    },
+    create: {
+      email: adminEmail,
+      password: adminHashedPassword,
+      firstName: 'Admin',
+      lastName: 'Régional',
+      role: Role.ADMIN,
+      isGuest: false,
+      isEmailVerified: true,
+      organismeId: organisme.id,
+    },
+  });
+  console.log(`🎉 Admin prêt (Email: ${admin.email}, Mdp: ${adminPassword})`);
+
+  // --- Création du compte EDITOR (Animateur) ---
+  const editorEmail = 'editor@lpo.fr';
+  const editorPassword = process.env.EDITOR_PASSWORD || 'LpoEditor123!';
+  const editorHashedPassword = await bcrypt.hash(editorPassword, saltRounds);
+
+  const editor = await prisma.user.upsert({
+    where: { email: editorEmail },
+    update: {
+      organismeId: organisme.id, // S'assure que l'éditeur est bien rattaché
+    },
+    create: {
+      email: editorEmail,
+      password: editorHashedPassword,
+      firstName: 'Animateur',
+      lastName: 'LPO',
+      role: Role.EDITOR,
+      isGuest: false,
+      isEmailVerified: true,
+      organismeId: organisme.id,
+    },
+  });
+  console.log(`🎉 Editor prêt (Email: ${editor.email}, Mdp: ${editorPassword})`);
 }
 
 main()

@@ -19,8 +19,8 @@ export class ZonagesController {
   constructor(private readonly zonagesService: ZonagesService) {}
 
   @Get('admin/zonages')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Lister le référentiel des zonages (ADMIN/SUPER_ADMIN)' })
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Lister le référentiel des zonages (EDITOR/ADMIN/SUPER_ADMIN)' })
   @ApiResponse({ status: 200, description: 'Liste des zonages disponibles.' })
   findAll() {
     return this.zonagesService.findAll();

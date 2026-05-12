@@ -22,6 +22,7 @@ import { join } from 'path';
 import { EtapesModule } from './modules/etapes/etapes.module';
 import { JeuxModule } from './modules/jeux/jeux.module';
 import { SocialModule } from './modules/social/social.module';
+import { StatsModule } from './modules/stats/stats.module';
 
 @Module({
   imports: [ 
@@ -64,6 +65,7 @@ import { SocialModule } from './modules/social/social.module';
     EtapesModule,
     JeuxModule,
     SocialModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -93,8 +93,9 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
     startTransition(async () => {
       try {
         if ('id' in editingEtape && editingEtape.id) {
-          // Update
-          const updated = await updateEtape(editingEtape.id, editingEtape);
+          // Update — on n'envoie que les champs acceptés par UpdateEtapeDto
+          const { order, title, latitude, longitude, description, transitionText, parcoursId } = editingEtape;
+          const updated = await updateEtape(editingEtape.id, { order, title, latitude, longitude, description, transitionText, parcoursId });
           setEtapes(prev => prev.map(e => e.id === updated.id ? updated : e));
         } else {
           // Create
