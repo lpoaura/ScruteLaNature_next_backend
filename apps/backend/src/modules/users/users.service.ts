@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DatabaseService } from '../../database/database.service';
 import { MailService } from '../../providers/mail/mail.service';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -51,19 +52,35 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async findAll() {
-    const users = await this.databaseService.user.findMany({
+  async findAll(userRole: Role, userOrganismeId: string | null) {
+    const where: any = {
+      role: { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] },
+    };
+    if (userRole !== Role.SUPER_ADMIN) {
+      where.organismeId = userOrganismeId;
+    }
+    return this.databaseService.user.findMany({
+      where,
       select: {
         id: true,
         email: true,
         firstName: true,
         lastName: true,
         role: true,
+        organismeId: true,
+        organisme: { select: { id: true, nom: true } },
         isEmailVerified: true,
         createdAt: true,
       },
+      orderBy: { createdAt: 'desc' },
     });
-    return users;
+  }
+
+  async removeById(id: string) {
+    const user = await this.databaseService.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable.');
+    await this.databaseService.user.delete({ where: { id } });
+    return { message: 'Compte supprimé.' };
   }
 
   async findOne(id: string) {

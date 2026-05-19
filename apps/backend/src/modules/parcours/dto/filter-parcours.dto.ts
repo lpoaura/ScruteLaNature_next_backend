@@ -17,4 +17,9 @@ export class FilterParcoursDto {
   @IsOptional()
   @IsString()
   zonageId?: string;
+
+  @ApiPropertyOptional({ description: 'Filtrer par organismeId (SUPER_ADMIN uniquement)' })
+  @IsOptional()
+  @IsString()
+  organismeId?: string;
 }

@@ -4,6 +4,7 @@ import type { Parcours, PublishStatus } from '@/src/types/api.types';
 export interface ParcoursFilters {
   status?: PublishStatus;
   zonageId?: string;
+  organismeId?: string;
 }
 
 /**
@@ -13,6 +14,7 @@ export async function getParcours(filters?: ParcoursFilters): Promise<Parcours[]
   const params = new URLSearchParams();
   if (filters?.status) params.set('status', filters.status);
   if (filters?.zonageId) params.set('zonageId', filters.zonageId);
+  if (filters?.organismeId) params.set('organismeId', filters.organismeId);
 
   const query = params.toString() ? `?${params.toString()}` : '';
   return apiClient<Parcours[]>(`/admin/parcours${query}`);
@@ -45,6 +47,13 @@ export async function updateParcours(id: string, dto: Partial<Parcours>): Promis
     method: 'PATCH',
     body: JSON.stringify(dto),
   });
+}
+
+/**
+ * Soumet un parcours pour publication (→ PENDING_REVIEW).
+ */
+export async function requestPublishParcours(id: string): Promise<{ id: string; status: string; title: string }> {
+  return apiClient(`/admin/parcours/${id}/request-publish`, { method: 'PATCH' });
 }
 
 /**

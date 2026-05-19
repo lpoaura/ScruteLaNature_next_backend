@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getStats, getExportCsvUrl } from '@/src/services/stats.service';
-import type { DashboardStats } from '@/src/services/stats.service';
-import { Download, Loader2, Map, Users, Target, CheckCircle2, TrendingUp, Building2, BarChart3, Globe } from 'lucide-react';
+import type { DashboardStats, StatsFilterParams } from '@/src/services/stats.service';
+import { Download, Loader2, Map, Users, CheckCircle2, TrendingUp, Building2, BarChart3, Globe, UserCheck, ChevronDown } from 'lucide-react';
+import { useAuth } from '@/src/hooks/use-auth';
+import { useRoles } from '@/src/hooks/use-roles';
 import { getAccessToken } from '@/src/lib/api-client';
 
 // Mini bar chart component
@@ -35,9 +37,9 @@ const KPI_CONFIGS = [
     textColor: 'text-emerald-700 dark:text-emerald-300',
   },
   {
-    key: 'totalUsers' as const,
+    key: 'totalPlayers' as const,
     label: 'Joueurs inscrits',
-    sublabel: 'comptes actifs',
+    sublabel: 'comptes joueurs actifs',
     icon: Users,
     gradient: 'from-blue-500 to-indigo-600',
     bg: 'bg-blue-50 dark:bg-blue-950/30',
@@ -46,39 +48,61 @@ const KPI_CONFIGS = [
     textColor: 'text-blue-700 dark:text-blue-300',
   },
   {
-    key: 'totalObservations' as const,
-    label: 'Observations terrain',
-    sublabel: 'photos remontées',
-    icon: Target,
-    gradient: 'from-amber-500 to-orange-600',
-    bg: 'bg-amber-50 dark:bg-amber-950/30',
-    iconBg: 'bg-amber-100 dark:bg-amber-900/50',
-    iconColor: 'text-amber-600 dark:text-amber-400',
-    textColor: 'text-amber-700 dark:text-amber-300',
-  },
-  {
-    key: 'totalCompletions' as const,
-    label: 'Parcours complétés',
-    sublabel: 'par les joueurs',
-    icon: CheckCircle2,
+    key: 'totalMembers' as const,
+    label: 'Membres équipe',
+    sublabel: 'éditeurs & admins',
+    icon: UserCheck,
     gradient: 'from-violet-500 to-purple-600',
     bg: 'bg-violet-50 dark:bg-violet-950/30',
     iconBg: 'bg-violet-100 dark:bg-violet-900/50',
     iconColor: 'text-violet-600 dark:text-violet-400',
     textColor: 'text-violet-700 dark:text-violet-300',
   },
+  {
+    key: 'totalCompletions' as const,
+    label: 'Parcours complétés',
+    sublabel: 'par les joueurs',
+    icon: CheckCircle2,
+    gradient: 'from-rose-500 to-pink-600',
+    bg: 'bg-rose-50 dark:bg-rose-950/30',
+    iconBg: 'bg-rose-100 dark:bg-rose-900/50',
+    iconColor: 'text-rose-600 dark:text-rose-400',
+    textColor: 'text-rose-700 dark:text-rose-300',
+  },
 ];
 
 export default function StatistiquesClient() {
+  const { user } = useAuth();
+  const { isSuperAdmin } = useRoles(user);
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [allOrganismes, setAllOrganismes] = useState<{ id: string; nom: string }[]>([]);
+  const [allZonages, setAllZonages] = useState<{ id: string; nom: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
-  const fetchStats = useCallback(async () => {
+  const [filterOrgId, setFilterOrgId] = useState('');
+  const [filterZonageId, setFilterZonageId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Export mirrors active filters
+  const [exportOrgId, setExportOrgId] = useState('');
+  const [exportZonageId, setExportZonageId] = useState('');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+
+  const fetchStats = useCallback(async (params?: StatsFilterParams) => {
     setIsLoading(true);
     try {
-      const data = await getStats();
+      const data = await getStats(params);
       setStats(data);
+      // Populate reference lists from first unfiltered load
+      if (!params) {
+        setAllOrganismes(data.byOrganisme.map(o => ({ id: o.id, nom: o.nom })));
+        setAllZonages(data.byZonage.map(z => ({ id: z.id, nom: z.nom })));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -88,11 +112,48 @@ export default function StatistiquesClient() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  const buildActiveParams = (overrides?: Partial<StatsFilterParams>): StatsFilterParams => ({
+    organismeId: filterOrgId || undefined,
+    zonageId: filterZonageId || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    ...overrides,
+  });
+
+  const handleFilterOrg = (val: string) => {
+    setFilterOrgId(val); setFilterZonageId(''); setExportOrgId(val); setExportZonageId('');
+    fetchStats(buildActiveParams({ organismeId: val || undefined, zonageId: undefined }));
+  };
+
+  const handleFilterZonage = (val: string) => {
+    setFilterZonageId(val); setFilterOrgId(''); setExportZonageId(val); setExportOrgId('');
+    fetchStats(buildActiveParams({ zonageId: val || undefined, organismeId: undefined }));
+  };
+
+  const handleDateChange = (field: 'startDate' | 'endDate', val: string) => {
+    if (field === 'startDate') { setStartDate(val); setExportStartDate(val); }
+    else { setEndDate(val); setExportEndDate(val); }
+    fetchStats(buildActiveParams({ [field]: val || undefined }));
+  };
+
+  const handleReset = () => {
+    setFilterOrgId(''); setFilterZonageId(''); setStartDate(''); setEndDate('');
+    setExportOrgId(''); setExportZonageId(''); setExportStartDate(''); setExportEndDate('');
+    fetchStats(undefined);
+  };
+
+  const isFiltered = !!(filterOrgId || filterZonageId || startDate || endDate);
+
   const handleExportCsv = async () => {
     setIsExporting(true);
     try {
       const token = await getAccessToken();
-      const url = getExportCsvUrl();
+      const url = getExportCsvUrl({
+        organismeId: exportOrgId || undefined,
+        zonageId: exportZonageId || undefined,
+        startDate: exportStartDate || undefined,
+        endDate: exportEndDate || undefined,
+      });
       const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error('Erreur lors du téléchargement');
       const blob = await response.blob();
@@ -135,6 +196,53 @@ export default function StatistiquesClient() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
+      {/* Filtres */}
+      <div className="flex flex-wrap items-center gap-3 p-4 bg-card border border-border rounded-xl shadow-sm">
+        <span className="text-sm font-medium text-muted-foreground shrink-0">Filtrer par :</span>
+
+        {isSuperAdmin && allOrganismes.length > 0 && (
+          <select value={filterOrgId} onChange={(e) => handleFilterOrg(e.target.value)}
+            className="px-3 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
+            <option value="">Tous les organismes</option>
+            {allOrganismes.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+          </select>
+        )}
+
+        {allZonages.length > 0 && (
+          <select value={filterZonageId} onChange={(e) => handleFilterZonage(e.target.value)}
+            className="px-3 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
+            <option value="">Tous les zonages</option>
+            {allZonages.map(z => <option key={z.id} value={z.id}>{z.nom}</option>)}
+          </select>
+        )}
+
+        {isFiltered && (
+          <>
+            <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+              {filterOrgId ? allOrganismes.find(o => o.id === filterOrgId)?.nom : allZonages.find(z => z.id === filterZonageId)?.nom}
+            </span>
+            <button onClick={handleReset}
+              className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
+              Réinitialiser
+            </button>
+          </>
+        )}
+
+        {/* Date range */}
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs text-muted-foreground">Du</span>
+          <input type="date" value={startDate} max={endDate || undefined}
+            onChange={(e) => handleDateChange('startDate', e.target.value)}
+            className="px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary" />
+          <span className="text-xs text-muted-foreground">au</span>
+          <input type="date" value={endDate} min={startDate || undefined}
+            onChange={(e) => handleDateChange('endDate', e.target.value)}
+            className="px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary" />
+        </div>
+
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {KPI_CONFIGS.map((cfg) => {
@@ -176,14 +284,67 @@ export default function StatistiquesClient() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleExportCsv}
-          disabled={isExporting}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all shadow-md shadow-primary/25 disabled:opacity-60 whitespace-nowrap"
-        >
-          {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {isExporting ? 'Export en cours…' : 'Exporter CSV'}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowExportPanel((v) => !v)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all shadow-md shadow-primary/25 whitespace-nowrap"
+          >
+            <Download className="h-4 w-4" />
+            Exporter CSV
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showExportPanel ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showExportPanel && (
+            <div className="bg-card border border-border rounded-xl p-4 shadow-lg w-72 space-y-3 z-10">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtres d’export</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Date début</label>
+                  <input type="date" value={exportStartDate} onChange={e => setExportStartDate(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-input rounded-lg bg-background text-xs outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Date fin</label>
+                  <input type="date" value={exportEndDate} onChange={e => setExportEndDate(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-input rounded-lg bg-background text-xs outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+
+              {isSuperAdmin && allOrganismes.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Organisme</label>
+                  <select value={exportOrgId} onChange={(e) => { setExportOrgId(e.target.value); setExportZonageId(''); }}
+                    className="w-full px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Tous les organismes</option>
+                    {allOrganismes.map((o) => (
+                      <option key={o.id} value={o.id}>{o.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {allZonages.length > 0 && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Zonage</label>
+                  <select value={exportZonageId} onChange={(e) => { setExportZonageId(e.target.value); setExportOrgId(''); }}
+                    className="w-full px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Tous les zonages</option>
+                    {allZonages.map((z) => (
+                      <option key={z.id} value={z.id}>{z.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button onClick={handleExportCsv} disabled={isExporting}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isExporting ? 'Export en cours…' : 'Télécharger'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom 2-column grid */}

@@ -7,7 +7,7 @@ import { DatabaseService } from '../../database/database.service';
 import { CreateParcoursDto } from './dto/create-parcours.dto';
 import { FilterParcoursDto } from './dto/filter-parcours.dto';
 import { PartialType } from '@nestjs/mapped-types';
-import { Role } from '@prisma/client';
+import { Role, PublishStatus } from '@prisma/client';
 import * as fs from 'fs';
 import { join } from 'path';
 
@@ -40,6 +40,7 @@ export class ParcoursService {
     if (filters.status) where.status = filters.status;
     if (filters.difficulty) where.difficulty = filters.difficulty;
     if (filters.zonageId) where.zonageId = filters.zonageId;
+    if (filters.organismeId && userRole === Role.SUPER_ADMIN) where.organismeId = filters.organismeId;
 
     return this.db.parcours.findMany({
       where,
@@ -53,6 +54,9 @@ export class ParcoursService {
         coverImage: true,
         zonage: { select: { id: true, nom: true } },
         organisme: { select: { id: true, nom: true } },
+        createdBy: userRole === Role.SUPER_ADMIN
+          ? { select: { id: true, firstName: true, lastName: true, email: true } }
+          : false,
         _count: { select: { etapes: true, reviews: true } },
         createdAt: true,
         updatedAt: true,
@@ -90,7 +94,7 @@ export class ParcoursService {
   /**
    * Crée un nouveau parcours — l'organismeId est déduit du compte connecté
    */
-  async create(dto: CreateParcoursDto, userRole: Role, userOrganismeId: string | null) {
+  async create(dto: CreateParcoursDto, userRole: Role, userOrganismeId: string | null, createdById?: string) {
     // Vérification que la zonage existe
     const zonage = await this.db.zonage.findUnique({ where: { id: dto.zonageId } });
     if (!zonage) throw new NotFoundException(`Zonage #${dto.zonageId} introuvable`);
@@ -110,6 +114,7 @@ export class ParcoursService {
       data: {
         ...dto,
         organismeId,
+        ...(createdById ? { createdById } : {}),
       },
     });
   }
@@ -141,7 +146,7 @@ export class ParcoursService {
   }
 
   /**
-   * Met à jour un parcours (avec vérification de propriété)
+   * Met à jour un parcours (avec vérification de propriété et de rôle sur le statut)
    */
   async update(
     id: string,
@@ -151,20 +156,58 @@ export class ParcoursService {
   ) {
     const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
 
+    // Un parcours publié ne peut pas être modifié par un ADMIN ou EDITOR
+    if (existing.status === PublishStatus.PUBLISHED && userRole !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException('Un parcours publié ne peut pas être modifié. Contactez un Super Admin.');
+    }
+
+    // Un EDITOR ne peut jamais toucher au statut
+    if (dto.status !== undefined && userRole === Role.EDITOR) {
+      throw new ForbiddenException('Les éditeurs ne peuvent pas modifier le statut d\'un parcours.');
+    }
+
+    // Un ADMIN ne peut pas publier directement
+    if (dto.status === PublishStatus.PUBLISHED && userRole === Role.ADMIN) {
+      throw new ForbiddenException('Seul un Super Admin peut publier un parcours.');
+    }
+
+    // Exclure le champ status du dto pour EDITOR (double sécurité)
+    const safeDto = userRole === Role.EDITOR ? (({ status, ...rest }) => rest)(dto as any) : dto;
+
     const updated = await this.db.parcours.update({
       where: { id },
-      data: dto,
+      data: safeDto,
     });
 
     // Nettoyage des anciennes images spécifiques si elles ont été modifiées
-    if (dto.coverImage !== undefined) {
-      this.cleanupOldSpecificImage(existing.coverImage, dto.coverImage);
+    if (safeDto.coverImage !== undefined) {
+      this.cleanupOldSpecificImage(existing.coverImage, safeDto.coverImage);
     }
-    if (dto.mascotteImg !== undefined) {
-      this.cleanupOldSpecificImage(existing.mascotteImg, dto.mascotteImg);
+    if (safeDto.mascotteImg !== undefined) {
+      this.cleanupOldSpecificImage(existing.mascotteImg, safeDto.mascotteImg);
     }
 
     return updated;
+  }
+
+  /**
+   * Soumet un parcours pour relecture (EDITOR/ADMIN → PENDING_REVIEW)
+   */
+  async requestPublish(id: string, userRole: Role, userOrganismeId: string | null) {
+    const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
+
+    if (existing.status === PublishStatus.PUBLISHED) {
+      throw new ForbiddenException('Ce parcours est déjà publié.');
+    }
+    if (existing.status === PublishStatus.PENDING_REVIEW) {
+      throw new ForbiddenException('Une demande de publication est déjà en cours.');
+    }
+
+    return this.db.parcours.update({
+      where: { id },
+      data: { status: PublishStatus.PENDING_REVIEW },
+      select: { id: true, status: true, title: true },
+    });
   }
 
   /**

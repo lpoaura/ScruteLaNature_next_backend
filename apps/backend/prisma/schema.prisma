@@ -48,6 +48,7 @@ enum Difficulty {
 
 enum PublishStatus {
   DRAFT
+  PENDING_REVIEW
   PUBLISHED
   ARCHIVED
 }
@@ -111,6 +112,7 @@ model User {
   badges           UserBadge[]
   parcoursDone     UserParcours[]
   reviews          Review[]
+  parcoursCreated  Parcours[]     @relation("ParcoursCreatedBy")
 
   @@index([organismeId])
   @@map("users")
@@ -232,6 +234,9 @@ model Parcours {
   pathGeoJSON String? @db.Text
   mascotteNom String?
   mascotteImg String?
+
+  createdById String?
+  createdBy   User?     @relation("ParcoursCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)

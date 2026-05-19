@@ -8,6 +8,8 @@ import {
   Param,
   Request,
 } from '@nestjs/common';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import {
   ApiTags,
   ApiOperation,
@@ -106,6 +108,14 @@ export class ReviewsController {
   @ApiResponse({ status: 200, description: 'Liste des avis + note moyenne.' })
   getReviews(@Param('parcoursId') parcoursId: string) {
     return this.socialService.getReviewsByParcours(parcoursId);
+  }
+
+  @Get('admin/all')
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Lister tous les avis pour la modération (EDITOR/ADMIN/SUPER_ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Liste complète des avis avec auteur et parcours.' })
+  getAllReviews(@Request() req: any) {
+    return this.socialService.getAllReviews(req.user.role, req.user.organismeId ?? null);
   }
 
   @Delete(':id')

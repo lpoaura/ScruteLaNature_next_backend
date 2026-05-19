@@ -8,29 +8,83 @@ import type { Etape } from '@/src/types/api.types';
 
 // Fix for default Leaflet icons in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
 
-// Custom icon for etapes (optional: make it a different color)
-const etapeIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-  className: 'hue-rotate-[150deg]', // Simple CSS hack to change color in Tailwind
-});
+function createLabelIcon(label: string, color: string) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      position:absolute;
+      transform:translateX(-50%);
+      background:${color};
+      border:2px solid white;
+      border-radius:4px;
+      padding:3px 8px;
+      color:white;
+      font-weight:700;
+      font-size:11px;
+      font-family:sans-serif;
+      white-space:nowrap;
+      box-shadow:0 2px 6px rgba(0,0,0,.35);
+    ">${label}</div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -14],
+  });
+}
+
+function getTraceEndpoints(geoJSON: any): { start: [number, number] | null; end: [number, number] | null } {
+  const features: any[] = geoJSON?.features ?? [];
+  const lines = features.filter(f => f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString');
+  if (lines.length === 0) return { start: null, end: null };
+
+  let allCoords: [number, number][] = [];
+  for (const f of lines) {
+    if (f.geometry.type === 'LineString') {
+      allCoords = [...allCoords, ...f.geometry.coordinates];
+    } else {
+      for (const seg of f.geometry.coordinates) allCoords = [...allCoords, ...seg];
+    }
+  }
+  if (allCoords.length === 0) return { start: null, end: null };
+
+  const first = allCoords[0];
+  const last = allCoords[allCoords.length - 1];
+  return {
+    start: [first[1], first[0]],
+    end: [last[1], last[0]],
+  };
+}
+
+function createNumberedIcon(order: number, isActive = false) {
+  const bg = isActive ? '#f59e0b' : '#10b981';
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:32px;height:32px;
+      background:${bg};
+      border:2.5px solid white;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:white;
+      font-weight:700;
+      font-size:13px;
+      font-family:sans-serif;
+      box-shadow:0 2px 6px rgba(0,0,0,.35);
+    ">${order}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -20],
+  });
+}
 
 interface MapLeafletProps {
   etapes: Etape[];
-  pathGeoJSON?: any; // The parsed GeoJSON object
+  pathGeoJSON?: any;
   onMapClick?: (lat: number, lng: number) => void;
   onMarkerClick?: (etape: Etape) => void;
+  activeEtapeId?: string | null;
 }
 
 function MapEvents({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
@@ -64,7 +118,7 @@ function FitBounds({ geoJSON }: { geoJSON: any }) {
   return null;
 }
 
-export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerClick }: MapLeafletProps) {
+export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerClick, activeEtapeId }: MapLeafletProps) {
   // Center map on the first etape, or a default location (e.g., center of France)
   const defaultCenter: [number, number] = etapes.length > 0 
     ? [etapes[0].latitude, etapes[0].longitude] 
@@ -88,25 +142,48 @@ export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerCl
         <MapEvents onMapClick={onMapClick} />
         <FitBounds geoJSON={pathGeoJSON} />
 
-        {/* Tracé GPX / GeoJSON */}
-        {pathGeoJSON && (
-          <GeoJSON 
-            key={JSON.stringify(pathGeoJSON).length} // Force recreation when data changes
-            data={pathGeoJSON} 
-            style={{
-              color: '#10b981', // Tailwind emerald-500
-              weight: 4,
-              opacity: 0.8,
-            }}
-          />
-        )}
+        {/* Tracé GPX / GeoJSON — on filtre les waypoints (Point) pour ne garder que le tracé */}
+        {pathGeoJSON && (() => {
+          const traceOnly = {
+            ...pathGeoJSON,
+            features: (pathGeoJSON.features ?? []).filter(
+              (f: any) => f.geometry?.type !== 'Point'
+            ),
+          };
+          return traceOnly.features.length > 0 ? (
+            <GeoJSON
+              key={JSON.stringify(traceOnly).length}
+              data={traceOnly}
+              style={{ color: '#10b981', weight: 4, opacity: 0.8 }}
+            />
+          ) : null;
+        })()}
+
+        {/* Marqueurs Départ / Fin du tracé */}
+        {pathGeoJSON && (() => {
+          const { start, end } = getTraceEndpoints(pathGeoJSON);
+          return (
+            <>
+              {start && (
+                <Marker position={start} icon={createLabelIcon('Départ', '#16a34a')} interactive={false}>
+                  <Popup><span className="font-semibold text-sm">Départ du tracé</span></Popup>
+                </Marker>
+              )}
+              {end && (
+                <Marker position={end} icon={createLabelIcon('Fin', '#dc2626')} interactive={false}>
+                  <Popup><span className="font-semibold text-sm">Fin du tracé</span></Popup>
+                </Marker>
+              )}
+            </>
+          );
+        })()}
 
         {/* Marqueurs des étapes */}
         {etapes.map((etape, index) => (
           <Marker 
-            key={etape.id || `temp-${index}-${etape.latitude}`} 
+            key={`${etape.id || `temp-${index}`}-${etape.order}-${activeEtapeId === etape.id}`}
             position={[etape.latitude, etape.longitude]}
-            icon={etapeIcon}
+            icon={createNumberedIcon(etape.order, !!(activeEtapeId && etape.id === activeEtapeId))}
             eventHandlers={{
               click: () => onMarkerClick && onMarkerClick(etape),
             }}

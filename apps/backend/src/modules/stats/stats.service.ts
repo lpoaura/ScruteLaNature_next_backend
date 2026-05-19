@@ -6,27 +6,75 @@ import { Role } from '@prisma/client';
 export class StatsService {
   constructor(private readonly db: DatabaseService) {}
 
-  async getDashboardStats(role: Role, organismeId: string | null) {
+  async getDashboardStats(
+    role: Role,
+    organismeId: string | null,
+    filterOrganismeId?: string,
+    filterZonageId?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
     const isSuperAdmin = role === Role.SUPER_ADMIN;
-    const parcoursFilter = isSuperAdmin ? {} : { organismeId: organismeId! };
-    const userFilter = isSuperAdmin ? { isGuest: false } : { isGuest: false, organismeId: organismeId! };
-
+    const baseFilter = isSuperAdmin ? {} : { organismeId: organismeId! };
+    const parcoursFilter: any = { ...baseFilter };
+    if (filterOrganismeId) parcoursFilter.organismeId = filterOrganismeId;
+    if (filterZonageId) parcoursFilter.zonageId = filterZonageId;
+    if (startDate || endDate) {
+      parcoursFilter.createdAt = {
+        ...(startDate ? { gte: new Date(startDate) } : {}),
+        ...(endDate ? { lte: new Date(endDate + 'T23:59:59.999Z') } : {}),
+      };
+    }
     // 1. Chiffres globaux
     const totalParcours = await this.db.parcours.count({ where: parcoursFilter });
-    const totalUsers = await this.db.user.count({ where: userFilter });
-    const totalObservations = await this.db.observation.count({
-      where: isSuperAdmin ? undefined : { user: { organismeId: organismeId! } }
-    });
-    const totalCompletions = await this.db.userParcours.count({
-      where: isSuperAdmin ? undefined : { parcours: parcoursFilter }
-    });
 
-    // 2. Tableau croisé dynamique des organismes (financeurs)
-    // On veut le nombre de parcours, la distance totale, et le nb de participants
+    // Résoudre les IDs de parcours correspondants (évite distinct+relation nested instable)
+    const isFiltered = !!(filterOrganismeId || filterZonageId || startDate || endDate);
+    const noScope = isSuperAdmin && !isFiltered;
+
+    const parcoursIds: string[] = noScope
+      ? []
+      : (await this.db.parcours.findMany({ where: parcoursFilter, select: { id: true } })).map(p => p.id);
+
+    const upWhere = noScope ? undefined : { parcoursId: { in: parcoursIds } };
+
+    // Joueurs distincts ayant joué les parcours concernés
+    const totalPlayers = noScope
+      ? await this.db.user.count({ where: { role: Role.USER, isGuest: false } })
+      : await this.db.userParcours
+          .groupBy({ by: ['userId'], where: upWhere })
+          .then((r) => r.length);
+
+    // Membres staff
+    const membersWhere: any = isSuperAdmin
+      ? { role: { in: [Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN] } }
+      : { role: { in: [Role.EDITOR, Role.ADMIN] }, organismeId: organismeId! };
+    if (filterOrganismeId) membersWhere.organismeId = filterOrganismeId;
+    const totalMembers = await this.db.user.count({ where: membersWhere });
+
+    const totalCompletions = await this.db.userParcours.count({ where: upWhere });
+
+    // 2. Tableau croisé dynamique des organismes
+    const orgWhere = filterOrganismeId
+      ? { id: filterOrganismeId }
+      : isSuperAdmin ? undefined : { id: organismeId! };
+
+    // Filtre sur les parcours inclus (date/zonage uniquement — organismeId est implicite via la relation)
+    const parcoursIncludeWhere: any = {};
+    if (filterZonageId) parcoursIncludeWhere.zonageId = filterZonageId;
+    if (startDate || endDate) {
+      parcoursIncludeWhere.createdAt = {
+        ...(startDate ? { gte: new Date(startDate) } : {}),
+        ...(endDate ? { lte: new Date(endDate + 'T23:59:59.999Z') } : {}),
+      };
+    }
+    const hasParcoursIncludeFilter = Object.keys(parcoursIncludeWhere).length > 0;
+
     const organismes = await this.db.organisme.findMany({
-      where: isSuperAdmin ? undefined : { id: organismeId! },
+      where: orgWhere,
       include: {
         parcours: {
+          where: hasParcoursIncludeFilter ? parcoursIncludeWhere : undefined,
           select: {
             id: true,
             distanceKm: true,
@@ -53,6 +101,7 @@ export class StatsService {
 
     // 3. Stats par Zonage
     const zonages = await this.db.zonage.findMany({
+      where: filterZonageId ? { id: filterZonageId } : undefined,
       include: {
         _count: {
           select: { parcours: { where: parcoursFilter } },
@@ -63,8 +112,8 @@ export class StatsService {
     return {
       global: {
         totalParcours,
-        totalUsers,
-        totalObservations,
+        totalPlayers,
+        totalMembers,
         totalCompletions,
       },
       byOrganisme: statsByOrganisme,
@@ -76,9 +125,17 @@ export class StatsService {
     };
   }
 
-  async exportCsv(role: Role, organismeId: string | null) {
+  async exportCsv(
+    role: Role,
+    userOrganismeId: string | null,
+    filterOrganismeId?: string,
+    filterZonageId?: string,
+  ) {
     const isSuperAdmin = role === Role.SUPER_ADMIN;
-    const parcoursFilter = isSuperAdmin ? {} : { organismeId: organismeId! };
+    const baseFilter = isSuperAdmin ? {} : { organismeId: userOrganismeId! };
+    const parcoursFilter: any = { ...baseFilter };
+    if (filterOrganismeId) parcoursFilter.organismeId = filterOrganismeId;
+    if (filterZonageId) parcoursFilter.zonageId = filterZonageId;
 
     // Génère un CSV des parcours pour export
     const parcoursList = await this.db.parcours.findMany({

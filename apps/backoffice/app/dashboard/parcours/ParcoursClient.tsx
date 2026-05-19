@@ -15,32 +15,43 @@ import {
 } from 'lucide-react';
 import { getParcours, deleteParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
-import type { Parcours, Zonage, PublishStatus } from '@/src/types/api.types';
+import { getOrganismes } from '@/src/services/organismes.service';
+import { useAuth } from '@/src/hooks/use-auth';
+import { useRoles } from '@/src/hooks/use-roles';
+import type { Parcours, Zonage, Organisme, PublishStatus } from '@/src/types/api.types';
 import { cn } from '@/lib/utils';
 
 export default function ParcoursClient() {
+  const { user } = useAuth();
+  const { isSuperAdmin } = useRoles(user);
+
   const [parcoursList, setParcoursList] = useState<Parcours[]>([]);
   const [zonages, setZonages] = useState<Zonage[]>([]);
+  const [organismes, setOrganismes] = useState<Organisme[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PublishStatus | 'ALL'>('ALL');
   const [zonageFilter, setZonageFilter] = useState<string>('ALL');
+  const [organismeFilter, setOrganismeFilter] = useState<string>('ALL');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [pData, zData] = await Promise.all([
+      const fetches: [Promise<Parcours[]>, Promise<Zonage[]>, Promise<Organisme[]>?] = [
         getParcours(),
         getZonages(),
-      ]);
+        ...(isSuperAdmin ? [getOrganismes()] : []),
+      ] as any;
+      const [pData, zData, orgData] = await Promise.all(fetches);
       setParcoursList(pData);
       setZonages(zData);
+      if (orgData) setOrganismes(orgData);
     } catch (err) {
       console.error('Erreur lors du chargement des parcours', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     fetchData();
@@ -61,13 +72,15 @@ export default function ParcoursClient() {
       const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchStatus = statusFilter === 'ALL' || p.status === statusFilter;
       const matchZonage = zonageFilter === 'ALL' || p.zonage?.id === zonageFilter;
-      return matchSearch && matchStatus && matchZonage;
+      const matchOrganisme = !isSuperAdmin || organismeFilter === 'ALL' || p.organisme?.id === organismeFilter;
+      return matchSearch && matchStatus && matchZonage && matchOrganisme;
     });
-  }, [parcoursList, searchQuery, statusFilter, zonageFilter]);
+  }, [parcoursList, searchQuery, statusFilter, zonageFilter, organismeFilter, isSuperAdmin]);
 
   const StatusBadge = ({ status }: { status: string }) => {
     const configs: Record<string, { label: string; classes: string }> = {
       PUBLISHED: { label: 'Publié', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+      PENDING_REVIEW: { label: 'En attente', classes: 'bg-violet-100 text-violet-700 border-violet-200' },
       DRAFT: { label: 'Brouillon', classes: 'bg-amber-100 text-amber-700 border-amber-200' },
       ARCHIVED: { label: 'Archivé', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
     };
@@ -112,6 +125,21 @@ export default function ParcoursClient() {
 
         {/* Filtres et Actions */}
         <div className="flex items-center gap-3">
+          {isSuperAdmin && organismes.length > 0 && (
+            <div className="relative">
+              <select
+                value={organismeFilter}
+                onChange={(e) => setOrganismeFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-2 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+              >
+                <option value="ALL">Tous les organismes</option>
+                {organismes.map(o => (
+                  <option key={o.id} value={o.id}>{o.nom}</option>
+                ))}
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            </div>
+          )}
           <div className="relative">
             <select
               value={statusFilter}
@@ -120,6 +148,7 @@ export default function ParcoursClient() {
             >
               <option value="ALL">Tous les statuts</option>
               <option value="PUBLISHED">Publiés</option>
+              <option value="PENDING_REVIEW">En attente</option>
               <option value="DRAFT">Brouillons</option>
               <option value="ARCHIVED">Archivés</option>
             </select>
@@ -159,6 +188,7 @@ export default function ParcoursClient() {
                 <tr>
                   <th className="px-4 py-3 font-medium text-muted-foreground w-16">Image</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Titre</th>
+                  {isSuperAdmin && <th className="px-4 py-3 font-medium text-muted-foreground">Créé par</th>}
                   <th className="px-4 py-3 font-medium text-muted-foreground">Zonage</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Statut</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Difficulté</th>
@@ -168,7 +198,7 @@ export default function ParcoursClient() {
               <tbody className="divide-y divide-border">
                 {filteredParcours.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={isSuperAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground">
                       Aucun parcours trouvé.
                     </td>
                   </tr>
@@ -190,6 +220,22 @@ export default function ParcoursClient() {
                           {parcours.distanceKm ? `${parcours.distanceKm} km` : '-'} • {parcours.durationMin ? `${parcours.durationMin} min` : '-'}
                         </p>
                       </td>
+                      {isSuperAdmin && (
+                        <td className="px-4 py-3">
+                          {parcours.createdBy ? (
+                            <div>
+                              <p className="text-sm text-foreground">
+                                {parcours.createdBy.firstName || parcours.createdBy.lastName
+                                  ? `${parcours.createdBy.firstName ?? ''} ${parcours.createdBy.lastName ?? ''}`.trim()
+                                  : parcours.createdBy.email ?? '—'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{parcours.organisme?.nom ?? '-'}</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-muted-foreground">
                         {parcours.zonage?.nom || '-'}
                       </td>

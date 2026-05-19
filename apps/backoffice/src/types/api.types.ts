@@ -54,7 +54,7 @@ export interface CreateZonageDto {
 
 // ── Parcours ──────────────────────────────────────────────────────────────────
 
-export type PublishStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type PublishStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface Parcours {
   id: string;
@@ -75,6 +75,7 @@ export interface Parcours {
   zonageId: string;
   zonage?: Zonage;
   organisme?: Organisme;
+  createdBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
   etapes?: Etape[];
   createdAt: string;
   updatedAt: string;

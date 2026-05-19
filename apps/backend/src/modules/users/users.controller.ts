@@ -52,10 +52,19 @@ export class UsersController {
 
   @Get('admin/users')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Lister les employés (Role: ADMIN/SUPER_ADMIN)' })
+  @ApiOperation({ summary: 'Lister les employés de son organisme (ADMIN) ou tous (SUPER_ADMIN)' })
   @ApiResponse({ status: 200, description: 'Liste des utilisateurs.' })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Request() req: any) {
+    return this.usersService.findAll(req.user.role, req.user.organismeId ?? null);
+  }
+
+  @Delete('admin/users/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Supprimer un compte employé (ADMIN/SUPER_ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Compte supprimé.' })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
+  removeById(@Param('id') id: string) {
+    return this.usersService.removeById(id);
   }
 
   @Post('admin/users')

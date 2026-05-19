@@ -3,8 +3,8 @@ import { apiClient } from '@/src/lib/api-client';
 export interface DashboardStats {
   global: {
     totalParcours: number;
-    totalUsers: number;
-    totalObservations: number;
+    totalPlayers: number;
+    totalMembers: number;
     totalCompletions: number;
   };
   byOrganisme: {
@@ -21,12 +21,32 @@ export interface DashboardStats {
   }[];
 }
 
-export async function getStats(): Promise<DashboardStats> {
-  return apiClient<DashboardStats>('/admin/stats');
+export interface StatsFilterParams {
+  organismeId?: string;
+  zonageId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
-export function getExportCsvUrl(): string {
-  // Return the URL that triggers download
+function buildQs(params?: StatsFilterParams): string {
+  const qs = new URLSearchParams();
+  if (params?.organismeId) qs.set('organismeId', params.organismeId);
+  if (params?.zonageId) qs.set('zonageId', params.zonageId);
+  if (params?.startDate) qs.set('startDate', params.startDate);
+  if (params?.endDate) qs.set('endDate', params.endDate);
+  return qs.toString() ? `?${qs.toString()}` : '';
+}
+
+export async function getStats(params?: StatsFilterParams): Promise<DashboardStats> {
+  return apiClient<DashboardStats>(`/admin/stats${buildQs(params)}`);
+}
+
+export function getExportCsvUrl(params?: StatsFilterParams): string {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000/api';
-  return `${BACKEND_URL}/admin/stats/export/csv`;
+  const url = new URL(`${BACKEND_URL}/admin/stats/export/csv`);
+  if (params?.organismeId) url.searchParams.set('organismeId', params.organismeId);
+  if (params?.zonageId) url.searchParams.set('zonageId', params.zonageId);
+  if (params?.startDate) url.searchParams.set('startDate', params.startDate);
+  if (params?.endDate) url.searchParams.set('endDate', params.endDate);
+  return url.toString();
 }

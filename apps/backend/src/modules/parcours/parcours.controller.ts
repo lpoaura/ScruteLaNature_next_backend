@@ -67,7 +67,7 @@ export class ParcoursController {
   @ApiQuery({ name: 'organismeId', required: false, description: 'Obligatoire pour les SUPER_ADMIN. Ignoré pour les autres rôles.' })
   create(@Body() dto: CreateParcoursDto, @Query('organismeId') queryOrganismeId: string, @Request() req: any) {
     const orgId = req.user.role === Role.SUPER_ADMIN ? queryOrganismeId : (req.user.organismeId ?? null);
-    return this.parcoursService.create(dto, req.user.role, orgId);
+    return this.parcoursService.create(dto, req.user.role, orgId, req.user.sub);
   }
 
   @Patch(':id')
@@ -83,6 +83,16 @@ export class ParcoursController {
     @Request() req: any,
   ) {
     return this.parcoursService.update(id, dto, req.user.role, req.user.organismeId ?? null);
+  }
+
+  @Patch(':id/request-publish')
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Soumettre un parcours pour publication (→ PENDING_REVIEW)' })
+  @ApiParam({ name: 'id', description: 'UUID du parcours' })
+  @ApiResponse({ status: 200, description: 'Statut passé à PENDING_REVIEW.' })
+  @ApiResponse({ status: 403, description: 'Déjà publié ou déjà en attente.' })
+  requestPublish(@Param('id') id: string, @Request() req: any) {
+    return this.parcoursService.requestPublish(id, req.user.role, req.user.organismeId ?? null);
   }
 
   @Delete(':id')

@@ -1,6 +1,7 @@
 'use client';
 
-import { Bell, ChevronDown } from 'lucide-react';
+import { Bell, ChevronDown, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/src/hooks/use-auth';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export function Header({ title }: HeaderProps) {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const initials = user?.firstName
     ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
@@ -21,6 +23,17 @@ export function Header({ title }: HeaderProps) {
 
       {/* Actions droite */}
       <div className="flex items-center gap-3">
+        {/* Toggle dark/light */}
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted transition-colors"
+          title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+        >
+          {theme === 'dark'
+            ? <Sun className="h-4 w-4 text-muted-foreground" />
+            : <Moon className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
         {/* Notifications (placeholder) */}
         <button className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted transition-colors">
           <Bell className="h-4 w-4 text-muted-foreground" />

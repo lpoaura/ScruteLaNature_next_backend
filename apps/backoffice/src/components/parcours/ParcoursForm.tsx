@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload, SendHorizonal, Lock } from 'lucide-react';
 import Link from 'next/link';
-import { createParcours, updateParcours } from '@/src/services/parcours.service';
+import { createParcours, updateParcours, requestPublishParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
 import { getMedias, uploadMedia } from '@/src/services/medias.service';
 import { getOrganismes } from '@/src/services/organismes.service';
@@ -25,7 +25,12 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const { user } = useAuth();
-  const { isSuperAdmin } = useRoles(user);
+  const { isSuperAdmin, role } = useRoles(user);
+  const isEditor = role === 'EDITOR';
+  const isAdminOnly = role === 'ADMIN';
+
+  const isPublished = initialData?.status === 'PUBLISHED';
+  const isLockedForEdit = isPublished && !isSuperAdmin;
 
   // Données de base de données pour les selects
   const [zonages, setZonages] = useState<Zonage[]>([]);
@@ -52,6 +57,8 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [publishRequested, setPublishRequested] = useState(false);
+  const [isRequestingPublish, setIsRequestingPublish] = useState(false);
 
   useEffect(() => {
     const fetchRefs = async () => {
@@ -97,6 +104,19 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     }
 
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRequestPublish = async () => {
+    if (!initialData) return;
+    setIsRequestingPublish(true);
+    try {
+      await requestPublishParcours(initialData.id);
+      setPublishRequested(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la demande de publication.');
+    } finally {
+      setIsRequestingPublish(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -253,11 +273,17 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
           </h1>
         </div>
         
+        {isLockedForEdit && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+            <Lock className="h-4 w-4 shrink-0" />
+            Parcours publié — modification réservée au Super Admin
+          </div>
+        )}
         {activeTab === 'info' && (
           <button
             type="submit"
             form="parcours-form"
-            disabled={isPending}
+            disabled={isPending || isLockedForEdit}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -372,18 +398,43 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="status" className="text-sm font-medium">Statut de publication</label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                    >
-                      <option value="DRAFT">Brouillon (invisible)</option>
-                      <option value="PUBLISHED">Publié (visible dans l'app)</option>
-                      <option value="ARCHIVED">Archivé</option>
-                    </select>
+                    <label className="text-sm font-medium">Statut de publication</label>
+                    {isEditor ? (
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          'inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border',
+                          formData.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          formData.status === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-muted text-muted-foreground border-border'
+                        )}>
+                          {formData.status === 'PUBLISHED' ? 'Publié' :
+                           formData.status === 'PENDING_REVIEW' ? 'En attente de validation' :
+                           formData.status === 'ARCHIVED' ? 'Archivé' : 'Brouillon'}
+                        </span>
+                        {isEdit && formData.status === 'DRAFT' && !publishRequested && (
+                          <button type="button" onClick={handleRequestPublish} disabled={isRequestingPublish}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors">
+                            {isRequestingPublish ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizonal className="h-3.5 w-3.5" />}
+                            Demander la publication
+                          </button>
+                        )}
+                        {publishRequested && <span className="text-xs text-emerald-600 font-medium">Demande envoyée ✔</span>}
+                      </div>
+                    ) : (
+                      <select
+                        id="status"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        disabled={isLockedForEdit}
+                        className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none disabled:opacity-60"
+                      >
+                        <option value="DRAFT">Brouillon (invisible)</option>
+                        <option value="PENDING_REVIEW">En attente de validation</option>
+                        {isSuperAdmin && <option value="PUBLISHED">Publié (visible dans l'app)</option>}
+                        <option value="ARCHIVED">Archivé</option>
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

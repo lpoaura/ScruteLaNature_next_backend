@@ -268,7 +268,21 @@ export class SocialService {
     };
   }
 
-  // ── 9. Supprimer un avis (auteur ou modérateur ADMIN/SUPER_ADMIN) ─────────
+  // ── 9. Lister tous les avis (modération admin) ───────────────────────────
+
+  async getAllReviews(userRole: Role, organismeId: string | null) {
+    const isSuperAdmin = userRole === Role.SUPER_ADMIN;
+    return this.db.review.findMany({
+      where: isSuperAdmin ? undefined : { parcours: { organismeId: organismeId! } },
+      include: {
+        user: { select: { id: true, pseudo: true, email: true } },
+        parcours: { select: { id: true, title: true, organismeId: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // ── 10. Supprimer un avis (auteur ou modérateur ADMIN/SUPER_ADMIN) ────────
 
   async deleteReview(reviewId: string, userId: string, userRole: Role) {
     const review = await this.db.review.findUnique({
@@ -279,7 +293,7 @@ export class SocialService {
       throw new NotFoundException('Avis introuvable.');
     }
 
-    const isAdmin = userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
+    const isAdmin = userRole === Role.EDITOR || userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN;
     const isOwner = review.userId === userId;
 
     if (!isOwner && !isAdmin) {

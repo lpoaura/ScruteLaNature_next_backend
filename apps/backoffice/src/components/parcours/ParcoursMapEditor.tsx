@@ -181,9 +181,9 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Colonne de Gauche : La Carte (2/3) */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="lg:col-span-6 space-y-4">
         <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div>
             <h3 className="font-semibold text-lg">Carte du parcours</h3>
@@ -217,11 +217,12 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
           pathGeoJSON={pathGeoJSON} 
           onMapClick={handleMapClick}
           onMarkerClick={(etape) => setEditingEtape(etape)}
+          activeEtapeId={(editingEtape as any)?.id ?? null}
         />
       </div>
 
-      {/* Colonne de Droite : Gestionnaire d'Étapes (1/3) */}
-      <div className="space-y-4">
+      {/* Colonne de Droite : Gestionnaire d'Étapes (2/5) */}
+      <div className="lg:col-span-6 space-y-4">
         {editingEtape ? (
           <div className="bg-card rounded-xl border border-border shadow-sm p-5 animate-in slide-in-from-right-4">
             <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
