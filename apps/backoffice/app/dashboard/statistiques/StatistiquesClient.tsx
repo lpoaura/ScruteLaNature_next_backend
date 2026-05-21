@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getStats, getExportCsvUrl } from '@/src/services/stats.service';
-import type { DashboardStats, StatsFilterParams } from '@/src/services/stats.service';
-import { Download, Loader2, Map, Users, CheckCircle2, TrendingUp, Building2, BarChart3, Globe, UserCheck, ChevronDown } from 'lucide-react';
+import type { DashboardStats, StatsFilterParams, ParcoursActivity } from '@/src/services/stats.service';
+import { Download, Loader2, Map, Users, CheckCircle2, TrendingUp, Building2, BarChart3, Globe, UserCheck, ChevronDown, ArrowUpDown, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
 import { getAccessToken } from '@/src/lib/api-client';
+import { cn } from '@/lib/utils';
 
 // Mini bar chart component
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -440,6 +441,159 @@ export default function StatistiquesClient() {
           </div>
         </div>
 
+      </div>
+
+      {/* ── Activité par parcours ─────────────────────────────────────────── */}
+      {stats.byParcours && stats.byParcours.length > 0 && (
+        <ActivityTable rows={stats.byParcours} isSuperAdmin={isSuperAdmin} />
+      )}
+
+    </div>
+  );
+}
+
+// ─── Composant tableau d'activité par parcours ───────────────────────────────
+type Period = 'thisMonth' | 'last2Months' | 'total';
+type SortKey = 'title' | 'downloads' | 'plays';
+
+const PERIOD_LABELS: Record<Period, string> = {
+  thisMonth:   'Ce mois',
+  last2Months: '2 derniers mois',
+  total:       'Total',
+};
+
+function ActivityBadge({ value }: { value: number }) {
+  const color = value === 0
+    ? 'bg-muted text-muted-foreground'
+    : value < 5
+      ? 'bg-blue-100 text-blue-700'
+      : value < 20
+        ? 'bg-emerald-100 text-emerald-700'
+        : 'bg-violet-100 text-violet-700';
+  return (
+    <span className={cn('inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-bold', color)}>
+      {value}
+    </span>
+  );
+}
+
+function ActivityTable({ rows, isSuperAdmin }: { rows: ParcoursActivity[]; isSuperAdmin: boolean }) {
+  const [period, setPeriod] = useState<Period>('thisMonth');
+  const [sortKey, setSortKey] = useState<SortKey>('downloads');
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(a => !a);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const sorted = [...rows].sort((a, b) => {
+    let va: number | string, vb: number | string;
+    if (sortKey === 'title') { va = a.title; vb = b.title; }
+    else if (sortKey === 'downloads') { va = a.downloads[period]; vb = b.downloads[period]; }
+    else { va = a.plays[period]; vb = b.plays[period]; }
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb as string) : (vb as string).localeCompare(va);
+    return sortAsc ? (va as number) - (vb as number) : (vb as number) - (va as number);
+  });
+
+  const SortBtn = ({ col }: { col: SortKey }) => (
+    <button onClick={() => handleSort(col)} className="inline-flex items-center gap-1 group">
+      <ArrowUpDown className={cn('h-3.5 w-3.5 transition-colors', sortKey === col ? 'text-primary' : 'text-muted-foreground/50 group-hover:text-muted-foreground')} />
+    </button>
+  );
+
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+      {/* En-tête */}
+      <div className="px-6 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-sky-500/10 p-2 rounded-lg">
+            <Download className="h-4 w-4 text-sky-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-base">Activité par parcours</h3>
+            <p className="text-xs text-muted-foreground">Téléchargements &amp; parties jouées</p>
+          </div>
+        </div>
+
+        {/* Sélecteur de période */}
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={cn(
+                'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                period === p
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tableau */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/40 border-b border-border">
+              <th className="px-5 py-3 text-left font-medium text-muted-foreground">
+                <span className="flex items-center gap-1">Parcours <SortBtn col="title" /></span>
+              </th>
+              {isSuperAdmin && (
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Organisme</th>
+              )}
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                <span className="flex items-center justify-center gap-1">
+                  <Download className="h-3.5 w-3.5 text-sky-500" />
+                  Téléchargements <SortBtn col="downloads" />
+                </span>
+              </th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                <span className="flex items-center justify-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  Parties jouées <SortBtn col="plays" />
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {sorted.map((p, i) => (
+              <tr key={p.id} className="hover:bg-muted/20 transition-colors">
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-muted-foreground/40 w-4 shrink-0">#{i + 1}</span>
+                    <div className="h-9 w-12 rounded-md overflow-hidden bg-muted shrink-0 border border-border">
+                      {p.coverImage
+                        ? <img src={p.coverImage} alt={p.title} className="w-full h-full object-cover" />
+                        : <ImageIcon className="h-4 w-4 m-auto mt-2.5 text-muted-foreground/30" />}
+                    </div>
+                    <span className="font-medium text-foreground line-clamp-1">{p.title}</span>
+                  </div>
+                </td>
+                {isSuperAdmin && (
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{p.organisme ?? '—'}</td>
+                )}
+                <td className="px-4 py-3 text-center">
+                  <ActivityBadge value={p.downloads[period]} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <ActivityBadge value={p.plays[period]} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Note explicative */}
+      <div className="px-5 py-3 border-t border-border bg-muted/20">
+        <p className="text-[11px] text-muted-foreground">
+          💡 Les téléchargements sont enregistrés par l&apos;app mobile au premier chargement d&apos;un parcours. Les parties jouées correspondent aux parcours complétés.
+        </p>
       </div>
     </div>
   );

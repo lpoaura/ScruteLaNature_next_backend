@@ -64,12 +64,12 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   useEffect(() => {
     const fetchRefs = async () => {
       try {
-        const fetches: Promise<any>[] = [getZonages(), getMedias()];
+        const fetches: Promise<any>[] = [getZonages(), getMedias({ type: 'image', limit: 200 })];
         if (isSuperAdmin) fetches.push(getOrganismes());
 
         const [zData, mData, orgData] = await Promise.all(fetches);
         setZonages(zData);
-        setMedias(mData.filter((m: any) => m.mimetype.startsWith('image/')));
+        setMedias(mData.data); // mData est maintenant paginé → { data, meta }
 
         if (isSuperAdmin && orgData) {
           setOrganismes(orgData);

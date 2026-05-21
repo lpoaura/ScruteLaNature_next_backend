@@ -1,96 +1,87 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, Trash2, Image as ImageIcon, Music, MapPin, Loader2, FileWarning } from 'lucide-react';
+import { Upload, Trash2, Music, MapPin, Loader2, FileWarning } from 'lucide-react';
 import { getMedias, uploadMedia, deleteMedia, type Media } from '@/src/services/medias.service';
+import PaginationBar from '@/src/components/ui/PaginationBar';
 import { cn } from '@/lib/utils';
 
+type TabType = 'all' | 'image' | 'audio' | 'gpx' | 'unused';
+const LIMIT = 24;
+
+const TABS: { id: TabType; label: string }[] = [
+  { id: 'all',    label: 'Tous les fichiers' },
+  { id: 'image',  label: 'Images' },
+  { id: 'audio',  label: 'Audio' },
+  { id: 'gpx',    label: 'Tracés GPX' },
+  { id: 'unused', label: 'Non rattachés' },
+];
+
 export default function MediasClient() {
-  const [medias, setMedias] = useState<Media[]>([]);
+  const [medias, setMedias]       = useState<Media[]>([]);
+  const [meta, setMeta]           = useState({ total: 0, page: 1, totalPages: 1 });
+  const [page, setPage]           = useState(1);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter tabs: 'all', 'image', 'audio', 'gpx', 'unused'
-  const [activeTab, setActiveTab] = useState<'all' | 'image' | 'audio' | 'gpx' | 'unused'>('all');
+  // Reset page à 1 quand on change d'onglet
+  useEffect(() => { setPage(1); }, [activeTab]);
 
   const fetchMedias = useCallback(() => {
     setIsLoading(true);
-    getMedias()
-      .then(setMedias)
+    const typeParam = activeTab === 'image' || activeTab === 'audio' || activeTab === 'gpx'
+      ? activeTab
+      : undefined;
+    getMedias({ page, limit: LIMIT, type: typeParam })
+      .then((res) => {
+        // Pour l'onglet "unused", on filtre côté client (le backend ne gère pas ce filtre)
+        const data = activeTab === 'unused' ? res.data.filter(m => !m.isUsed) : res.data;
+        setMedias(data);
+        setMeta({ total: res.meta.total, page: res.meta.page, totalPages: res.meta.totalPages });
+      })
       .catch(() => setError('Impossible de charger les médias.'))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [page, activeTab]);
 
-  useEffect(() => {
-    fetchMedias();
-  }, [fetchMedias]);
+  useEffect(() => { fetchMedias(); }, [fetchMedias]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError(null);
     setIsUploading(true);
-
     try {
-      // Pour l'instant, on upload fichier par fichier séquentiellement
-      const newMedias = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 20 * 1024 * 1024) {
-          throw new Error(`Le fichier ${file.name} dépasse la limite de 20Mo.`);
-        }
-        const uploaded = await uploadMedia(file);
-        newMedias.push(uploaded);
+        if (file.size > 20 * 1024 * 1024) throw new Error(`Le fichier ${file.name} dépasse 20Mo.`);
+        await uploadMedia(file);
       }
-      
-      // On recharge la liste depuis le serveur pour s'assurer du tri et de la consistance
-      await fetchMedias();
+      setPage(1);
+      fetchMedias();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de l\'upload');
     } finally {
       setIsUploading(false);
-      // Reset l'input
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleDelete = async (filename: string) => {
     if (!confirm('Supprimer définitivement ce fichier ?')) return;
-    
     try {
       await deleteMedia(filename);
-      setMedias((prev) => prev.filter((m) => m.filename !== filename));
-    } catch (err) {
+      fetchMedias();
+    } catch {
       alert('Erreur lors de la suppression du fichier.');
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-  
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-  
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleUpload(e.dataTransfer.files);
-  };
-
-  const filteredMedias = medias.filter((m) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'image') return m.mimetype.startsWith('image/');
-    if (activeTab === 'audio') return m.mimetype.startsWith('audio/');
-    if (activeTab === 'gpx') return m.mimetype.includes('gpx');
-    if (activeTab === 'unused') return !m.isUsed;
-    return true;
-  });
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); handleUpload(e.dataTransfer.files); };
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
@@ -100,11 +91,11 @@ export default function MediasClient() {
 
   return (
     <div className="space-y-6">
-      {/* Zone de Drag & Drop */}
+      {/* Zone Drag & Drop */}
       <div
         className={cn(
-          "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-colors",
-          isDragging ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted/30"
+          'relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 transition-colors',
+          isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted/30',
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -119,20 +110,18 @@ export default function MediasClient() {
           onChange={(e) => handleUpload(e.target.files)}
           disabled={isUploading}
         />
-        
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            {isUploading ? (
-              <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            ) : (
-              <Upload className="h-8 w-8 text-primary" />
-            )}
+            {isUploading
+              ? <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              : <Upload className="h-8 w-8 text-primary" />
+            }
           </div>
           <h3 className="text-lg font-semibold text-foreground">
             {isUploading ? 'Upload en cours...' : 'Glissez-déposez vos fichiers ici'}
           </h3>
           <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-            PNG, JPG, WEBP, MP3, WAV ou GPX jusqu'à 20MB. Vous pouvez aussi cliquer pour parcourir.
+            PNG, JPG, WEBP, MP3, WAV ou GPX jusqu&apos;à 20MB. Vous pouvez aussi cliquer pour parcourir.
           </p>
         </div>
       </div>
@@ -144,62 +133,59 @@ export default function MediasClient() {
         </div>
       )}
 
-      {/* Filtres */}
-      <div className="flex items-center gap-2 border-b border-border pb-4 overflow-x-auto">
-        {[
-          { id: 'all', label: 'Tous les fichiers' },
-          { id: 'image', label: 'Images' },
-          { id: 'audio', label: 'Audio' },
-          { id: 'gpx', label: 'Tracés GPX' },
-          { id: 'unused', label: 'Non rattachés' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap",
-              activeTab === tab.id 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Onglets filtres */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap',
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground',
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-sm text-muted-foreground shrink-0 ml-4">
+          {isLoading ? '' : `${meta.total} fichier${meta.total > 1 ? 's' : ''}`}
+        </span>
       </div>
 
-      {/* Grille des médias */}
+      {/* Grille */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          {Array.from({ length: 12 }).map((_, i) => (
             <div key={i} className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm animate-pulse">
-              <div className="aspect-square bg-muted"></div>
+              <div className="aspect-square bg-muted" />
               <div className="p-3 space-y-2">
-                <div className="h-3 w-3/4 rounded bg-muted"></div>
+                <div className="h-3 w-3/4 rounded bg-muted" />
                 <div className="flex justify-between">
-                  <div className="h-2 w-8 rounded bg-muted"></div>
-                  <div className="h-2 w-12 rounded bg-muted"></div>
+                  <div className="h-2 w-8 rounded bg-muted" />
+                  <div className="h-2 w-12 rounded bg-muted" />
                 </div>
               </div>
             </div>
           ))}
         </div>
-      ) : filteredMedias.length === 0 ? (
+      ) : medias.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           Aucun fichier trouvé dans cette catégorie.
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {filteredMedias.map((media) => {
+          {medias.map((media) => {
             const isImage = media.mimetype.startsWith('image/');
             const isAudio = media.mimetype.startsWith('audio/');
-            
             return (
-              <div 
-                key={media.filename} 
+              <div
+                key={media.filename}
                 className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm hover:border-primary/50 transition-colors"
               >
-                {/* Aperçu */}
                 <div className="relative aspect-square bg-muted/30 flex items-center justify-center overflow-hidden">
                   {isImage ? (
                     <img src={media.url} alt={media.originalName} className="object-cover w-full h-full" />
@@ -209,8 +195,7 @@ export default function MediasClient() {
                     <MapPin className="h-10 w-10 text-muted-foreground/50" />
                   )}
 
-                  {/* Badge Utilisé / Non utilisé */}
-                  <div className="absolute top-2 left-2 flex gap-1">
+                  <div className="absolute top-2 left-2">
                     {media.isUsed ? (
                       <span className="bg-primary/90 text-primary-foreground text-[9px] font-bold px-2 py-0.5 rounded shadow-sm backdrop-blur-md">
                         UTILISÉ
@@ -221,16 +206,17 @@ export default function MediasClient() {
                       </span>
                     )}
                   </div>
-                  
-                  {/* Bouton supprimer (visible au hover) */}
+
                   <div className="absolute inset-0 bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button 
+                    <button
                       onClick={() => handleDelete(media.filename)}
                       className={cn(
-                        "p-2 rounded-full transition-transform hover:scale-110",
-                        media.isUsed ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed" : "bg-destructive text-destructive-foreground shadow-md"
+                        'p-2 rounded-full transition-transform hover:scale-110',
+                        media.isUsed
+                          ? 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                          : 'bg-destructive text-destructive-foreground shadow-md',
                       )}
-                      title={media.isUsed ? "Impossible de supprimer une image utilisée" : "Supprimer"}
+                      title={media.isUsed ? 'Impossible de supprimer une image utilisée' : 'Supprimer'}
                       disabled={media.isUsed}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -238,7 +224,6 @@ export default function MediasClient() {
                   </div>
                 </div>
 
-                {/* Métadonnées */}
                 <div className="p-3">
                   <p className="text-xs font-medium text-foreground truncate" title={media.originalName}>
                     {media.originalName}
@@ -253,6 +238,14 @@ export default function MediasClient() {
           })}
         </div>
       )}
+
+      {/* Pagination */}
+      <PaginationBar
+        page={meta.page}
+        totalPages={meta.totalPages}
+        onPageChange={setPage}
+        className="mt-4"
+      />
     </div>
   );
 }

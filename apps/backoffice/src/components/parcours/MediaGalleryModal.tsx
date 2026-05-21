@@ -19,13 +19,9 @@ export default function MediaGalleryModal({ type, onSelect, onClose }: MediaGall
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Fetch generic illustrations
-    getMedias()
-      .then(data => {
-        // Filter by type if needed (assuming gallery contains all, filter by mimetype prefix)
-        const filtered = data.filter(m => m.mimetype.startsWith(type));
-        setMedias(filtered);
-      })
+    // Fetch generic illustrations — on passe le type au serveur pour filtrer directement
+    getMedias({ type, limit: 200 })
+      .then(res => setMedias(res.data))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
   }, [type]);

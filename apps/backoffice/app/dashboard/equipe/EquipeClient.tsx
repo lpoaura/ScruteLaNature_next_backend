@@ -6,6 +6,7 @@ import { getTeam, createTeamMember, deleteTeamMember, type TeamMember, type Crea
 import { getOrganismes, type OrganismeDetail } from '@/src/services/organismes.service';
 import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
+import PaginationBar from '@/src/components/ui/PaginationBar';
 import { cn } from '@/lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -25,6 +26,9 @@ export default function EquipeClient() {
   const { isSuperAdmin } = useRoles(user);
 
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
+  const [page, setPage] = useState(1);
+  const LIMIT = 20;
   const [organismes, setOrganismes] = useState<OrganismeDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -47,17 +51,18 @@ export default function EquipeClient() {
   });
 
   useEffect(() => {
-    const fetches: Promise<any>[] = [getTeam()];
+    const fetches: Promise<any>[] = [getTeam(page, LIMIT)];
     if (isSuperAdmin) fetches.push(getOrganismes());
 
     Promise.all(fetches)
-      .then(([team, orgs]) => {
-        setMembers(team);
+      .then(([teamResult, orgs]) => {
+        setMembers(teamResult.data);
+        setMeta({ total: teamResult.meta.total, page: teamResult.meta.page, totalPages: teamResult.meta.totalPages });
         if (orgs) setOrganismes(orgs);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, page]);
 
   const handleCreate = () => {
     setError(null);
@@ -168,7 +173,7 @@ export default function EquipeClient() {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} / {members.length} membre(s)
+          {meta.total} membre(s) au total
           {(search || filterRole || filterOrganisme) && (
             <button onClick={() => { setSearch(''); setFilterRole(''); setFilterOrganisme(''); }}
               className="ml-2 text-primary hover:underline text-xs">
@@ -324,6 +329,14 @@ export default function EquipeClient() {
           </table>
         </div>
       )}
+
+      {/* Pagination */}
+      <PaginationBar
+        page={meta.page}
+        totalPages={meta.totalPages}
+        onPageChange={setPage}
+        className="mt-4"
+      />
     </div>
   );
 }

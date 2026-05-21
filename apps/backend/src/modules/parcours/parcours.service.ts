@@ -28,7 +28,7 @@ export class ParcoursService {
   ) {
     const where: any = {};
 
-    // Cloisonnement par organisme : un ADMIN/EDITOR ne voit que sa région
+    // Cloisonnement par organisme
     if (userRole !== Role.SUPER_ADMIN) {
       if (!userOrganismeId) {
         throw new ForbiddenException('Vous n\'êtes rattaché à aucune organisme.');
@@ -36,34 +36,48 @@ export class ParcoursService {
       where.organismeId = userOrganismeId;
     }
 
-    // Application des filtres optionnels
     if (filters.status) where.status = filters.status;
     if (filters.difficulty) where.difficulty = filters.difficulty;
     if (filters.zonageId) where.zonageId = filters.zonageId;
     if (filters.organismeId && userRole === Role.SUPER_ADMIN) where.organismeId = filters.organismeId;
 
-    return this.db.parcours.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        difficulty: true,
-        distanceKm: true,
-        durationMin: true,
-        coverImage: true,
-        zonage: { select: { id: true, nom: true } },
-        organisme: { select: { id: true, nom: true } },
-        createdBy: userRole === Role.SUPER_ADMIN
-          ? { select: { id: true, firstName: true, lastName: true, email: true } }
-          : false,
-        _count: { select: { etapes: true, reviews: true } },
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const page  = filters.page  ?? 1;
+    const limit = filters.limit ?? 15;
+    const skip  = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.db.parcours.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          difficulty: true,
+          distanceKm: true,
+          durationMin: true,
+          coverImage: true,
+          zonage: { select: { id: true, nom: true } },
+          organisme: { select: { id: true, nom: true } },
+          createdBy: userRole === Role.SUPER_ADMIN
+            ? { select: { id: true, firstName: true, lastName: true, email: true } }
+            : false,
+          _count: { select: { etapes: true, reviews: true } },
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.db.parcours.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
+
 
   /**
    * Détail complet d'un parcours avec étapes et jeux (pour l'éditeur backoffice)

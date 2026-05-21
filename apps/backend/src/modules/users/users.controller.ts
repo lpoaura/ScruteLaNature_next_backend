@@ -6,7 +6,8 @@ import {
   Patch,
   Param,
   Delete,
-  Request
+  Request,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -19,6 +20,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -66,9 +68,15 @@ export class UsersController {
   @Get('admin/users')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Lister les employés de son organisme (ADMIN) ou tous (SUPER_ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Liste des utilisateurs.' })
-  findAll(@Request() req: any) {
-    return this.usersService.findAll(req.user.role, req.user.organismeId ?? null);
+  @ApiQuery({ name: 'page',  required: false, type: Number, description: 'Page (défaut: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items par page (défaut: 20)' })
+  @ApiResponse({ status: 200, description: 'Liste paginée des utilisateurs.' })
+  findAll(
+    @Request() req: any,
+    @Query('page')  page  = '1',
+    @Query('limit') limit = '20',
+  ) {
+    return this.usersService.findAll(req.user.role, req.user.organismeId ?? null, +page, +limit);
   }
 
   @Delete('admin/users/:id')

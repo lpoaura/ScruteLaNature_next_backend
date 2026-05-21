@@ -5,19 +5,28 @@ export interface ParcoursFilters {
   status?: PublishStatus;
   zonageId?: string;
   organismeId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedParcours {
+  data: Parcours[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
 /**
- * Liste les parcours accessibles à l'utilisateur connecté (cloisonnés par organisme).
+ * Liste les parcours accessibles à l'utilisateur connecté (pagination serveur).
  */
-export async function getParcours(filters?: ParcoursFilters): Promise<Parcours[]> {
+export async function getParcours(filters?: ParcoursFilters): Promise<PaginatedParcours> {
   const params = new URLSearchParams();
-  if (filters?.status) params.set('status', filters.status);
-  if (filters?.zonageId) params.set('zonageId', filters.zonageId);
+  if (filters?.status)      params.set('status',      filters.status);
+  if (filters?.zonageId)    params.set('zonageId',    filters.zonageId);
   if (filters?.organismeId) params.set('organismeId', filters.organismeId);
+  if (filters?.page)        params.set('page',        String(filters.page));
+  if (filters?.limit)       params.set('limit',       String(filters.limit));
 
   const query = params.toString() ? `?${params.toString()}` : '';
-  return apiClient<Parcours[]>(`/admin/parcours${query}`);
+  return apiClient<PaginatedParcours>(`/admin/parcours${query}`);
 }
 
 /**

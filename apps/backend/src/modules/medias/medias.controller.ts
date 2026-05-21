@@ -4,6 +4,7 @@ import {
   Post,
   Delete,
   Param,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -69,12 +70,17 @@ export class MediasController {
 
   @Get()
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({
-    summary: 'Lister tous les médias uploadés sur le serveur',
-  })
-  @ApiResponse({ status: 200, description: 'Liste des fichiers.' })
-  findAll() {
-    return this.mediasService.findAllFiles();
+  @ApiOperation({ summary: 'Lister les médias avec pagination' })
+  @ApiQuery({ name: 'page',  required: false, type: Number, description: 'Page (défaut: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items par page (défaut: 24)' })
+  @ApiQuery({ name: 'type',  required: false, enum: ['image', 'audio', 'gpx'], description: 'Filtrer par type' })
+  @ApiResponse({ status: 200, description: 'Liste paginée des fichiers.' })
+  findAll(
+    @Query('page')  page  = '1',
+    @Query('limit') limit = '24',
+    @Query('type')  type?: string,
+  ) {
+    return this.mediasService.findAllFiles(+page, +limit, type);
   }
 
   @Delete(':filename')

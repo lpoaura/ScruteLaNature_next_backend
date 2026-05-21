@@ -1,6 +1,3 @@
-'use client';
-
-import { useState, useTransition } from 'react';
 import { apiClient } from '@/src/lib/api-client';
 import type { UserProfile } from '@/src/types/api.types';
 

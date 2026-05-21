@@ -98,14 +98,14 @@ export class MediasService {
     return { message: `Fichier "${filename}" supprimé avec succès` };
   }
 
-  async findAllFiles() {
+  async findAllFiles(page = 1, limit = 24, type?: string) {
     const subfolders = ['images', 'audio', 'gpx'] as const;
     const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date; isUsed: boolean }[] = [];
 
     // 1. Récupérer tous les fichiers utilisés
     const parcours = await this.db.parcours.findMany({ select: { coverImage: true, mascotteImg: true }});
     const jeux = await this.db.jeu.findMany({ select: { imageUrl: true, audioUrl: true }});
-    
+
     const usedFilenames = new Set<string>();
     parcours.forEach(p => {
       if (p.coverImage) usedFilenames.add(p.coverImage.split('/').pop() || '');
@@ -116,7 +116,14 @@ export class MediasService {
       if (j.audioUrl) usedFilenames.add(j.audioUrl.split('/').pop() || '');
     });
 
-    for (const sub of subfolders) {
+    // Filtrage des sous-dossiers selon le type demandé
+    const foldersToScan = type === 'image'
+      ? (['images'] as const)
+      : type === 'audio'
+        ? (['audio'] as const)
+        : subfolders;
+
+    for (const sub of foldersToScan) {
       const dirPath = join(process.cwd(), 'uploads', sub);
       if (!fs.existsSync(dirPath)) continue;
 
@@ -124,29 +131,37 @@ export class MediasService {
       for (const file of files) {
         if (file === '.gitkeep') continue;
         const stats = fs.statSync(join(dirPath, file));
-        
-        // Determiner le mimetype approx à partir de l'extension
+
         const ext = file.split('.').pop()?.toLowerCase() || '';
         let mimetype = 'application/octet-stream';
         if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) mimetype = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
         if (['mp3', 'wav', 'ogg'].includes(ext)) mimetype = `audio/${ext}`;
         if (ext === 'gpx') mimetype = 'application/gpx+xml';
 
-        const isUsed = usedFilenames.has(file);
-
         allFiles.push({
           filename: file,
-          originalName: file, // On n'a pas gardé l'original sur disque, on renvoie le nom actuel
+          originalName: file,
           mimetype,
           size: stats.size,
           url: this.getFileUrl(file, sub),
           createdAt: stats.mtime,
-          isUsed,
+          isUsed: usedFilenames.has(file),
         });
       }
     }
 
     // Trier du plus récent au plus ancien
-    return allFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    allFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Pagination
+    const total = allFiles.length;
+    const totalPages = Math.ceil(total / limit);
+    const skip = (page - 1) * limit;
+    const data = allFiles.slice(skip, skip + limit);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages },
+    };
   }
 }

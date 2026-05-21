@@ -25,10 +25,10 @@ export class StatsService {
         ...(endDate ? { lte: new Date(endDate + 'T23:59:59.999Z') } : {}),
       };
     }
+
     // 1. Chiffres globaux
     const totalParcours = await this.db.parcours.count({ where: parcoursFilter });
 
-    // Résoudre les IDs de parcours correspondants (évite distinct+relation nested instable)
     const isFiltered = !!(filterOrganismeId || filterZonageId || startDate || endDate);
     const noScope = isSuperAdmin && !isFiltered;
 
@@ -38,14 +38,12 @@ export class StatsService {
 
     const upWhere = noScope ? undefined : { parcoursId: { in: parcoursIds } };
 
-    // Joueurs distincts ayant joué les parcours concernés
     const totalPlayers = noScope
       ? await this.db.user.count({ where: { role: Role.USER, isGuest: false } })
       : await this.db.userParcours
           .groupBy({ by: ['userId'], where: upWhere })
           .then((r) => r.length);
 
-    // Membres staff
     const membersWhere: any = isSuperAdmin
       ? { role: { in: [Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN] } }
       : { role: { in: [Role.EDITOR, Role.ADMIN] }, organismeId: organismeId! };
@@ -54,12 +52,11 @@ export class StatsService {
 
     const totalCompletions = await this.db.userParcours.count({ where: upWhere });
 
-    // 2. Tableau croisé dynamique des organismes
+    // 2. Tableau croisé organismes
     const orgWhere = filterOrganismeId
       ? { id: filterOrganismeId }
       : isSuperAdmin ? undefined : { id: organismeId! };
 
-    // Filtre sur les parcours inclus (date/zonage uniquement — organismeId est implicite via la relation)
     const parcoursIncludeWhere: any = {};
     if (filterZonageId) parcoursIncludeWhere.zonageId = filterZonageId;
     if (startDate || endDate) {
@@ -78,9 +75,7 @@ export class StatsService {
           select: {
             id: true,
             distanceKm: true,
-            _count: {
-              select: { usersStats: true },
-            },
+            _count: { select: { usersStats: true } },
           },
         },
       },
@@ -89,7 +84,6 @@ export class StatsService {
     const statsByOrganisme = organismes.map((org) => {
       const totalDistance = org.parcours.reduce((acc, p) => acc + (p.distanceKm || 0), 0);
       const totalParticipants = org.parcours.reduce((acc, p) => acc + p._count.usersStats, 0);
-
       return {
         id: org.id,
         nom: org.nom,
@@ -103,25 +97,111 @@ export class StatsService {
     const zonages = await this.db.zonage.findMany({
       where: filterZonageId ? { id: filterZonageId } : undefined,
       include: {
-        _count: {
-          select: { parcours: { where: parcoursFilter } },
-        },
+        _count: { select: { parcours: { where: parcoursFilter } } },
       },
     });
 
-    return {
-      global: {
-        totalParcours,
-        totalPlayers,
-        totalMembers,
-        totalCompletions,
+    // 4. ── Activité par parcours (downloads + parties jouées) ──────────────────
+    const now = new Date();
+
+    // Début du mois en cours
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Début d'il y a 2 mois
+    const startOf2MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+    // On ne récupère que les parcours publiés visibles par l'utilisateur
+    const parcoursForActivity = await this.db.parcours.findMany({
+      where: parcoursFilter,
+      select: {
+        id: true,
+        title: true,
+        coverImage: true,
+        organisme: { select: { nom: true } },
+        _count: {
+          select: {
+            usersStats: true,   // total parties
+            downloads: true,    // total téléchargements
+          },
+        },
       },
+      orderBy: { updatedAt: 'desc' },
+      take: 50, // On limite pour ne pas surcharger
+    });
+
+    const parcourActivityIds = parcoursForActivity.map(p => p.id);
+
+    // Téléchargements ce mois
+    const dlThisMonthRaw = await this.db.parcoursDownload.groupBy({
+      by: ['parcoursId'],
+      where: {
+        parcoursId: { in: parcourActivityIds },
+        downloadedAt: { gte: startOfThisMonth },
+      },
+      _count: { parcoursId: true },
+    });
+
+    // Téléchargements 2 derniers mois
+    const dl2MonthsRaw = await this.db.parcoursDownload.groupBy({
+      by: ['parcoursId'],
+      where: {
+        parcoursId: { in: parcourActivityIds },
+        downloadedAt: { gte: startOf2MonthsAgo },
+      },
+      _count: { parcoursId: true },
+    });
+
+    // Parties ce mois
+    const playsThisMonthRaw = await this.db.userParcours.groupBy({
+      by: ['parcoursId'],
+      where: {
+        parcoursId: { in: parcourActivityIds },
+        completedAt: { gte: startOfThisMonth },
+      },
+      _count: { parcoursId: true },
+    });
+
+    // Parties 2 derniers mois
+    const plays2MonthsRaw = await this.db.userParcours.groupBy({
+      by: ['parcoursId'],
+      where: {
+        parcoursId: { in: parcourActivityIds },
+        completedAt: { gte: startOf2MonthsAgo },
+      },
+      _count: { parcoursId: true },
+    });
+
+    // Indexation rapide par parcoursId
+    const idx = <T extends { parcoursId: string; _count: { parcoursId: number } }>(arr: T[]) =>
+      Object.fromEntries(arr.map(r => [r.parcoursId, r._count.parcoursId]));
+
+    const dlThisMonth   = idx(dlThisMonthRaw);
+    const dl2Months     = idx(dl2MonthsRaw);
+    const playsThisMonth = idx(playsThisMonthRaw);
+    const plays2Months   = idx(plays2MonthsRaw);
+
+    const byParcours = parcoursForActivity.map(p => ({
+      id:           p.id,
+      title:        p.title,
+      coverImage:   p.coverImage,
+      organisme:    p.organisme?.nom ?? null,
+      downloads: {
+        thisMonth:  dlThisMonth[p.id]  ?? 0,
+        last2Months: dl2Months[p.id]   ?? 0,
+        total:       p._count.downloads,
+      },
+      plays: {
+        thisMonth:  playsThisMonth[p.id]  ?? 0,
+        last2Months: plays2Months[p.id]   ?? 0,
+        total:       p._count.usersStats,
+      },
+    }));
+
+    return {
+      global: { totalParcours, totalPlayers, totalMembers, totalCompletions },
       byOrganisme: statsByOrganisme,
-      byZonage: zonages.map(z => ({
-        id: z.id,
-        nom: z.nom,
-        nbParcours: z._count.parcours,
-      })),
+      byZonage: zonages.map(z => ({ id: z.id, nom: z.nom, nbParcours: z._count.parcours })),
+      byParcours,
     };
   }
 
@@ -137,20 +217,17 @@ export class StatsService {
     if (filterOrganismeId) parcoursFilter.organismeId = filterOrganismeId;
     if (filterZonageId) parcoursFilter.zonageId = filterZonageId;
 
-    // Génère un CSV des parcours pour export
     const parcoursList = await this.db.parcours.findMany({
       where: parcoursFilter,
       include: {
         organisme: true,
         zonage: true,
-        _count: {
-          select: { etapes: true, usersStats: true, reviews: true },
-        },
+        _count: { select: { etapes: true, usersStats: true, reviews: true, downloads: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    let csv = "ID,Titre,Statut,Difficulté,Distance (km),Durée (min),Organisme,Zonage,Nb Étapes,Nb Participants,Nb Avis\n";
+    let csv = 'ID,Titre,Statut,Difficulté,Distance (km),Durée (min),Organisme,Zonage,Nb Étapes,Nb Participants,Nb Téléchargements,Nb Avis\n';
 
     for (const p of parcoursList) {
       const row = [
@@ -164,9 +241,10 @@ export class StatsService {
         `"${p.zonage?.nom || ''}"`,
         p._count.etapes,
         p._count.usersStats,
+        p._count.downloads,
         p._count.reviews,
       ];
-      csv += row.join(',') + "\n";
+      csv += row.join(',') + '\n';
     }
 
     return csv;

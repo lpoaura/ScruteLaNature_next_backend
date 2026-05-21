@@ -23,6 +23,7 @@ import { EtapesModule } from './modules/etapes/etapes.module';
 import { JeuxModule } from './modules/jeux/jeux.module';
 import { SocialModule } from './modules/social/social.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { DownloadsModule } from './modules/downloads/downloads.module';
 
 @Module({
   imports: [ 
@@ -66,6 +67,7 @@ import { StatsModule } from './modules/stats/stats.module';
     JeuxModule,
     SocialModule,
     StatsModule,
+    DownloadsModule,
   ],
   controllers: [AppController],
   providers: [

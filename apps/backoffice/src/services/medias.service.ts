@@ -10,16 +10,31 @@ export interface Media {
   isUsed?: boolean;
 }
 
+export interface PaginatedMedias {
+  data: Media[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export interface MediasQuery {
+  page?: number;
+  limit?: number;
+  type?: 'image' | 'audio' | 'gpx';
+}
+
 /**
- * Récupère la liste de tous les médias (images, audio, gpx).
+ * Récupère les médias avec pagination serveur.
  */
-export async function getMedias(): Promise<Media[]> {
-  return apiClient<Media[]>('/medias');
+export async function getMedias(query?: MediasQuery): Promise<PaginatedMedias> {
+  const params = new URLSearchParams();
+  if (query?.page)  params.set('page',  String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
+  if (query?.type)  params.set('type',  query.type);
+  const q = params.toString() ? `?${params.toString()}` : '';
+  return apiClient<PaginatedMedias>(`/medias${q}`);
 }
 
 /**
  * Upload un fichier (multipart/form-data).
- * Utilise fetch directement car apiClient stringify le body par défaut.
  */
 export async function uploadMedia(file: File, context?: 'specific'): Promise<Media> {
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000/api';
@@ -28,8 +43,8 @@ export async function uploadMedia(file: File, context?: 'specific'): Promise<Med
   const formData = new FormData();
   formData.append('file', file);
 
-  const url = context === 'specific' 
-    ? `${BACKEND_URL}/medias/upload?context=specific` 
+  const url = context === 'specific'
+    ? `${BACKEND_URL}/medias/upload?context=specific`
     : `${BACKEND_URL}/medias/upload`;
 
   const response = await fetch(url, {

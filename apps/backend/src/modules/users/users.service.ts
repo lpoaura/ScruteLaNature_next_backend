@@ -52,28 +52,38 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async findAll(userRole: Role, userOrganismeId: string | null) {
+  async findAll(userRole: Role, userOrganismeId: string | null, page = 1, limit = 20) {
     const where: any = {
       role: { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] },
     };
     if (userRole !== Role.SUPER_ADMIN) {
       where.organismeId = userOrganismeId;
     }
-    return this.databaseService.user.findMany({
-      where,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        organismeId: true,
-        organisme: { select: { id: true, nom: true } },
-        isEmailVerified: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.databaseService.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          organismeId: true,
+          organisme: { select: { id: true, nom: true } },
+          isEmailVerified: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.databaseService.user.count({ where }),
+    ]);
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async removeById(id: string) {

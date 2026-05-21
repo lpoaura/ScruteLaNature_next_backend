@@ -21,8 +21,13 @@ export interface CreateTeamMemberDto {
   organismeId?: string;
 }
 
-export async function getTeam(): Promise<TeamMember[]> {
-  return apiClient<TeamMember[]>('/admin/users');
+export interface PaginatedTeam {
+  data: TeamMember[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export async function getTeam(page = 1, limit = 20): Promise<PaginatedTeam> {
+  return apiClient<PaginatedTeam>(`/admin/users?page=${page}&limit=${limit}`);
 }
 
 export async function createTeamMember(dto: CreateTeamMemberDto): Promise<TeamMember> {

@@ -2,48 +2,71 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Map, 
-  Image as ImageIcon 
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Eye,
+  Map,
+  Image as ImageIcon
 } from 'lucide-react';
-import { getParcours, deleteParcours } from '@/src/services/parcours.service';
+import { getParcours, deleteParcours, type PaginatedParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
 import { getOrganismes } from '@/src/services/organismes.service';
 import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
 import type { Parcours, Zonage, Organisme, PublishStatus } from '@/src/types/api.types';
+import PaginationBar from '@/src/components/ui/PaginationBar';
 import { cn } from '@/lib/utils';
+
+const LIMIT = 15;
 
 export default function ParcoursClient() {
   const { user } = useAuth();
   const { isSuperAdmin } = useRoles(user);
 
   const [parcoursList, setParcoursList] = useState<Parcours[]>([]);
+  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [zonages, setZonages] = useState<Zonage[]>([]);
   const [organismes, setOrganismes] = useState<Organisme[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Filtres (déclenchent un rechargement serveur)
+  const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<PublishStatus | 'ALL'>('ALL');
   const [zonageFilter, setZonageFilter] = useState<string>('ALL');
   const [organismeFilter, setOrganismeFilter] = useState<string>('ALL');
 
+  // Debounce search pour éviter trop d'appels
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Reset page à 1 quand un filtre change
+  useEffect(() => { setPage(1); }, [statusFilter, zonageFilter, organismeFilter, debouncedSearch]);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetches: [Promise<Parcours[]>, Promise<Zonage[]>, Promise<Organisme[]>?] = [
-        getParcours(),
+      const filters = {
+        ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
+        ...(zonageFilter !== 'ALL' ? { zonageId: zonageFilter } : {}),
+        ...(isSuperAdmin && organismeFilter !== 'ALL' ? { organismeId: organismeFilter } : {}),
+        page,
+        limit: LIMIT,
+      };
+      const [pData, zData, orgData] = await Promise.all([
+        getParcours(filters),
         getZonages(),
-        ...(isSuperAdmin ? [getOrganismes()] : []),
-      ] as any;
-      const [pData, zData, orgData] = await Promise.all(fetches);
-      setParcoursList(pData);
+        ...(isSuperAdmin ? [getOrganismes()] : []) as any[],
+      ]);
+      setParcoursList(pData.data);
+      setMeta({ total: pData.meta.total, page: pData.meta.page, totalPages: pData.meta.totalPages });
       setZonages(zData);
       if (orgData) setOrganismes(orgData);
     } catch (err) {
@@ -51,42 +74,38 @@ export default function ParcoursClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, statusFilter, zonageFilter, organismeFilter, page]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`Supprimer définitivement le parcours "${title}" ?\nAttention, cela supprimera aussi ses étapes et jeux.`)) return;
     try {
       await deleteParcours(id);
-      setParcoursList((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
+      fetchData();
+    } catch {
       alert('Erreur lors de la suppression.');
     }
   };
 
+  // Filtre local rapide par recherche (uniquement sur la page courante)
   const filteredParcours = useMemo(() => {
-    return parcoursList.filter((p) => {
-      const matchSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchStatus = statusFilter === 'ALL' || p.status === statusFilter;
-      const matchZonage = zonageFilter === 'ALL' || p.zonage?.id === zonageFilter;
-      const matchOrganisme = !isSuperAdmin || organismeFilter === 'ALL' || p.organisme?.id === organismeFilter;
-      return matchSearch && matchStatus && matchZonage && matchOrganisme;
-    });
-  }, [parcoursList, searchQuery, statusFilter, zonageFilter, organismeFilter, isSuperAdmin]);
+    if (!debouncedSearch) return parcoursList;
+    return parcoursList.filter(p =>
+      p.title.toLowerCase().includes(debouncedSearch.toLowerCase()),
+    );
+  }, [parcoursList, debouncedSearch]);
 
   const StatusBadge = ({ status }: { status: string }) => {
     const configs: Record<string, { label: string; classes: string }> = {
-      PUBLISHED: { label: 'Publié', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-      PENDING_REVIEW: { label: 'En attente', classes: 'bg-violet-100 text-violet-700 border-violet-200' },
-      DRAFT: { label: 'Brouillon', classes: 'bg-amber-100 text-amber-700 border-amber-200' },
-      ARCHIVED: { label: 'Archivé', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
+      PUBLISHED:      { label: 'Publié',      classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+      PENDING_REVIEW: { label: 'En attente',  classes: 'bg-violet-100 text-violet-700 border-violet-200' },
+      DRAFT:          { label: 'Brouillon',   classes: 'bg-amber-100 text-amber-700 border-amber-200' },
+      ARCHIVED:       { label: 'Archivé',     classes: 'bg-slate-100 text-slate-700 border-slate-200' },
     };
     const config = configs[status] || configs.DRAFT;
     return (
-      <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium border", config.classes)}>
+      <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium border', config.classes)}>
         {config.label}
       </span>
     );
@@ -95,13 +114,13 @@ export default function ParcoursClient() {
   const DifficultyBadge = ({ level }: { level: string | null }) => {
     if (!level) return <span className="text-muted-foreground">-</span>;
     const configs: Record<string, { label: string; classes: string }> = {
-      FACILE: { label: 'Facile', classes: 'bg-green-100 text-green-700' },
-      MOYEN: { label: 'Moyen', classes: 'bg-blue-100 text-blue-700' },
-      DIFFICILE: { label: 'Difficile', classes: 'bg-red-100 text-red-700' },
+      FACILE:   { label: 'Facile',    classes: 'bg-green-100 text-green-700' },
+      MOYEN:    { label: 'Moyen',     classes: 'bg-blue-100 text-blue-700' },
+      DIFFICILE:{ label: 'Difficile', classes: 'bg-red-100 text-red-700' },
     };
     const config = configs[level] || configs.FACILE;
     return (
-      <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-medium", config.classes)}>
+      <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium', config.classes)}>
         {config.label}
       </span>
     );
@@ -111,7 +130,6 @@ export default function ParcoursClient() {
     <div className="space-y-6">
       {/* Barre d'outils */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        {/* Recherche */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -123,7 +141,6 @@ export default function ParcoursClient() {
           />
         </div>
 
-        {/* Filtres et Actions */}
         <div className="flex items-center gap-3">
           {isSuperAdmin && organismes.length > 0 && (
             <div className="relative">
@@ -179,7 +196,17 @@ export default function ParcoursClient() {
         </div>
       </div>
 
-      {/* Tableau des parcours */}
+      {/* Compteur */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          {isLoading ? 'Chargement…' : `${meta.total} parcours au total`}
+        </span>
+        {meta.totalPages > 1 && (
+          <span>Page {meta.page} / {meta.totalPages}</span>
+        )}
+      </div>
+
+      {/* Tableau */}
       {!isLoading && (
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -236,25 +263,19 @@ export default function ParcoursClient() {
                           )}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {parcours.zonage?.nom || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={parcours.status} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <DifficultyBadge level={parcours.difficulty} />
-                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{parcours.zonage?.nom || '-'}</td>
+                      <td className="px-4 py-3"><StatusBadge status={parcours.status} /></td>
+                      <td className="px-4 py-3"><DifficultyBadge level={parcours.difficulty} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link 
+                          <Link
                             href={`/dashboard/parcours/${parcours.id}`}
                             className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
                             title="Voir les détails"
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
-                          <Link 
+                          <Link
                             href={`/dashboard/parcours/${parcours.id}/edit`}
                             className="p-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-100 rounded-md transition-colors"
                             title="Modifier"
@@ -278,6 +299,14 @@ export default function ParcoursClient() {
           </div>
         </div>
       )}
+
+      {/* Pagination */}
+      <PaginationBar
+        page={meta.page}
+        totalPages={meta.totalPages}
+        onPageChange={setPage}
+        className="mt-4"
+      />
     </div>
   );
 }

@@ -1,5 +1,14 @@
 import { apiClient } from '@/src/lib/api-client';
 
+export interface ParcoursActivity {
+  id: string;
+  title: string;
+  coverImage: string | null;
+  organisme: string | null;
+  downloads: { thisMonth: number; last2Months: number; total: number };
+  plays:     { thisMonth: number; last2Months: number; total: number };
+}
+
 export interface DashboardStats {
   global: {
     totalParcours: number;
@@ -19,6 +28,7 @@ export interface DashboardStats {
     nom: string;
     nbParcours: number;
   }[];
+  byParcours: ParcoursActivity[];
 }
 
 export interface StatsFilterParams {

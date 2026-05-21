@@ -113,7 +113,8 @@ model User {
   badges           UserBadge[]
   parcoursDone     UserParcours[]
   reviews          Review[]
-  parcoursCreated  Parcours[]     @relation("ParcoursCreatedBy")
+  parcoursCreated  Parcours[]          @relation("ParcoursCreatedBy")
+  downloads        ParcoursDownload[]  @relation("UserDownloads")
 
   @@index([organismeId])
   @@map("users")
@@ -252,6 +253,7 @@ model Parcours {
   etapes     Etape[]
   usersStats UserParcours[]
   reviews    Review[]
+  downloads  ParcoursDownload[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -323,6 +325,22 @@ model UserParcours {
   @@unique([userId, parcoursId])
   @@index([parcoursId])
   @@map("user_parcours")
+}
+
+// ======================================================
+// 📥 TÉLÉCHARGEMENTS
+// ======================================================
+model ParcoursDownload {
+  id           String   @id @default(uuid())
+  parcoursId   String
+  parcours     Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  userId       String?  // null = invité non connecté
+  user         User?    @relation("UserDownloads", fields: [userId], references: [id], onDelete: SetNull)
+  downloadedAt DateTime @default(now())
+
+  @@index([parcoursId])
+  @@index([downloadedAt])
+  @@map("parcours_downloads")
 }
 
 // ======================================================
