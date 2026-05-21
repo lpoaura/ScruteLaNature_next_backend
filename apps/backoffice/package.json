@@ -11,6 +11,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.0",
     "@tmcw/togeojson": "^7.1.2",
+    "@uiw/react-md-editor": "^4.1.0",
     "@xmldom/xmldom": "^0.9.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

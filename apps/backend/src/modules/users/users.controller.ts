@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -48,6 +49,18 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Compte supprimé.' })
   removeMe(@Request() req: any) {
     return this.usersService.remove(req.user.sub || req.user.id);
+  }
+
+  @Post('users/me/change-password')
+  @ApiOperation({ summary: 'Changer son mot de passe (ancien mdp requis)' })
+  @ApiResponse({ status: 200, description: 'Mot de passe modifié.' })
+  @ApiResponse({ status: 401, description: 'Mot de passe actuel incorrect.' })
+  changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.usersService.changePassword(
+      req.user.sub || req.user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Get('admin/users')

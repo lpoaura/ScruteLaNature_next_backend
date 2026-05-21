@@ -20,6 +20,11 @@ export class AppConfigService {
     return `${this.appUrl}/api`;
   }
 
+  /** URL du backoffice Next.js (port 3001 en dev, domaine dédié en prod) */
+  get backofficeUrl(): string {
+    return this.config.get<string>('BACKOFFICE_URL') || 'http://localhost:3001';
+  }
+
   // ─── URLs Auth (Email) ─────────────────────────────────────────────────────
 
   get verifyEmailUrl(): string {
@@ -35,7 +40,8 @@ export class AppConfigService {
   }
 
   buildResetPasswordUrl(token: string): string {
-    return `${this.resetPasswordUrl}?token=${token}`;
+    // Pointe vers la page du backoffice, pas l'endpoint API
+    return `${this.backofficeUrl}/reset-password?token=${token}`;
   }
 
   // ─── URLs Médias (Fichiers statiques) ──────────────────────────────────────

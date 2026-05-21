@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { Plus, Trash2, Loader2, Search, MapPin } from 'lucide-react';
-import { getZonages, createZonage, deleteZonage } from '@/src/services/zonages.service';
+import { Plus, Trash2, Loader2, Search, MapPin, Pencil, Check, X } from 'lucide-react';
+import { getZonages, createZonage, updateZonage, deleteZonage } from '@/src/services/zonages.service';
 import type { Zonage } from '@/src/types/api.types';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,39 @@ export default function ZonagesClient() {
   const [code, setCode] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Édition inline
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNom, setEditNom] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSaving, startSaving] = useTransition();
+
+  const startEdit = (z: Zonage) => {
+    setEditingId(z.id);
+    setEditNom(z.nom);
+    setEditCode(z.code ?? '');
+    setEditError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditError(null);
+  };
+
+  const handleUpdate = (id: string) => {
+    if (!editNom.trim()) { setEditError('Le nom est obligatoire.'); return; }
+    setEditError(null);
+    startSaving(async () => {
+      try {
+        const updated = await updateZonage(id, { nom: editNom.trim(), code: editCode.trim() || undefined });
+        setZonages((prev) => prev.map((z) => (z.id === id ? { ...z, ...updated } : z)));
+        setEditingId(null);
+      } catch (err: unknown) {
+        setEditError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.');
+      }
+    });
+  };
 
   // Chargement initial
   useEffect(() => {
@@ -214,6 +247,53 @@ export default function ZonagesClient() {
                 </tr>
               ) : (
                 filtered.map((z) => (
+                  editingId === z.id ? (
+                    <tr key={z.id} className="bg-muted/20">
+                      <td className="px-4 py-2">
+                        <input
+                          autoFocus
+                          value={editNom}
+                          onChange={(e) => setEditNom(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleUpdate(z.id); if (e.key === 'Escape') cancelEdit(); }}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          disabled={isSaving}
+                        />
+                        {editError && <p className="mt-1 text-xs text-destructive">{editError}</p>}
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          value={editCode}
+                          onChange={(e) => setEditCode(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleUpdate(z.id); if (e.key === 'Escape') cancelEdit(); }}
+                          maxLength={10}
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          disabled={isSaving}
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground text-sm">
+                        {z._count?.parcours ?? '—'} parcours
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => handleUpdate(z.id)}
+                            disabled={isSaving}
+                            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                          >
+                            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            Enregistrer
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Annuler
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
                   <tr key={z.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-foreground">{z.nom}</td>
                     <td className="px-4 py-3 text-muted-foreground">{z.code}</td>
@@ -221,15 +301,25 @@ export default function ZonagesClient() {
                       {z._count?.parcours ?? '—'} parcours
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleDelete(z.id, z.nom)}
-                        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Supprimer
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => startEdit(z)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Modifier
+                        </button>
+                        <button
+                          onClick={() => handleDelete(z.id, z.nom)}
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Supprimer
+                        </button>
+                      </div>
                     </td>
                   </tr>
+                  )
                 ))
               )}
             </tbody>

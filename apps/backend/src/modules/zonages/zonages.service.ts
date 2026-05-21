@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { CreateZonageDto } from './dto/create-zonage.dto';
+import { UpdateZonageDto } from './dto/update-zonage.dto';
 
 @Injectable()
 export class ZonagesService {
@@ -151,6 +152,15 @@ export class ZonagesService {
       co2: co2._sum.co2Saved ?? 0,
       zonages: statsZonages,
     };
+  }
+
+  async update(id: string, dto: UpdateZonageDto) {
+    await this.findOne(id);
+    if (dto.nom) {
+      const conflict = await this.db.zonage.findFirst({ where: { nom: dto.nom, NOT: { id } } });
+      if (conflict) throw new ConflictException(`Le nom "${dto.nom}" est déjà utilisé par un autre zonage.`);
+    }
+    return this.db.zonage.update({ where: { id }, data: dto });
   }
 
   async findOne(id: string) {

@@ -47,6 +47,7 @@ export class EtapesService {
 
     return this.db.etape.create({
       data: createEtapeDto,
+      include: { jeux: true },
     });
   }
 
@@ -98,6 +99,7 @@ export class EtapesService {
     return this.db.etape.update({
       where: { id },
       data: updateEtapeDto,
+      include: { jeux: true },
     });
   }
 

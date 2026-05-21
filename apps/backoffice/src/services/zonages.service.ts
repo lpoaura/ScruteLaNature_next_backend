@@ -23,6 +23,13 @@ export async function createZonage(dto: CreateZonageDto): Promise<Zonage> {
   });
 }
 
+export async function updateZonage(id: string, dto: Partial<CreateZonageDto>): Promise<Zonage> {
+  return apiClient<Zonage>(`/admin/zonages/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(dto),
+  });
+}
+
 export async function deleteZonage(id: string): Promise<void> {
   return apiClient<void>(`/admin/zonages/${id}`, { method: 'DELETE' });
 }

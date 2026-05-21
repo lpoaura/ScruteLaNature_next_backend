@@ -97,7 +97,7 @@ export interface Etape {
   updatedAt: string;
 }
 
-export type JeuType = 'INFO' | 'QCM' | 'CHARADE' | 'CODE_CAESAR' | 'CALCUL_PYRAMIDAL' | 'VALIDATION_LIEU' | 'ECO_GESTE';
+export type JeuType = 'INFO' | 'QCM' | 'CHARADE' | 'CODE_CAESAR' | 'CALCUL_PYRAMIDAL' | 'VALIDATION_LIEU' | 'ECO_GESTE' | 'PUZZLE';
 
 export interface Jeu {
   id: string;

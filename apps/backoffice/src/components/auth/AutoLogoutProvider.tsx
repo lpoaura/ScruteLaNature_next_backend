@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/src/services/auth.service';
+import { getAccessToken, clearTokens, refreshTokenSilently } from '@/src/lib/api-client';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -28,24 +29,35 @@ export default function AutoLogoutProvider({ children }: { children: React.React
       timeoutId = setTimeout(handleIdle, INACTIVITY_LIMIT_MS);
     };
 
-    // Écouteurs d'événements pour réinitialiser le chrono
-    const events = ['mousemove', 'keydown', 'wheel', 'DOMMouseScroll', 'mouseWheel', 'mousedown', 'touchstart', 'touchmove', 'MSPointerDown', 'MSPointerMove', 'visibilitychange'];
-
-    const onEvent = () => {
-      // Pour visibilitychange, on ne reset le timer que si l'onglet redevient visible
+    // Quand l'onglet redevient visible, tenter un refresh silencieux
+    const onVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         resetTimer();
+        // Refresh silencieux au retour d'onglet
+        const token = await getAccessToken();
+        if (token) {
+          await refreshTokenSilently();
+        }
       }
     };
 
-    events.forEach(event => document.addEventListener(event, onEvent, { passive: true }));
+    // Écouteurs d'événements pour réinitialiser le chrono
+    const interactionEvents = ['mousemove', 'keydown', 'wheel', 'DOMMouseScroll', 'mouseWheel', 'mousedown', 'touchstart', 'touchmove', 'MSPointerDown', 'MSPointerMove'];
+
+    const onInteraction = () => {
+      resetTimer();
+    };
+
+    interactionEvents.forEach(event => document.addEventListener(event, onInteraction, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Lancement initial
     resetTimer();
 
     return () => {
       clearTimeout(timeoutId);
-      events.forEach(event => document.removeEventListener(event, onEvent));
+      interactionEvents.forEach(event => document.removeEventListener(event, onInteraction));
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [handleIdle]);
 

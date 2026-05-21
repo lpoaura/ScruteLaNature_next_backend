@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { login } from '@/src/services/auth.service';
 import { cn } from '@/lib/utils';
 
@@ -68,9 +69,17 @@ export default function LoginForm() {
 
       {/* Mot de passe */}
       <div className="space-y-1.5">
-        <label htmlFor="password" className="text-sm font-medium text-foreground">
-          Mot de passe
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="text-sm font-medium text-foreground">
+            Mot de passe
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-primary hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <div className="relative">
           <input
             id="password"

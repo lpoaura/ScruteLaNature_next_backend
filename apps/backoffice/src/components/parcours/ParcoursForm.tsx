@@ -15,6 +15,7 @@ import type { Media } from '@/src/services/medias.service';
 import { cn } from '@/lib/utils';
 import ParcoursMapEditor from './ParcoursMapEditor';
 import MediaGalleryModal from './MediaGalleryModal';
+import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
 
 interface ParcoursFormProps {
   initialData?: Parcours;
@@ -346,16 +347,13 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium">Description complète <span className="text-destructive">*</span></label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    required
-                    rows={5}
+                  <label className="text-sm font-medium">Description complète <span className="text-destructive">*</span></label>
+                  <MarkdownEditor
                     value={formData.description}
-                    onChange={handleChange}
+                    onChange={(val) => setFormData(prev => ({ ...prev, description: val }))}
+                    disabled={isLockedForEdit}
                     placeholder="Décrivez ce que les visiteurs vont découvrir..."
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none resize-y"
+                    minHeight={220}
                   />
                 </div>
 

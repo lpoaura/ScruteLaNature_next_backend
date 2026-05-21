@@ -28,6 +28,26 @@ export async function login(email: string, password: string): Promise<UserProfil
 }
 
 /**
+ * Envoie un email de réinitialisation de mot de passe.
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  return apiClient<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Réinitialise le mot de passe avec le token reçu par email.
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  return apiClient<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+/**
  * Déconnecte l'utilisateur (côté serveur + vide les tokens locaux).
  */
 export async function logout(): Promise<void> {

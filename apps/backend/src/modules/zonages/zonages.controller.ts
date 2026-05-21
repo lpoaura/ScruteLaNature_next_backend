@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Delete,
   Param,
@@ -9,6 +10,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { ZonagesService } from './zonages.service';
 import { CreateZonageDto } from './dto/create-zonage.dto';
+import { UpdateZonageDto } from './dto/update-zonage.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 
@@ -33,6 +35,17 @@ export class ZonagesController {
   @ApiResponse({ status: 409, description: 'Cette zonage existe déjà.' })
   create(@Body() dto: CreateZonageDto) {
     return this.zonagesService.create(dto);
+  }
+
+  @Patch('admin/zonages/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Modifier un zonage (ADMIN/SUPER_ADMIN)' })
+  @ApiParam({ name: 'id', description: 'ID du zonage à modifier' })
+  @ApiResponse({ status: 200, description: 'Zonage mis à jour.' })
+  @ApiResponse({ status: 404, description: 'Zonage introuvable.' })
+  @ApiResponse({ status: 409, description: 'Ce nom est déjà utilisé.' })
+  update(@Param('id') id: string, @Body() dto: UpdateZonageDto) {
+    return this.zonagesService.update(id, dto);
   }
 
   @Delete('admin/zonages/:id')

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DatabaseService } from '../../database/database.service';
@@ -115,6 +115,30 @@ export class UsersService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userWithoutPassword } = updatedUser;
     return userWithoutPassword;
+  }
+
+  /**
+   * Changer son mot de passe (authentifié) :
+   * vérifie l'ancien mot de passe, puis hache et sauvegarde le nouveau.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.databaseService.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable.');
+    if (!user.password) throw new BadRequestException('Ce compte utilise une connexion externe (OAuth) et n\'a pas de mot de passe.');
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new UnauthorizedException('Mot de passe actuel incorrect.');
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    // Invalider toutes les sessions pour forcer une reconnexion sur les autres appareils
+    await this.databaseService.session.deleteMany({ where: { userId } });
+
+    return { message: 'Mot de passe modifié avec succès.' };
   }
 
   /**

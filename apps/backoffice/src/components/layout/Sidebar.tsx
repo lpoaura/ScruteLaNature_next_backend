@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Avis & Modération', href: '/dashboard/moderation', icon: MessageSquare },
   { label: 'Statistiques', href: '/dashboard/statistiques', icon: BarChart2, adminOnly: true },
   { label: 'Mon Équipe', href: '/dashboard/equipe', icon: Users, adminOnly: true },
-  { label: 'Réseau National', href: '/dashboard/organismes', icon: Building2, superAdminOnly: true },
+  { label: 'Organismes', href: '/dashboard/organismes', icon: Building2, superAdminOnly: true },
 ];
 
 export function Sidebar() {
@@ -137,36 +137,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Profil & Déconnexion */}
-      <div className="border-t border-border p-2 space-y-0.5">
-        {collapsed ? (
-          <div
-            title={user?.firstName ?? user?.email ?? ''}
-            className="flex h-9 w-9 mx-auto items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold select-none"
-          >
-            {initials}
-          </div>
-        ) : (
-          <div className="rounded-md px-2 py-2">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {user?.firstName ?? user?.email}
-            </p>
-            <p className="text-xs text-muted-foreground">{user?.role}</p>
-          </div>
-        )}
-
-        <button
-          onClick={logout}
-          title={collapsed ? 'Se déconnecter' : undefined}
-          className={cn(
-            'flex w-full items-center rounded-md px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors',
-            collapsed ? 'justify-center' : 'gap-3',
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && 'Se déconnecter'}
-        </button>
-      </div>
     </aside>
   );
 }

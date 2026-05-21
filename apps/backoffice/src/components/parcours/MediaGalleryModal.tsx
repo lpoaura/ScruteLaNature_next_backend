@@ -110,7 +110,7 @@ export default function MediaGalleryModal({ type, onSelect, onClose }: MediaGall
                 <button
                   key={m.filename}
                   type="button"
-                  onClick={() => onSelect(m.url)}
+                  onClick={() => { onSelect(m.url); onClose(); }}
                   title={m.originalName}
                   className={cn(
                     "aspect-square rounded-lg overflow-hidden border-2 transition-all relative group bg-background shadow-sm flex flex-col border-transparent hover:border-primary/50"
