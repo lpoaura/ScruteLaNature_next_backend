@@ -172,7 +172,7 @@ model OAuthAccount {
 }
 
 // ======================================================
-// 🤝 GESTION DES AMIS (Table de jointure explicite)
+//  GESTION DES AMIS (Table de jointure explicite)
 // ======================================================
 
 model Friendship {
@@ -194,7 +194,7 @@ model Friendship {
 }
 
 // ======================================================
-// 🏙️ COMMUNES & ORGANISMES
+//  COMMUNES & ORGANISMES
 // ======================================================
 
 model Organisme {
@@ -220,7 +220,7 @@ model Zonage {
 }
 
 // ======================================================
-// 🗺️ PARCOURS (Optimisé avec Index)
+//  PARCOURS (Optimisé avec Index)
 // ======================================================
 
 model Parcours {
@@ -264,7 +264,7 @@ model Parcours {
 }
 
 // ======================================================
-// 📍 ÉTAPES & JEUX
+//  ÉTAPES & JEUX
 // ======================================================
 
 model Etape {
@@ -307,7 +307,7 @@ model Jeu {
 }
 
 // ======================================================
-// 📊 HISTORIQUE (Avec protection contre les doublons)
+//  HISTORIQUE (Avec protection contre les doublons)
 // ======================================================
 model UserParcours {
   id     String  @id @default(uuid())
@@ -328,7 +328,7 @@ model UserParcours {
 }
 
 // ======================================================
-// 📥 TÉLÉCHARGEMENTS
+//  TÉLÉCHARGEMENTS
 // ======================================================
 model ParcoursDownload {
   id           String   @id @default(uuid())
@@ -344,7 +344,7 @@ model ParcoursDownload {
 }
 
 // ======================================================
-// 🌿 OBSERVATIONS & BADGES
+//  OBSERVATIONS & BADGES
 // ======================================================
 model Observation {
   id     String  @id @default(uuid())
