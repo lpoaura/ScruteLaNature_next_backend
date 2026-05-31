@@ -270,16 +270,56 @@ export class SocialService {
 
   // ── 9. Lister tous les avis (modération admin) ───────────────────────────
 
-  async getAllReviews(userRole: Role, organismeId: string | null) {
+  async getAllReviews(userRole: Role, organismeId: string | null, page = 1, limit = 20, rating?: number, sortOrder: 'asc' | 'desc' = 'desc') {
     const isSuperAdmin = userRole === Role.SUPER_ADMIN;
-    return this.db.review.findMany({
-      where: isSuperAdmin ? undefined : { parcours: { organismeId: organismeId! } },
-      include: {
-        user: { select: { id: true, pseudo: true, email: true } },
-        parcours: { select: { id: true, title: true, organismeId: true } },
+    const baseWhere: any = isSuperAdmin ? {} : { parcours: { organismeId: organismeId! } };
+    
+    const where = { ...baseWhere };
+    if (rating) {
+      where.rating = rating;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total, agg] = await Promise.all([
+      this.db.review.findMany({
+        where,
+        include: {
+          user: { select: { id: true, pseudo: true, email: true } },
+          parcours: { select: { id: true, title: true, organismeId: true } },
+        },
+        orderBy: { createdAt: sortOrder },
+        skip,
+        take: limit,
+      }),
+      this.db.review.count({ where }),
+      this.db.review.groupBy({
+        by: ['rating'],
+        where: baseWhere,
+        _count: true,
+      })
+    ]);
+
+    const totalReviews = agg.reduce((acc, curr) => acc + curr._count, 0);
+    const avgRating = totalReviews ? (agg.reduce((acc, curr) => acc + (curr.rating * curr._count), 0) / totalReviews) : null;
+    const count5 = agg.find(a => a.rating === 5)?._count || 0;
+    const count1 = agg.find(a => a.rating === 1)?._count || 0;
+
+    return {
+      data,
+      meta: { 
+        total, 
+        page, 
+        limit, 
+        totalPages: Math.ceil(total / limit),
+        kpis: {
+          total: totalReviews,
+          avgRating: avgRating ? Math.round(avgRating * 10) / 10 : null,
+          count5,
+          count1
+        }
       },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
   // ── 10. Supprimer un avis (auteur ou modérateur ADMIN/SUPER_ADMIN) ────────

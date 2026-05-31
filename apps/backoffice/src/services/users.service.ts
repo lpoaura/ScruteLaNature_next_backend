@@ -26,8 +26,14 @@ export interface PaginatedTeam {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-export async function getTeam(page = 1, limit = 20): Promise<PaginatedTeam> {
-  return apiClient<PaginatedTeam>(`/admin/users?page=${page}&limit=${limit}`);
+export async function getTeam(page = 1, limit = 20, search?: string, role?: string, organismeId?: string): Promise<PaginatedTeam> {
+  const qs = new URLSearchParams();
+  qs.set('page', page.toString());
+  qs.set('limit', limit.toString());
+  if (search) qs.set('search', search);
+  if (role) qs.set('role', role);
+  if (organismeId) qs.set('organismeId', organismeId);
+  return apiClient<PaginatedTeam>(`/admin/users?${qs.toString()}`);
 }
 
 export async function createTeamMember(dto: CreateTeamMemberDto): Promise<TeamMember> {

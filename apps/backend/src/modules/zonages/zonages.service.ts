@@ -11,9 +11,25 @@ import { UpdateZonageDto } from './dto/update-zonage.dto';
 export class ZonagesService {
   constructor(private readonly db: DatabaseService) {}
 
-  async findAll() {
+  async findAll(search?: string) {
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { nom: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     return this.db.zonage.findMany({
-      select: { id: true, nom: true, code: true },
+      where,
+      select: { 
+        id: true, 
+        nom: true, 
+        code: true,
+        _count: {
+          select: { parcours: true }
+        }
+      },
       orderBy: { nom: 'asc' },
     });
   }

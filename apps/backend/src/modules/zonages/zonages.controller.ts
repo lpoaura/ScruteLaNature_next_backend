@@ -6,8 +6,9 @@ import {
   Body,
   Delete,
   Param,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ZonagesService } from './zonages.service';
 import { CreateZonageDto } from './dto/create-zonage.dto';
 import { UpdateZonageDto } from './dto/update-zonage.dto';
@@ -23,9 +24,10 @@ export class ZonagesController {
   @Get('admin/zonages')
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Lister le référentiel des zonages (EDITOR/ADMIN/SUPER_ADMIN)' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Recherche par nom ou code' })
   @ApiResponse({ status: 200, description: 'Liste des zonages disponibles.' })
-  findAll() {
-    return this.zonagesService.findAll();
+  findAll(@Query('search') search?: string) {
+    return this.zonagesService.findAll(search);
   }
 
   @Post('admin/zonages')

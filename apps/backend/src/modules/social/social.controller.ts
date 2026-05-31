@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Request,
+  Query,
 } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -17,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { SocialService } from './social.service';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
@@ -113,9 +115,19 @@ export class ReviewsController {
   @Get('admin/all')
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Lister tous les avis pour la modération (EDITOR/ADMIN/SUPER_ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Liste complète des avis avec auteur et parcours.' })
-  getAllReviews(@Request() req: any) {
-    return this.socialService.getAllReviews(req.user.role, req.user.organismeId ?? null);
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page courante (défaut: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Nombre d\'éléments par page (défaut: 20)' })
+  @ApiQuery({ name: 'rating', required: false, type: Number, description: 'Filtre par note' })
+  @ApiQuery({ name: 'sortOrder', required: false, type: String, description: 'Ordre de tri (asc ou desc)' })
+  @ApiResponse({ status: 200, description: 'Liste complète des avis avec auteur et parcours paginée.' })
+  getAllReviews(
+    @Request() req: any,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('rating') rating?: string,
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc'
+  ) {
+    return this.socialService.getAllReviews(req.user.role, req.user.organismeId ?? null, +page, +limit, rating ? +rating : undefined, sortOrder);
   }
 
   @Delete(':id')

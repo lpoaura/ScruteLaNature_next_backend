@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { Trash2, Star, Loader2, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
-import { getAllReviews, deleteReview } from '@/src/services/reviews.service';
+import { getAllReviews, deleteReview, type PaginatedReviews } from '@/src/services/reviews.service';
 import type { Review } from '@/src/types/api.types';
+import PaginationBar from '@/src/components/ui/PaginationBar';
 import { cn } from '@/lib/utils';
 
 function StarRating({ rating }: { rating: number }) {
@@ -21,6 +22,9 @@ function StarRating({ rating }: { rating: number }) {
 
 export default function ModerationClient() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [meta, setMeta] = useState<PaginatedReviews['meta'] | null>(null);
+  const [page, setPage] = useState(1);
+  const LIMIT = 20;
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -28,11 +32,20 @@ export default function ModerationClient() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   useEffect(() => {
-    getAllReviews()
-      .then(setReviews)
+    setIsLoading(true);
+    getAllReviews(page, LIMIT, filterRating, sortOrder)
+      .then((res) => {
+        setReviews(res.data);
+        setMeta(res.meta);
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [page, filterRating, sortOrder]);
+
+  // Retour à la page 1 si on change de filtre
+  useEffect(() => {
+    setPage(1);
+  }, [filterRating, sortOrder]);
 
   const handleDelete = (id: string) => {
     if (!confirm('Supprimer définitivement cet avis ?')) return;
@@ -50,17 +63,7 @@ export default function ModerationClient() {
     });
   };
 
-  const filtered = reviews
-    .filter((r) => filterRating === null || r.rating === filterRating)
-    .sort((a, b) => {
-      const da = new Date(a.createdAt).getTime();
-      const db = new Date(b.createdAt).getTime();
-      return sortOrder === 'desc' ? db - da : da - db;
-    });
-
-  const avgRating = reviews.length
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-    : null;
+  // Suppression du filtrage local et du calcul local des KPIs
 
   if (isLoading) {
     return (
@@ -76,10 +79,10 @@ export default function ModerationClient() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total avis', value: reviews.length },
-          { label: 'Note moyenne', value: avgRating ? `${avgRating} / 5` : '—' },
-          { label: '5 étoiles', value: reviews.filter(r => r.rating === 5).length },
-          { label: '1 étoile', value: reviews.filter(r => r.rating === 1).length },
+          { label: 'Total avis', value: meta?.kpis.total ?? 0 },
+          { label: 'Note moyenne', value: meta?.kpis.avgRating ? `${meta.kpis.avgRating} / 5` : '—' },
+          { label: '5 étoiles', value: meta?.kpis.count5 ?? 0 },
+          { label: '1 étoile', value: meta?.kpis.count1 ?? 0 },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 shadow-sm text-center">
             <p className="text-2xl font-bold text-foreground">{value}</p>
@@ -123,14 +126,14 @@ export default function ModerationClient() {
       </div>
 
       {/* Liste */}
-      {filtered.length === 0 ? (
+      {reviews.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <MessageSquare className="h-12 w-12 mb-3 opacity-20" />
           <p className="text-sm">Aucun avis pour le moment.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((review) => (
+          {reviews.map((review) => (
             <div
               key={review.id}
               className="rounded-xl border border-border bg-card p-4 shadow-sm flex items-start justify-between gap-4"
@@ -175,6 +178,15 @@ export default function ModerationClient() {
             </div>
           ))}
         </div>
+      )}
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <PaginationBar
+          page={meta.page}
+          totalPages={meta.totalPages}
+          onPageChange={setPage}
+          className="mt-6"
+        />
       )}
     </div>
   );

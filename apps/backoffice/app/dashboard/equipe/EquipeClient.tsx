@@ -38,8 +38,23 @@ export default function EquipeClient() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterOrganisme, setFilterOrganisme] = useState<string>('');
+
+  // Debounce search pour éviter trop d'appels API
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Retourner à la page 1 lors d'une nouvelle recherche
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Retour à la page 1 si on change un filtre
+  useEffect(() => {
+    setPage(1);
+  }, [filterRole, filterOrganisme]);
 
   const [form, setForm] = useState<CreateTeamMemberDto>({
     email: '',
@@ -51,8 +66,9 @@ export default function EquipeClient() {
   });
 
   useEffect(() => {
-    const fetches: Promise<any>[] = [getTeam(page, LIMIT)];
-    if (isSuperAdmin) fetches.push(getOrganismes());
+    setIsLoading(true);
+    const fetches: Promise<any>[] = [getTeam(page, LIMIT, debouncedSearch, filterRole, filterOrganisme)];
+    if (isSuperAdmin && organismes.length === 0) fetches.push(getOrganismes());
 
     Promise.all(fetches)
       .then(([teamResult, orgs]) => {
@@ -62,7 +78,7 @@ export default function EquipeClient() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [isSuperAdmin, page]);
+  }, [isSuperAdmin, page, debouncedSearch, filterRole, filterOrganisme]);
 
   const handleCreate = () => {
     setError(null);
@@ -90,16 +106,7 @@ export default function EquipeClient() {
     });
   };
 
-  const filtered = members.filter((m) => {
-    const q = search.toLowerCase();
-    const matchSearch = !q ||
-      m.email.toLowerCase().includes(q) ||
-      (m.firstName ?? '').toLowerCase().includes(q) ||
-      (m.lastName ?? '').toLowerCase().includes(q);
-    const matchRole = !filterRole || m.role === filterRole;
-    const matchOrg = !filterOrganisme || m.organismeId === filterOrganisme;
-    return matchSearch && matchRole && matchOrg;
-  });
+  // Filtrage local supprimé -> filtrage backend
 
   const handleDelete = (id: string) => {
     if (!confirm('Supprimer définitivement ce compte ?')) return;
@@ -270,10 +277,10 @@ export default function EquipeClient() {
       )}
 
       {/* Liste des membres */}
-      {filtered.length === 0 ? (
+      {members.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Users className="h-12 w-12 mb-3 opacity-20" />
-          <p className="text-sm">{members.length === 0 ? "Aucun membre dans l'équipe pour le moment." : 'Aucun résultat pour ces filtres.'}</p>
+          <p className="text-sm">{search || filterRole || filterOrganisme ? 'Aucun résultat pour ces filtres.' : "Aucun membre dans l'équipe pour le moment."}</p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -289,7 +296,7 @@ export default function EquipeClient() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((m) => (
+              {members.map((m) => (
                 <tr key={m.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-medium text-foreground">

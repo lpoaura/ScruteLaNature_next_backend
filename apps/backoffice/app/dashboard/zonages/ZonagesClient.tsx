@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 
 export default function ZonagesClient() {
   const [zonages, setZonages] = useState<Zonage[]>([]);
-  const [filtered, setFiltered] = useState<Zonage[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,26 +53,24 @@ export default function ZonagesClient() {
     });
   };
 
-  // Chargement initial
+  // Debounce search pour éviter trop d'appels API
   useEffect(() => {
-    getZonages()
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Chargement avec recherche backend
+  useEffect(() => {
+    setIsLoading(true);
+    getZonages(debouncedSearch)
       .then((data) => {
         setZonages(data);
-        setFiltered(data);
       })
       .catch(() => setError('Impossible de charger les zonages.'))
       .finally(() => setIsLoading(false));
-  }, []);
-
-  // Filtrage en temps réel
-  useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(
-      zonages.filter(
-        (z) => z.nom.toLowerCase().includes(q) || z.code?.toLowerCase().includes(q),
-      ),
-    );
-  }, [search, zonages]);
+  }, [debouncedSearch]);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,7 +234,7 @@ export default function ZonagesClient() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.length === 0 ? (
+              {zonages.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                     <MapPin className="mx-auto mb-2 h-8 w-8 opacity-30" />
@@ -246,7 +244,7 @@ export default function ZonagesClient() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((z) => (
+                zonages.map((z) => (
                   editingId === z.id ? (
                     <tr key={z.id} className="bg-muted/20">
                       <td className="px-4 py-2">
@@ -326,10 +324,10 @@ export default function ZonagesClient() {
           </table>
 
           {/* Footer */}
-          {filtered.length > 0 && (
+          {zonages.length > 0 && (
             <div className="border-t border-border bg-muted/30 px-4 py-2">
               <p className="text-xs text-muted-foreground">
-                {filtered.length} zonage{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}
+                {zonages.length} zonage{zonages.length > 1 ? 's' : ''} affiché{zonages.length > 1 ? 's' : ''}
               </p>
             </div>
           )}

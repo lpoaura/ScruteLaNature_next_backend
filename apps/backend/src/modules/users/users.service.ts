@@ -52,13 +52,36 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async findAll(userRole: Role, userOrganismeId: string | null, page = 1, limit = 20) {
-    const where: any = {
-      role: { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] },
-    };
-    if (userRole !== Role.SUPER_ADMIN) {
+  async findAll(userRole: Role, userOrganismeId: string | null, page = 1, limit = 20, search?: string, filterRole?: string, filterOrganismeId?: string) {
+    const where: any = {};
+    
+    // Rôle : Par défaut on affiche ADMIN, EDITOR (et SUPER_ADMIN pour superadmin).
+    // Si un filtre de rôle est fourni, on l'utilise, sinon on restreint aux rôles autorisés.
+    if (filterRole && ([Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] as string[]).includes(filterRole)) {
+      where.role = filterRole;
+    } else {
+      where.role = { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] };
+    }
+
+    // Organisme : Si l'utilisateur est SUPER_ADMIN il voit tout ou peut filtrer par organisme.
+    // Sinon, il ne voit que son propre organisme.
+    if (userRole === Role.SUPER_ADMIN) {
+      if (filterOrganismeId) {
+        where.organismeId = filterOrganismeId;
+      }
+    } else {
       where.organismeId = userOrganismeId;
     }
+
+    // Recherche par email, firstName ou lastName
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.databaseService.user.findMany({

@@ -75,8 +75,19 @@ export class UsersController {
     @Request() req: any,
     @Query('page')  page  = '1',
     @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('role') filterRole?: string,
+    @Query('organismeId') filterOrganisme?: string,
   ) {
-    return this.usersService.findAll(req.user.role, req.user.organismeId ?? null, +page, +limit);
+    return this.usersService.findAll(
+      req.user.role, 
+      req.user.organismeId ?? null, 
+      +page, 
+      +limit,
+      search,
+      filterRole,
+      filterOrganisme
+    );
   }
 
   @Delete('admin/users/:id')
