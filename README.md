@@ -117,6 +117,8 @@ Password : LpoEditor123!
 | **Amis** | `POST /social/friends/request` · `GET /social/friends` · `GET /social/friends/requests` · `PATCH /:id/accept` · `PATCH /:id/block` · `DELETE /:id` |
 | **Avis** | `POST /social/reviews` · `GET /social/reviews/parcours/:id` · `DELETE /social/reviews/:id` |
 | **Stats investisseurs** | `GET /admin/stats/zonages` (tableau croisé : joueurs uniques, completions, note moyenne) |
+| **Backoffice (Pagination & Recherche)** | Listes paginées côté serveur (Utilisateurs, Zonages, Avis) avec barre de recherche |
+| **Refonte Narration** | Simplification des modèles `Parcours`/`Etape` : la mascotte et la narration utilisent désormais exclusivement les mini-jeux (`JeuType.INFO`) |
 
 > **Note — Galerie d'observations :** La synchronisation des photos terrain (`observations[]`) est volontairement désactivée en attente de confirmation. Le modèle Prisma `Observation` est conservé en base. Réactivation : 2 étapes documentées dans le code.
 

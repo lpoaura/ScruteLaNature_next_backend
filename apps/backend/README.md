@@ -132,7 +132,7 @@ src/
 
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
-| `GET` | `/admin/zonages` | EDITOR/ADMIN | Référentiel des zonages (filtres de recherche) |
+| `GET` | `/admin/zonages` | EDITOR/ADMIN | Référentiel des zonages avec pagination et recherche texte |
 | `POST` | `/admin/zonages` | ADMIN | Ajouter une zonage |
 | `GET` | `/admin/stats/zonages` | ADMIN | Stats investisseurs : joueurs uniques, completions, note moyenne |
 | `GET` | `/admin/stats` | ADMIN | Dashboard global (KPIs, Tableau croisé des organismes) |
@@ -149,7 +149,7 @@ src/
 
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
-| `GET` | `/admin/parcours` | ADMIN | Liste (cloison par organisme) — filtres : statut, difficulté, zonage |
+| `GET` | `/admin/parcours` | ADMIN | Liste paginée (cloison par organisme) — filtres : statut, difficulté, zonage |
 | `GET` | `/admin/parcours/:id` | ADMIN | Détail complet avec étapes & jeux |
 | `POST` | `/admin/parcours` | EDITOR | Créer un parcours |
 | `PATCH` | `/admin/parcours/:id` | EDITOR | Mettre à jour |
@@ -215,7 +215,8 @@ src/
 | Méthode | Route | Auth | Description |
 |---|---|---|---|
 | `POST` | `/social/reviews` | JWT | Laisser un avis (1 à 5 ⭐, commentaire optionnel) — 1 seul par parcours |
-| `GET` | `/social/reviews/parcours/:id` | JWT | Avis d'un parcours + note moyenne calculée |
+| `GET` | `/social/reviews/parcours/:id` | JWT | Avis d'un parcours (paginés) + note moyenne calculée |
+| `GET` | `/social/reviews/admin/all` | ADMIN | Liste paginée de tous les avis pour modération avec recherche |
 | `DELETE` | `/social/reviews/:id` | JWT | Supprimer (auteur ou ADMIN — modération) |
 
 ---

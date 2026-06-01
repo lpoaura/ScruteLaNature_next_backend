@@ -72,6 +72,8 @@ apps/backoffice/
 │   ├── login/                → Page de connexion
 │   ├── dashboard/            → Espace privé (protégé par AuthGuard)
 │   │   ├── parcours/         → Liste et éditeur de parcours (CRUD)
+│   │   ├── moderation/       → Interface de modération des avis (Reviews)
+│   │   ├── equipe/           → Gestion des collaborateurs (Admin/Editor)
 │   │   ├── statistiques/     → Dashboard Data (KPIs, Export CSV)
 │   │   ├── zonages/          → Gestion du référentiel géographique
 │   │   ├── organismes/       → Réservé SUPER_ADMIN (Réseau National)
@@ -90,6 +92,7 @@ apps/backoffice/
 ## 🏗️ Fonctionnalités Principales
 
 - **Authentification Sécurisée :** JWT avec rotation automatique via `api-client`.
-- **Créateur de Parcours :** Interface WYSIWYG permettant l'ajout dynamique d'étapes (GPS) et l'intégration de multiples types de jeux (QCM, Charades, etc.).
+- **Gestion des Parcours :** Interface permettant l'ajout dynamique d'étapes (GPS) et l'intégration de multiples types de jeux (QCM, Charades, Info, etc.). La narration (mascotte, indications) est désormais intégralement gérée via les mini-jeux.
+- **Modération & Gestion (Paginée) :** Listes paginées avec barre de recherche côté serveur pour les Utilisateurs, les Zonages et les Avis (Modération).
 - **Dashboard Data :** Suivi en temps réel de la progression du projet avec génération de tableaux croisés et de fichiers CSV téléchargeables.
 - **Mode Sombre (À venir) :** Préparation du support des thèmes via les tokens CSS.
