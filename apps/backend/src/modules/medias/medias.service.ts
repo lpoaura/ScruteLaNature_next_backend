@@ -59,7 +59,6 @@ export class MediasService {
       where: {
         OR: [
           { coverImage: { contains: filename } },
-          { mascotteImg: { contains: filename } },
         ],
       },
     });
@@ -103,13 +102,12 @@ export class MediasService {
     const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date; isUsed: boolean }[] = [];
 
     // 1. Récupérer tous les fichiers utilisés
-    const parcours = await this.db.parcours.findMany({ select: { coverImage: true, mascotteImg: true }});
+    const parcours = await this.db.parcours.findMany({ select: { coverImage: true }});
     const jeux = await this.db.jeu.findMany({ select: { imageUrl: true, audioUrl: true }});
 
     const usedFilenames = new Set<string>();
     parcours.forEach(p => {
       if (p.coverImage) usedFilenames.add(p.coverImage.split('/').pop() || '');
-      if (p.mascotteImg) usedFilenames.add(p.mascotteImg.split('/').pop() || '');
     });
     jeux.forEach(j => {
       if (j.imageUrl) usedFilenames.add(j.imageUrl.split('/').pop() || '');

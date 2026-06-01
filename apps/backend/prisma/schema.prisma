@@ -234,8 +234,6 @@ model Parcours {
   status      PublishStatus @default(DRAFT)
 
   pathGeoJSON String? @db.Text
-  mascotteNom String?
-  mascotteImg String?
 
   createdById String?
   createdBy   User?     @relation("ParcoursCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -276,8 +274,6 @@ model Etape {
   latitude       Float
   longitude      Float
   title          String
-  description    String? @db.Text
-  transitionText String? @db.Text
 
   jeux Jeu[]
 

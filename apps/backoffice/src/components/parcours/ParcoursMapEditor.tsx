@@ -81,8 +81,6 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
         longitude: lng,
         order: etapes.length + 1,
         title: `Nouvelle étape ${etapes.length + 1}`,
-        description: '',
-        transitionText: '',
       });
     }
   };
@@ -93,9 +91,8 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
     startTransition(async () => {
       try {
         if ('id' in editingEtape && editingEtape.id) {
-          // Update — on n'envoie que les champs acceptés par UpdateEtapeDto
-          const { order, title, latitude, longitude, description, transitionText, parcoursId } = editingEtape;
-          const updated = await updateEtape(editingEtape.id, { order, title, latitude, longitude, description, transitionText, parcoursId });
+          const { order, title, latitude, longitude, parcoursId } = editingEtape;
+          const updated = await updateEtape(editingEtape.id, { order, title, latitude, longitude, parcoursId });
           setEtapes(prev => prev.map(e => e.id === updated.id ? updated : e));
         } else {
           // Create
@@ -260,28 +257,6 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
                 <p className="text-[10px] text-muted-foreground italic">
                   Cliquez n'importe où sur la carte pour déplacer ce point.
                 </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Texte de la mascotte (Lieu)</label>
-                <textarea 
-                  rows={4}
-                  value={editingEtape.description || ''} 
-                  onChange={(e) => setEditingEtape({...editingEtape, description: e.target.value})}
-                  placeholder="Ce que la mascotte dit en arrivant ici..."
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Texte de transition (Vers l'étape suivante)</label>
-                <textarea 
-                  rows={3}
-                  value={editingEtape.transitionText || ''} 
-                  onChange={(e) => setEditingEtape({...editingEtape, transitionText: e.target.value})}
-                  placeholder="Indication pour se rendre au prochain point..."
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
-                />
               </div>
 
               <div className="pt-2 flex gap-3">

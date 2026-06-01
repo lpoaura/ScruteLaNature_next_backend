@@ -170,8 +170,6 @@ export class MobileService {
         distanceKm: true,
         durationMin: true,
         coverImage: true,
-        mascotteNom: true,
-        mascotteImg: true,
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,

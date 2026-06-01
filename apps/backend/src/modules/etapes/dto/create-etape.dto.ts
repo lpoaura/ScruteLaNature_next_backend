@@ -38,13 +38,4 @@ export class CreateEtapeDto {
   @Max(180)
   longitude: number;
 
-  @ApiPropertyOptional({ description: "Description détaillée de l'étape" })
-  @IsString()
-  @IsOptional()
-  description?: string;
-
-  @ApiPropertyOptional({ description: 'Texte affiché pendant la transition vers la prochaine étape' })
-  @IsString()
-  @IsOptional()
-  transitionText?: string;
 }

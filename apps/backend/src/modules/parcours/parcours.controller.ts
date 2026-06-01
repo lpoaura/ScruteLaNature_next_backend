@@ -72,7 +72,7 @@ export class ParcoursController {
 
   @Patch(':id')
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Mettre à jour un parcours (titre, zonage, mascotte, accessibilité, statut)' })
+  @ApiOperation({ summary: 'Mettre à jour un parcours (titre, zonage, accessibilité, statut)' })
   @ApiParam({ name: 'id', description: 'UUID du parcours' })
   @ApiResponse({ status: 200, description: 'Parcours mis à jour.' })
   @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })

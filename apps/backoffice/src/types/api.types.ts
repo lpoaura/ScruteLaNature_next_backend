@@ -68,8 +68,6 @@ export interface Parcours {
   isChildFriendly: boolean;
   isMentalHandicapFriendly: boolean;
   coverImage: string | null;
-  mascotteNom: string | null;
-  mascotteImg: string | null;
   pathGeoJSON?: string | null;
   organismeId: string;
   zonageId: string;
@@ -90,8 +88,6 @@ export interface Etape {
   latitude: number;
   longitude: number;
   title: string;
-  description: string | null;
-  transitionText: string | null;
   jeux?: Jeu[];
   createdAt: string;
   updatedAt: string;

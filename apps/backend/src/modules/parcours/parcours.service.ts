@@ -197,9 +197,7 @@ export class ParcoursService {
     if (safeDto.coverImage !== undefined) {
       this.cleanupOldSpecificImage(existing.coverImage, safeDto.coverImage);
     }
-    if (safeDto.mascotteImg !== undefined) {
-      this.cleanupOldSpecificImage(existing.mascotteImg, safeDto.mascotteImg);
-    }
+
 
     return updated;
   }
@@ -234,7 +232,7 @@ export class ParcoursService {
 
     // Nettoyage des images spécifiques associées au parcours supprimé
     this.cleanupOldSpecificImage(existing.coverImage, null);
-    this.cleanupOldSpecificImage(existing.mascotteImg, null);
+
 
     return { message: `Parcours #${id} supprimé avec succès` };
   }

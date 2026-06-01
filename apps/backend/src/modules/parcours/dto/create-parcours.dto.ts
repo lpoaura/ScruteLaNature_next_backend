@@ -66,17 +66,6 @@ export class CreateParcoursDto {
   @IsString()
   pathGeoJSON?: string;
 
-  @ApiPropertyOptional({ example: 'Hibou', description: "Nom de la mascotte du parcours" })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  mascotteNom?: string;
-
-  @ApiPropertyOptional({ example: 'uuid-hibou.png', description: "Image de la mascotte" })
-  @IsOptional()
-  @IsString()
-  mascotteImg?: string;
-
   @ApiProperty({ example: 'uuid-zonage-1234', description: 'UUID de la zonage rattachée' })
   @IsUUID()
   @IsNotEmpty()

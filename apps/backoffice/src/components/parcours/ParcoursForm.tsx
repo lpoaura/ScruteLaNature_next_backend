@@ -50,8 +50,6 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     zonageId: initialData?.zonageId || '',
     status: initialData?.status || 'DRAFT',
     coverImage: initialData?.coverImage || '',
-    mascotteNom: initialData?.mascotteNom || '',
-    mascotteImg: initialData?.mascotteImg || '',
     isPMRFriendly: initialData?.isPMRFriendly || false,
     isChildFriendly: initialData?.isChildFriendly || false,
     isMentalHandicapFriendly: initialData?.isMentalHandicapFriendly || false,
@@ -157,7 +155,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     });
   };
 
-  const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | 'mascotte' | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | null>(null);
   const [gallerySearch, setGallerySearch] = useState('');
   const [activeTab, setActiveTab] = useState<'info' | 'map'>('info');
   
@@ -176,8 +174,8 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       // Auto-sélectionner l'image uploadée
       if (isGalleryOpen) {
         setFormData(prev => ({ 
-          ...prev, 
-          [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: uploaded.url 
+          ...prev,
+          ...(isGalleryOpen === 'cover' ? { coverImage: uploaded.url } : {})
         }));
         setIsGalleryOpen(null);
       }
@@ -208,7 +206,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     value, 
     required = false 
   }: { 
-    type: 'cover' | 'mascotte', 
+    type: 'cover', 
     label: string, 
     value: string,
     required?: boolean
@@ -437,32 +435,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                 </div>
               </div>
 
-              {/* Section Mascotte */}
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
-                <h2 className="text-lg font-semibold border-b border-border pb-3">Mascotte du parcours</h2>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label htmlFor="mascotteNom" className="text-sm font-medium">Nom de la mascotte</label>
-                    <input
-                      id="mascotteNom"
-                      name="mascotteNom"
-                      type="text"
-                      maxLength={100}
-                      value={formData.mascotteNom}
-                      onChange={handleChange}
-                      placeholder="Ex: Hector le Castor"
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                    />
-                  </div>
 
-                  <ImagePicker 
-                    type="mascotte" 
-                    label="Image de la mascotte" 
-                    value={formData.mascotteImg} 
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Colonne de droite (1/3) : Paramètres techniques & Visuels */}
@@ -597,7 +570,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
           onSelect={(url) => {
             setFormData(prev => ({ 
               ...prev, 
-              [isGalleryOpen === 'cover' ? 'coverImage' : 'mascotteImg']: url 
+              ...(isGalleryOpen === 'cover' ? { coverImage: url } : {}) 
             }));
           }}
         />
