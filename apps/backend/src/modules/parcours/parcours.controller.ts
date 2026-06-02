@@ -41,7 +41,7 @@ export class ParcoursController {
   findAll(@Request() req: any, @Query() filters: FilterParcoursDto) {
     console.log('--- DEBUG USER IN PARCOURS CONTROLLER ---', req.user);
     return this.parcoursService.findAll(
-      req.user.sub,
+      req.user.id,
       req.user.role,
       req.user.organismeId ?? null,
       filters,
@@ -67,7 +67,7 @@ export class ParcoursController {
   @ApiQuery({ name: 'organismeId', required: false, description: 'Obligatoire pour les SUPER_ADMIN. Ignoré pour les autres rôles.' })
   create(@Body() dto: CreateParcoursDto, @Query('organismeId') queryOrganismeId: string, @Request() req: any) {
     const orgId = req.user.role === Role.SUPER_ADMIN ? queryOrganismeId : (req.user.organismeId ?? null);
-    return this.parcoursService.create(dto, req.user.role, orgId, req.user.sub);
+    return this.parcoursService.create(dto, req.user.role, orgId, req.user.id);
   }
 
   @Patch(':id')
