@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import ParcoursMapEditor from './ParcoursMapEditor';
 import MediaGalleryModal from './MediaGalleryModal';
 import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 
 interface ParcoursFormProps {
   initialData?: Parcours;
@@ -360,37 +361,29 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                     <label htmlFor="organismeId" className="text-sm font-medium">
                       Organisme <span className="text-destructive">*</span>
                     </label>
-                    <select
-                      id="organismeId"
-                      value={selectedOrganismeId}
-                      onChange={e => setSelectedOrganismeId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                    >
-                      <option value="" disabled>Sélectionner un organisme</option>
-                      {organismes.map(o => (
-                        <option key={o.id} value={o.id}>{o.nom}</option>
-                      ))}
-                    </select>
+                  <SearchableSelect
+                    id="organismeId"
+                    options={organismes.map((o) => ({ value: o.id, label: o.nom }))}
+                    value={selectedOrganismeId}
+                    onChange={setSelectedOrganismeId}
+                    placeholder="Sélectionner un organisme"
+                    searchPlaceholder="Rechercher un organisme…"
+                  />
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label htmlFor="zonageId" className="text-sm font-medium">Zonage associé <span className="text-destructive">*</span></label>
-                    <select
-                      id="zonageId"
-                      name="zonageId"
-                      required
-                      value={formData.zonageId}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-                    >
-                      <option value="" disabled>Sélectionner un zonage</option>
-                      {zonages.map(z => (
-                        <option key={z.id} value={z.id}>{z.nom} ({z.code})</option>
-                      ))}
-                    </select>
+                  <SearchableSelect
+                    id="zonageId"
+                    options={zonages.map((z) => ({ value: z.id, label: z.nom, sublabel: z.code }))}
+                    value={formData.zonageId}
+                    onChange={(val) => setFormData(prev => ({ ...prev, zonageId: val }))}
+                    placeholder="Sélectionner un zonage"
+                    searchPlaceholder="Rechercher un zonage…"
+                    disabled={isLockedForEdit}
+                  />
                   </div>
 
                   <div className="space-y-2">

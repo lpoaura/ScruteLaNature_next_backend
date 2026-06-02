@@ -8,6 +8,7 @@ import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
 import { getAccessToken } from '@/src/lib/api-client';
 import { cn } from '@/lib/utils';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 
 // Mini bar chart component
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -202,19 +203,29 @@ export default function StatistiquesClient() {
         <span className="text-sm font-medium text-muted-foreground shrink-0">Filtrer par :</span>
 
         {isSuperAdmin && allOrganismes.length > 0 && (
-          <select value={filterOrgId} onChange={(e) => handleFilterOrg(e.target.value)}
-            className="px-3 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
-            <option value="">Tous les organismes</option>
-            {allOrganismes.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
-          </select>
+          <SearchableSelect
+            options={allOrganismes.map((o) => ({ value: o.id, label: o.nom }))}
+            value={filterOrgId}
+            onChange={handleFilterOrg}
+            placeholder="Tous les organismes"
+            searchPlaceholder="Rechercher un organisme…"
+            allowEmpty
+            emptyLabel="Tous les organismes"
+            className="w-52"
+          />
         )}
 
         {allZonages.length > 0 && (
-          <select value={filterZonageId} onChange={(e) => handleFilterZonage(e.target.value)}
-            className="px-3 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
-            <option value="">Tous les zonages</option>
-            {allZonages.map(z => <option key={z.id} value={z.id}>{z.nom}</option>)}
-          </select>
+          <SearchableSelect
+            options={allZonages.map((z) => ({ value: z.id, label: z.nom, sublabel: z.code }))}
+            value={filterZonageId}
+            onChange={handleFilterZonage}
+            placeholder="Tous les zonages"
+            searchPlaceholder="Rechercher un zonage…"
+            allowEmpty
+            emptyLabel="Tous les zonages"
+            className="w-52"
+          />
         )}
 
         {isFiltered && (
@@ -315,26 +326,30 @@ export default function StatistiquesClient() {
               {isSuperAdmin && allOrganismes.length > 0 && (
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Organisme</label>
-                  <select value={exportOrgId} onChange={(e) => { setExportOrgId(e.target.value); setExportZonageId(''); }}
-                    className="w-full px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
-                    <option value="">Tous les organismes</option>
-                    {allOrganismes.map((o) => (
-                      <option key={o.id} value={o.id}>{o.nom}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    options={allOrganismes.map((o) => ({ value: o.id, label: o.nom }))}
+                    value={exportOrgId}
+                    onChange={(val) => { setExportOrgId(val); setExportZonageId(''); }}
+                    placeholder="Tous les organismes"
+                    searchPlaceholder="Rechercher…"
+                    allowEmpty
+                    emptyLabel="Tous les organismes"
+                  />
                 </div>
               )}
 
               {allZonages.length > 0 && (
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Zonage</label>
-                  <select value={exportZonageId} onChange={(e) => { setExportZonageId(e.target.value); setExportOrgId(''); }}
-                    className="w-full px-2.5 py-1.5 border border-input rounded-lg bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
-                    <option value="">Tous les zonages</option>
-                    {allZonages.map((z) => (
-                      <option key={z.id} value={z.id}>{z.nom}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    options={allZonages.map((z) => ({ value: z.id, label: z.nom, sublabel: z.code }))}
+                    value={exportZonageId}
+                    onChange={(val) => { setExportZonageId(val); setExportOrgId(''); }}
+                    placeholder="Tous les zonages"
+                    searchPlaceholder="Rechercher…"
+                    allowEmpty
+                    emptyLabel="Tous les zonages"
+                  />
                 </div>
               )}
 

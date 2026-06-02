@@ -19,6 +19,7 @@ import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
 import type { Parcours, Zonage, Organisme, PublishStatus } from '@/src/types/api.types';
 import PaginationBar from '@/src/components/ui/PaginationBar';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 import { cn } from '@/lib/utils';
 
 const LIMIT = 15;
@@ -143,20 +144,19 @@ export default function ParcoursClient() {
 
         <div className="flex items-center gap-3">
           {isSuperAdmin && organismes.length > 0 && (
-            <div className="relative">
-              <select
-                value={organismeFilter}
-                onChange={(e) => setOrganismeFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-              >
-                <option value="ALL">Tous les organismes</option>
-                {organismes.map(o => (
-                  <option key={o.id} value={o.id}>{o.nom}</option>
-                ))}
-              </select>
-              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            </div>
+            <SearchableSelect
+              options={organismes.map((o) => ({ value: o.id, label: o.nom }))}
+              value={organismeFilter === 'ALL' ? '' : organismeFilter}
+              onChange={(val) => setOrganismeFilter(val || 'ALL')}
+              placeholder="Tous les organismes"
+              searchPlaceholder="Rechercher un organisme…"
+              allowEmpty
+              emptyLabel="Tous les organismes"
+              className="w-48"
+            />
           )}
+
+          {/* Statut : 4 options fixes — select natif suffit */}
           <div className="relative">
             <select
               value={statusFilter}
@@ -172,19 +172,16 @@ export default function ParcoursClient() {
             <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           </div>
 
-          <div className="relative">
-            <select
-              value={zonageFilter}
-              onChange={(e) => setZonageFilter(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-2 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-            >
-              <option value="ALL">Tous les zonages</option>
-              {zonages.map(z => (
-                <option key={z.id} value={z.id}>{z.nom}</option>
-              ))}
-            </select>
-            <Map className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          </div>
+          <SearchableSelect
+            options={zonages.map((z) => ({ value: z.id, label: z.nom, sublabel: z.code }))}
+            value={zonageFilter === 'ALL' ? '' : zonageFilter}
+            onChange={(val) => setZonageFilter(val || 'ALL')}
+            placeholder="Tous les zonages"
+            searchPlaceholder="Rechercher un zonage…"
+            allowEmpty
+            emptyLabel="Tous les zonages"
+            className="w-52"
+          />
 
           <Link
             href="/dashboard/parcours/new"

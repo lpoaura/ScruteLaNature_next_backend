@@ -7,6 +7,7 @@ import { getOrganismes, type OrganismeDetail } from '@/src/services/organismes.s
 import { useAuth } from '@/src/hooks/use-auth';
 import { useRoles } from '@/src/hooks/use-roles';
 import PaginationBar from '@/src/components/ui/PaginationBar';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 import { cn } from '@/lib/utils';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -165,16 +166,16 @@ export default function EquipeClient() {
         </select>
 
         {isSuperAdmin && organismes.length > 0 && (
-          <select
+          <SearchableSelect
+            options={organismes.map((o) => ({ value: o.id, label: o.nom }))}
             value={filterOrganisme}
-            onChange={(e) => setFilterOrganisme(e.target.value)}
-            className="px-3 py-2 border border-input rounded-md bg-background text-sm outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">Tous les organismes</option>
-            {organismes.map((o) => (
-              <option key={o.id} value={o.id}>{o.nom}</option>
-            ))}
-          </select>
+            onChange={setFilterOrganisme}
+            placeholder="Tous les organismes"
+            searchPlaceholder="Rechercher un organisme…"
+            allowEmpty
+            emptyLabel="Tous les organismes"
+            className="w-52"
+          />
         )}
       </div>
 
@@ -254,11 +255,13 @@ export default function EquipeClient() {
           {isSuperAdmin && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Organisme <span className="text-destructive">*</span></label>
-              <select value={form.organismeId} onChange={e => setForm(f => ({ ...f, organismeId: e.target.value }))}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm outline-none focus:ring-2 focus:ring-primary">
-                <option value="" disabled>Sélectionner un organisme</option>
-                {organismes.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
-              </select>
+              <SearchableSelect
+                options={organismes.map((o) => ({ value: o.id, label: o.nom }))}
+                value={form.organismeId}
+                onChange={(val) => setForm((f) => ({ ...f, organismeId: val }))}
+                placeholder="Sélectionner un organisme"
+                searchPlaceholder="Rechercher un organisme…"
+              />
             </div>
           )}
 
