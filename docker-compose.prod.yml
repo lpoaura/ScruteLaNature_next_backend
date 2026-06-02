@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # Base de données PostgreSQL
+  # ── Base de données PostgreSQL ──────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: lpo_postgres_prod
@@ -12,11 +10,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-lpo_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      # Optionnel: on peut enlever le port si on ne veut pas exposer la BDD sur l'IP publique
-      - "5434:5432"
+    # Ne pas exposer le port en production — le backend y accède via le réseau Docker
+    # Décommenter la ligne suivante si besoin d'un accès direct depuis l'hôte
+    # ports:
+    #   - "5434:5432"
 
-  # API Backend (NestJS)
+  # ── API Backend (NestJS + Prisma) ───────────────────────────────────────────
   backend:
     build:
       context: .
@@ -26,33 +25,34 @@ services:
     depends_on:
       - postgres
     environment:
-      # L'URL de connexion Prisma doit correspondre au service postgres défini ci-dessus
       DATABASE_URL: "postgresql://${POSTGRES_USER:-lpo_user}:${POSTGRES_PASSWORD:-lpo_password}@postgres:5432/${POSTGRES_DB:-lpo_db}?schema=public"
-      JWT_SECRET: ${JWT_SECRET:-"change-me-in-production-very-secret"}
-      JWT_EXPIRATION: "15m"
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-"change-me-too-very-secret"}
-      JWT_REFRESH_EXPIRATION: "180d"
+      # APP_URL est utilisé par AppConfigService pour construire les URLs des médias
+      # et les liens dans les e-mails. Mettre l'URL publique du backend.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      BACKOFFICE_URL: ${BACKOFFICE_URL:-http://localhost:3001}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-180d}
       PORT: 3000
     ports:
       - "3000:3000"
     volumes:
-      # Pour conserver les médias uploadés en dehors du cycle de vie du conteneur
       - backend_uploads:/app/apps/backend/uploads
 
-  # Interface Backoffice (Next.js)
+  # ── Interface Backoffice (Next.js) ──────────────────────────────────────────
   backoffice:
     build:
       context: .
       dockerfile: apps/backoffice/Dockerfile
+      args:
+        # NEXT_PUBLIC_* est injecté au BUILD TIME dans le bundle JS.
+        # Passer ici l'URL publique du backend telle que vue par le navigateur.
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000/api}
     container_name: lpo_backoffice_prod
     restart: always
     depends_on:
       - backend
-    environment:
-      # Le frontend a besoin de connaitre l'URL publique de l'API.
-      # Exemple: https://api.scrutelanature.fr/api ou http://[IP_Serveur]:3000/api
-      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-"http://localhost:3000/api"}
-      PORT: 3001
     ports:
       - "3001:3001"
 

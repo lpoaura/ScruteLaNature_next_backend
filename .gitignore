@@ -1,2 +1,5 @@
 node_modules
 .next
+backend.log
+dev.log
+dev.pid

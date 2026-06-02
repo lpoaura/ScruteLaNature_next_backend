@@ -1,9 +1,8 @@
 # apps/backoffice/Dockerfile
-# Context should be the root of the monorepo
+# Context: racine du monorepo (docker build -f apps/backoffice/Dockerfile .)
 
-# --- 1. Base Node ---
+# --- 1. Base ---
 FROM node:20-alpine AS base
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
@@ -12,15 +11,21 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/backoffice/package.json ./apps/backoffice/
-RUN npm install
+RUN npm ci
 
 # --- 3. Builder ---
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# We disable telemetry to avoid collecting data during build
+
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# NEXT_PUBLIC_* est une variable build-time : elle doit être passée en ARG
+# pour être injectée dans le bundle JS au moment du build.
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:3000/api
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+
 RUN npm run build --workspace=backoffice
 
 # --- 4. Production Runner ---
@@ -30,20 +35,20 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Don't run production as root
+# Sécurité : ne pas tourner en root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Set the correct permission for prerender cache
+# Dossier cache pour le pre-rendering
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-# In a monorepo, Next.js standalone output usually puts the server in standalone/apps/backoffice
-COPY --from=builder --chown=nextjs:nodejs /app/apps/backoffice/public ./apps/backoffice/public
+# Copier le standalone output (contient node_modules tracés + server.js)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/backoffice/.next/standalone ./
+# Copier les assets statiques
 COPY --from=builder --chown=nextjs:nodejs /app/apps/backoffice/.next/static ./apps/backoffice/.next/static
+# Copier le dossier public (favicons, images statiques)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/backoffice/public ./apps/backoffice/public
 
 USER nextjs
 
@@ -51,6 +56,4 @@ EXPOSE 3001
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
 CMD ["node", "apps/backoffice/server.js"]
