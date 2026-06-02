@@ -215,7 +215,7 @@ export default function ParcoursClient() {
                 <tr>
                   <th className="px-4 py-3 font-medium text-muted-foreground w-16">Image</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Titre</th>
-                  {isSuperAdmin && <th className="px-4 py-3 font-medium text-muted-foreground">Créé par</th>}
+                  <th className="px-4 py-3 font-medium text-muted-foreground">Créé par</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Zonage</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Statut</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Difficulté</th>
@@ -225,7 +225,7 @@ export default function ParcoursClient() {
               <tbody className="divide-y divide-border">
                 {filteredParcours.length === 0 ? (
                   <tr>
-                    <td colSpan={isSuperAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       Aucun parcours trouvé.
                     </td>
                   </tr>
@@ -247,8 +247,7 @@ export default function ParcoursClient() {
                           {parcours.distanceKm ? `${parcours.distanceKm} km` : '-'} • {parcours.durationMin ? `${parcours.durationMin} min` : '-'}
                         </p>
                       </td>
-                      {isSuperAdmin && (
-                        <td className="px-4 py-3">
+                      <td className="px-4 py-3">
                           {parcours.createdBy ? (
                             <div>
                               <p className="text-sm text-foreground">
@@ -256,13 +255,14 @@ export default function ParcoursClient() {
                                   ? `${parcours.createdBy.firstName ?? ''} ${parcours.createdBy.lastName ?? ''}`.trim()
                                   : parcours.createdBy.email ?? '—'}
                               </p>
-                              <p className="text-xs text-muted-foreground">{parcours.organisme?.nom ?? '-'}</p>
+                              {isSuperAdmin && (
+                                <p className="text-xs text-muted-foreground">{parcours.organisme?.nom ?? '-'}</p>
+                              )}
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
-                      )}
                       <td className="px-4 py-3 text-muted-foreground">{parcours.zonage?.nom || '-'}</td>
                       <td className="px-4 py-3"><StatusBadge status={parcours.status} /></td>
                       <td className="px-4 py-3"><DifficultyBadge level={parcours.difficulty} /></td>

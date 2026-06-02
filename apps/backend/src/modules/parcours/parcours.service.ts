@@ -58,9 +58,7 @@ export class ParcoursService {
           coverImage: true,
           zonage: { select: { id: true, nom: true } },
           organisme: { select: { id: true, nom: true } },
-          createdBy: userRole === Role.SUPER_ADMIN
-            ? { select: { id: true, firstName: true, lastName: true, email: true } }
-            : false,
+          createdBy: { select: { id: true, firstName: true, lastName: true, email: true } },
           _count: { select: { etapes: true, reviews: true } },
           createdAt: true,
           updatedAt: true,
