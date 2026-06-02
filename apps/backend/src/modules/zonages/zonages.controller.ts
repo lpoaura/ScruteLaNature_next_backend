@@ -31,8 +31,8 @@ export class ZonagesController {
   }
 
   @Post('admin/zonages')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Ajouter une zonage dans le référentiel (ADMIN/SUPER_ADMIN)' })
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Ajouter une zonage dans le référentiel (SUPER_ADMIN uniquement)' })
   @ApiResponse({ status: 201, description: 'Zonage ajoutée.' })
   @ApiResponse({ status: 409, description: 'Cette zonage existe déjà.' })
   create(@Body() dto: CreateZonageDto) {
@@ -40,8 +40,8 @@ export class ZonagesController {
   }
 
   @Patch('admin/zonages/:id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Modifier un zonage (ADMIN/SUPER_ADMIN)' })
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Modifier un zonage (SUPER_ADMIN uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du zonage à modifier' })
   @ApiResponse({ status: 200, description: 'Zonage mis à jour.' })
   @ApiResponse({ status: 404, description: 'Zonage introuvable.' })
@@ -51,8 +51,8 @@ export class ZonagesController {
   }
 
   @Delete('admin/zonages/:id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Supprimer un zonage (ADMIN/SUPER_ADMIN)' })
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Supprimer un zonage (SUPER_ADMIN uniquement)' })
   @ApiParam({ name: 'id', description: 'ID du zonage à supprimer' })
   @ApiResponse({ status: 200, description: 'Zonage supprimé.' })
   @ApiResponse({ status: 404, description: 'Zonage introuvable.' })

@@ -5,8 +5,13 @@ import { Plus, Trash2, Loader2, Search, MapPin, Pencil, Check, X } from 'lucide-
 import { getZonages, createZonage, updateZonage, deleteZonage } from '@/src/services/zonages.service';
 import type { Zonage } from '@/src/types/api.types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/src/hooks/use-auth';
+import { useRoles } from '@/src/hooks/use-roles';
 
 export default function ZonagesClient() {
+  const { user } = useAuth();
+  const { isSuperAdmin } = useRoles(user);
+
   const [zonages, setZonages] = useState<Zonage[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -118,23 +123,25 @@ export default function ZonagesClient() {
           />
         </div>
 
-        {/* Bouton ajouter */}
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className={cn(
-            'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-            showForm
-              ? 'bg-muted text-muted-foreground hover:bg-muted/80'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90',
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          Ajouter un zonage
-        </button>
+        {/* Bouton ajouter — SUPER_ADMIN seulement */}
+        {isSuperAdmin && (
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className={cn(
+              'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+              showForm
+                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90',
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter un zonage
+          </button>
+        )}
       </div>
 
-      {/* Formulaire d'ajout (accordéon) */}
-      {showForm && (
+      {/* Formulaire d'ajout (accordéon) — SUPER_ADMIN seulement */}
+      {isSuperAdmin && showForm && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-foreground">Nouveau zonage</h3>
           <form onSubmit={handleCreate} className="flex items-end gap-3">
@@ -300,20 +307,24 @@ export default function ZonagesClient() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="inline-flex items-center gap-1">
-                        <button
-                          onClick={() => startEdit(z)}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Modifier
-                        </button>
-                        <button
-                          onClick={() => handleDelete(z.id, z.nom)}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Supprimer
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => startEdit(z)}
+                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Modifier
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleDelete(z.id, z.nom)}
+                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Supprimer
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
