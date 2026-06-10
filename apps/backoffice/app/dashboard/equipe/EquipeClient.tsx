@@ -257,7 +257,7 @@ export default function EquipeClient() {
               <label className="text-sm font-medium">Organisme <span className="text-destructive">*</span></label>
               <SearchableSelect
                 options={organismes.map((o) => ({ value: o.id, label: o.nom }))}
-                value={form.organismeId}
+                value={form.organismeId ?? ''}
                 onChange={(val) => setForm((f) => ({ ...f, organismeId: val }))}
                 placeholder="Sélectionner un organisme"
                 searchPlaceholder="Rechercher un organisme…"

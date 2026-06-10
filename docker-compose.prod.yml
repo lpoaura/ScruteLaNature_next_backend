@@ -1,15 +1,15 @@
 services:
   # ── Base de données PostgreSQL ──────────────────────────────────────────────
-  postgres:
-    image: postgres:15-alpine
-    container_name: lpo_postgres_prod
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-lpo_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpo_password}
-      POSTGRES_DB: ${POSTGRES_DB:-lpo_db}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: lpo_postgres_prod
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-lpo_user}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpo_password}
+  #     POSTGRES_DB: ${POSTGRES_DB:-lpo_db}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
     # Ne pas exposer le port en production — le backend y accède via le réseau Docker
     # Décommenter la ligne suivante si besoin d'un accès direct depuis l'hôte
     # ports:
@@ -22,10 +22,10 @@ services:
       dockerfile: apps/backend/Dockerfile
     container_name: lpo_backend_prod
     restart: always
-    depends_on:
-      - postgres
+    # depends_on:
+    #   - postgres
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-lpo_user}:${POSTGRES_PASSWORD:-lpo_password}@postgres:5432/${POSTGRES_DB:-lpo_db}?schema=public"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-lpo_user}:${POSTGRES_PASSWORD:-lpo_password}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-lpo_db}?schema=public"
       # APP_URL est utilisé par AppConfigService pour construire les URLs des médias
       # et les liens dans les e-mails. Mettre l'URL publique du backend.
       APP_URL: ${APP_URL:-http://localhost:3000}
@@ -57,5 +57,6 @@ services:
       - "3001:3001"
 
 volumes:
-  postgres_data:
+
+  # postgres_data:
   backend_uploads:
