@@ -6,7 +6,10 @@ import {
   Body,
   Get,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { join } from 'path';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from '../../common/guards/local-auth.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -145,10 +148,14 @@ export class AuthController {
   @Get('verify-email')
   @ApiOperation({ summary: "Vérifier l'adresse email avec un token" })
   @ApiQuery({ name: 'token', required: true })
-  @ApiResponse({ status: 200, description: 'Email vérifié avec succès.' })
+  @ApiResponse({ status: 200, description: 'Page HTML de confirmation avec deep link vers l\'app.' })
   @ApiResponse({ status: 400, description: 'Token invalide ou expiré.' })
-  verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
+  async verifyEmail(@Query('token') token: string, @Res() res: Response) {
+    await this.authService.verifyEmail(token);
+    // Sert la page HTML de confirmation avec deep link automatique vers l'app
+    // Le fichier est copié dans dist/src/ par nest-cli.json assets
+    const htmlPath = join(process.cwd(), 'dist', 'src', 'providers', 'mail', 'templates', 'email-verified.html');
+    res.sendFile(htmlPath);
   }
 
   @Public()

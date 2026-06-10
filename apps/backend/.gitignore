@@ -56,3 +56,15 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Uploads - ignorer le contenu mais garder la structure des dossiers
+/uploads/*
+!/uploads/images/
+!/uploads/audio/
+!/uploads/gpx/
+/uploads/images/*
+!/uploads/images/.gitkeep
+/uploads/audio/*
+!/uploads/audio/.gitkeep
+/uploads/gpx/*
+!/uploads/gpx/.gitkeep

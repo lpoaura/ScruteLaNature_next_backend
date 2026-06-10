@@ -9,6 +9,11 @@
         "include": "**/*.ejs",
         "outDir": "dist/src",
         "watchAssets": true
+      },
+      {
+        "include": "**/*.html",
+        "outDir": "dist/src",
+        "watchAssets": true
       }
     ],
     "watchAssets": true

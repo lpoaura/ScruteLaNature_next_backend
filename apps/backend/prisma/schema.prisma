@@ -48,6 +48,7 @@ enum Difficulty {
 
 enum PublishStatus {
   DRAFT
+  PENDING_REVIEW
   PUBLISHED
   ARCHIVED
 }
@@ -60,6 +61,7 @@ enum JeuType {
   CALCUL_PYRAMIDAL
   VALIDATION_LIEU
   ECO_GESTE
+  PUZZLE
 }
 
 // ------------------------------------------------------
@@ -85,8 +87,8 @@ model User {
   isTwoFactorEnabled Boolean @default(false)
 
   // Métriques LPO
-  agenceId String?
-  agence   Agence? @relation(fields: [agenceId], references: [id])
+  organismeId String?
+  organisme   Organisme? @relation(fields: [organismeId], references: [id])
 
   analyticsConsent Boolean @default(false)
   pushToken        String?
@@ -111,8 +113,10 @@ model User {
   badges           UserBadge[]
   parcoursDone     UserParcours[]
   reviews          Review[]
+  parcoursCreated  Parcours[]          @relation("ParcoursCreatedBy")
+  downloads        ParcoursDownload[]  @relation("UserDownloads")
 
-  @@index([agenceId])
+  @@index([organismeId])
   @@map("users")
 }
 
@@ -168,7 +172,7 @@ model OAuthAccount {
 }
 
 // ======================================================
-// 🤝 GESTION DES AMIS (Table de jointure explicite)
+//  GESTION DES AMIS (Table de jointure explicite)
 // ======================================================
 
 model Friendship {
@@ -190,10 +194,10 @@ model Friendship {
 }
 
 // ======================================================
-// 🏙️ COMMUNES & AGENCES
+//  COMMUNES & ORGANISMES
 // ======================================================
 
-model Agence {
+model Organisme {
   id        String     @id @default(uuid())
   nom       String     @unique
   employes  User[]
@@ -201,22 +205,22 @@ model Agence {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  @@map("agences")
+  @@map("organismes")
 }
 
-model Commune {
-  id         String     @id @default(uuid())
-  nom        String     @unique
-  codePostal String?
-  parcours   Parcours[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+model Zonage {
+  id        String     @id @default(uuid())
+  nom       String     @unique
+  code      String?
+  parcours  Parcours[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  @@map("communes")
+  @@map("zonages")
 }
 
 // ======================================================
-// 🗺️ PARCOURS (Optimisé avec Index)
+//  PARCOURS (Optimisé avec Index)
 // ======================================================
 
 model Parcours {
@@ -230,14 +234,15 @@ model Parcours {
   status      PublishStatus @default(DRAFT)
 
   pathGeoJSON String? @db.Text
-  mascotteNom String?
-  mascotteImg String?
 
-  agenceId String
-  agence   Agence @relation(fields: [agenceId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?     @relation("ParcoursCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
-  communeId String
-  commune   Commune @relation(fields: [communeId], references: [id], onDelete: Restrict)
+  organismeId String
+  organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+
+  zonageId String
+  zonage   Zonage @relation(fields: [zonageId], references: [id], onDelete: Restrict)
 
   isPMRFriendly            Boolean @default(false)
   isChildFriendly          Boolean @default(false)
@@ -246,17 +251,18 @@ model Parcours {
   etapes     Etape[]
   usersStats UserParcours[]
   reviews    Review[]
+  downloads  ParcoursDownload[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([communeId])
-  @@index([agenceId])
+  @@index([zonageId])
+  @@index([organismeId])
   @@map("parcours")
 }
 
 // ======================================================
-// 📍 ÉTAPES & JEUX
+//  ÉTAPES & JEUX
 // ======================================================
 
 model Etape {
@@ -268,8 +274,6 @@ model Etape {
   latitude       Float
   longitude      Float
   title          String
-  description    String? @db.Text
-  transitionText String? @db.Text
 
   jeux Jeu[]
 
@@ -299,7 +303,7 @@ model Jeu {
 }
 
 // ======================================================
-// 📊 HISTORIQUE (Avec protection contre les doublons)
+//  HISTORIQUE (Avec protection contre les doublons)
 // ======================================================
 model UserParcours {
   id     String  @id @default(uuid())
@@ -320,7 +324,23 @@ model UserParcours {
 }
 
 // ======================================================
-// 🌿 OBSERVATIONS & BADGES
+//  TÉLÉCHARGEMENTS
+// ======================================================
+model ParcoursDownload {
+  id           String   @id @default(uuid())
+  parcoursId   String
+  parcours     Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  userId       String?  // null = invité non connecté
+  user         User?    @relation("UserDownloads", fields: [userId], references: [id], onDelete: SetNull)
+  downloadedAt DateTime @default(now())
+
+  @@index([parcoursId])
+  @@index([downloadedAt])
+  @@map("parcours_downloads")
+}
+
+// ======================================================
+//  OBSERVATIONS & BADGES
 // ======================================================
 model Observation {
   id     String  @id @default(uuid())

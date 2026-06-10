@@ -6,17 +6,21 @@ import {
   Patch,
   Param,
   Delete,
-  Request
+  Request,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -36,10 +40,10 @@ export class UsersController {
   }
 
   @Patch('users/me')
-  @ApiOperation({ summary: 'Mettre à jour son profil' })
+  @ApiOperation({ summary: 'Mettre à jour son profil (prénom, pseudo, pushToken, analyticsConsent)' })
   @ApiResponse({ status: 200, description: 'Profil mis à jour.' })
-  updateMe(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(req.user.sub || req.user.id, updateUserDto);
+  updateMe(@Request() req: any, @Body() dto: UpdateMeDto) {
+    return this.usersService.update(req.user.sub || req.user.id, dto);
   }
 
   @Delete('users/me')
@@ -49,12 +53,50 @@ export class UsersController {
     return this.usersService.remove(req.user.sub || req.user.id);
   }
 
+  @Post('users/me/change-password')
+  @ApiOperation({ summary: 'Changer son mot de passe (ancien mdp requis)' })
+  @ApiResponse({ status: 200, description: 'Mot de passe modifié.' })
+  @ApiResponse({ status: 401, description: 'Mot de passe actuel incorrect.' })
+  changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.usersService.changePassword(
+      req.user.sub || req.user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+  }
+
   @Get('admin/users')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Lister les employés (Role: ADMIN/SUPER_ADMIN)' })
-  @ApiResponse({ status: 200, description: 'Liste des utilisateurs.' })
-  findAll() {
-    return this.usersService.findAll();
+  @ApiOperation({ summary: 'Lister les employés de son organisme (ADMIN) ou tous (SUPER_ADMIN)' })
+  @ApiQuery({ name: 'page',  required: false, type: Number, description: 'Page (défaut: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items par page (défaut: 20)' })
+  @ApiResponse({ status: 200, description: 'Liste paginée des utilisateurs.' })
+  findAll(
+    @Request() req: any,
+    @Query('page')  page  = '1',
+    @Query('limit') limit = '20',
+    @Query('search') search?: string,
+    @Query('role') filterRole?: string,
+    @Query('organismeId') filterOrganisme?: string,
+  ) {
+    return this.usersService.findAll(
+      req.user.role, 
+      req.user.organismeId ?? null, 
+      +page, 
+      +limit,
+      search,
+      filterRole,
+      filterOrganisme
+    );
+  }
+
+  @Delete('admin/users/:id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Supprimer un compte employé (ADMIN/SUPER_ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Compte supprimé.' })
+  @ApiResponse({ status: 404, description: 'Utilisateur introuvable.' })
+  removeById(@Param('id') id: string) {
+    return this.usersService.removeById(id);
   }
 
   @Post('admin/users')

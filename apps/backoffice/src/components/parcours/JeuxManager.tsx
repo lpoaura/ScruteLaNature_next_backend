@@ -1,0 +1,753 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { Plus, Trash2, Save, X, Edit2, Loader2, Image as ImageIcon, Music, Type } from 'lucide-react';
+import { createJeu, updateJeu, deleteJeu } from '@/src/services/jeux.service';
+import type { Etape, Jeu, JeuType } from '@/src/types/api.types';
+import MediaGalleryModal from './MediaGalleryModal';
+
+type QcmMode = 'text' | 'image' | 'audio';
+
+interface QcmMediaPicker {
+  index: number;
+  mediaType: 'image' | 'audio';
+}
+
+interface JeuxManagerProps {
+  etape: Etape;
+  onUpdateEtape: (etape: Etape) => void;
+}
+
+export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) {
+  const [isPending, startTransition] = useTransition();
+  const [editingJeu, setEditingJeu] = useState<Jeu | Partial<Jeu> | null>(null);
+  const [galleryType, setGalleryType] = useState<'image' | 'audio' | null>(null);
+  const [qcmMediaPicker, setQcmMediaPicker] = useState<QcmMediaPicker | null>(null);
+
+  const handleCreateNew = () => {
+    setEditingJeu({
+      etapeId: etape.id,
+      order: (etape.jeux?.length || 0) + 1,
+      type: 'INFO',
+      question: 'Nouvelle information ou question',
+      explication: '',
+      donneesJeu: {},
+      reponse: '',
+    });
+  };
+
+  const handleSaveJeu = async () => {
+    if (!editingJeu) return;
+    startTransition(async () => {
+      try {
+        let savedJeu: Jeu;
+        if ('id' in editingJeu && editingJeu.id) {
+          savedJeu = await updateJeu(editingJeu.id, editingJeu);
+        } else {
+          savedJeu = await createJeu(editingJeu);
+        }
+        const newJeux = etape.jeux ? [...etape.jeux] : [];
+        const index = newJeux.findIndex(j => j.id === savedJeu.id);
+        if (index >= 0) {
+          newJeux[index] = savedJeu;
+        } else {
+          newJeux.push(savedJeu);
+        }
+        onUpdateEtape({ ...etape, jeux: newJeux });
+        setEditingJeu(null);
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la sauvegarde du jeu.');
+      }
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer ce mini-jeu ?')) return;
+    startTransition(async () => {
+      try {
+        await deleteJeu(id);
+        onUpdateEtape({ ...etape, jeux: (etape.jeux || []).filter(j => j.id !== id) });
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la suppression.');
+      }
+    });
+  };
+
+  // ── QCM helpers ────────────────────────────────────────────────────────────
+  const handleQcmTextChange = (index: number, value: string) => {
+    if (!editingJeu) return;
+    const options = [...(editingJeu.donneesJeu?.options || ['', '', '', ''])];
+    options[index] = value;
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, options } });
+  };
+
+  const handleQcmCorrect = (index: number) => {
+    if (!editingJeu) return;
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, bonneReponseIndex: index } });
+  };
+
+  const handleQcmModeChange = (mode: QcmMode) => {
+    if (!editingJeu) return;
+    setEditingJeu({
+      ...editingJeu,
+      donneesJeu: { qcmType: mode, options: ['', '', '', ''], bonneReponseIndex: null },
+    });
+  };
+
+  const handleQcmMediaSelect = (url: string) => {
+    if (!editingJeu || !qcmMediaPicker) return;
+    const options = [...(editingJeu.donneesJeu?.options || ['', '', '', ''])];
+    options[qcmMediaPicker.index] = url;
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, options } });
+    setQcmMediaPicker(null);
+  };
+
+  // ── Indices helpers ────────────────────────────────────────────────────────
+  const MAX_INDICES = 3;
+
+  const handleIndiceChange = (index: number, value: string) => {
+    if (!editingJeu) return;
+    const indices = [...(editingJeu.donneesJeu?.indices || [])];
+    indices[index] = value;
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, indices } });
+  };
+
+  const handleAddIndice = () => {
+    if (!editingJeu) return;
+    const indices = [...(editingJeu.donneesJeu?.indices || [])];
+    if (indices.length >= MAX_INDICES) return;
+    indices.push('');
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, indices } });
+  };
+
+  const handleRemoveIndice = (index: number) => {
+    if (!editingJeu) return;
+    const indices = [...(editingJeu.donneesJeu?.indices || [])].filter((_, i) => i !== index);
+    setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, indices } });
+  };
+
+  // ── Render QCM options bloc ────────────────────────────────────────────────
+  const renderQcmOptions = () => {
+    if (!editingJeu || editingJeu.type !== 'QCM') return null;
+    const qcmMode: QcmMode = editingJeu.donneesJeu?.qcmType || 'text';
+    const options: string[] = editingJeu.donneesJeu?.options || ['', '', '', ''];
+    const bonneReponseIndex: number | null = editingJeu.donneesJeu?.bonneReponseIndex ?? null;
+
+    return (
+      <div className="bg-card border border-border rounded-md p-3 space-y-4">
+
+        {/* Sélecteur de mode */}
+        <div>
+          <label className="text-xs font-medium text-primary block mb-2">Type de réponses</label>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { mode: 'text' as QcmMode,  icon: <Type className="h-4 w-4" />, label: 'Texte' },
+              { mode: 'image' as QcmMode, icon: <ImageIcon className="h-4 w-4" />, label: 'Images' },
+              { mode: 'audio' as QcmMode, icon: <Music className="h-4 w-4" />, label: 'Audio' },
+            ]).map(({ mode, icon, label }) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => handleQcmModeChange(mode)}
+                className={`flex flex-col items-center gap-1.5 py-2.5 rounded-lg border text-xs font-medium transition-colors ${
+                  qcmMode === mode
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4 options */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-primary block">Options (cochez la bonne réponse)</label>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <input
+                type="radio"
+                name="bonneReponse"
+                checked={bonneReponseIndex === i}
+                onChange={() => handleQcmCorrect(i)}
+                className="h-4 w-4 shrink-0 accent-primary"
+              />
+
+              {/* Texte */}
+              {qcmMode === 'text' && (
+                <input
+                  type="text"
+                  placeholder={`Option ${i + 1}`}
+                  value={options[i] || ''}
+                  onChange={(e) => handleQcmTextChange(i, e.target.value)}
+                  className="flex-1 px-3 py-1.5 border border-input rounded bg-background text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              )}
+
+              {/* Image */}
+              {qcmMode === 'image' && (
+                options[i] ? (
+                  <div className="relative flex-1 group">
+                    <img
+                      src={options[i]}
+                      alt={`Option ${i + 1}`}
+                      className="h-16 w-full object-cover rounded border border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleQcmTextChange(i, '')}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setQcmMediaPicker({ index: i, mediaType: 'image' })}
+                    className="flex-1 h-16 flex items-center justify-center gap-2 border-2 border-dashed border-border rounded text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <ImageIcon className="h-4 w-4" /> Choisir une image
+                  </button>
+                )
+              )}
+
+              {/* Audio */}
+              {qcmMode === 'audio' && (
+                options[i] ? (
+                  <div className="relative flex-1 bg-card border border-border rounded px-3 py-2 flex items-center gap-2">
+                    <Music className="h-4 w-4 text-primary shrink-0" />
+                    <audio controls src={options[i]} className="flex-1 h-8" />
+                    <button
+                      type="button"
+                      onClick={() => handleQcmTextChange(i, '')}
+                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setQcmMediaPicker({ index: i, mediaType: 'audio' })}
+                    className="flex-1 h-16 flex items-center justify-center gap-2 border-2 border-dashed border-border rounded text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Music className="h-4 w-4" /> Choisir un audio
+                  </button>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[10px] text-muted-foreground">
+          Cochez le bouton radio à gauche pour définir la bonne réponse.
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="mt-6 border-t border-border pt-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-lg flex items-center gap-2">
+          Mini-jeux &amp; Contenus
+          <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-medium">
+            {etape.jeux?.length || 0}
+          </span>
+        </h3>
+        {!editingJeu && (
+          <button
+            onClick={handleCreateNew}
+            className="bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-2 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Ajouter
+          </button>
+        )}
+      </div>
+
+      {editingJeu ? (
+        <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-4 animate-in fade-in">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <h4 className="font-medium text-primary">
+              {'id' in editingJeu && editingJeu.id ? 'Modifier le jeu' : 'Nouveau jeu'}
+            </h4>
+            <button onClick={() => setEditingJeu(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {/* Type de jeu */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Type de jeu/contenu</label>
+              <select
+                value={editingJeu.type}
+                onChange={(e) => setEditingJeu({
+                  ...editingJeu,
+                  type: e.target.value as JeuType,
+                  donneesJeu: {},
+                })}
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm outline-none focus:ring-primary"
+              >
+                <option value="INFO">Information simple (Texte/Audio)</option>
+                <option value="QCM">QCM (Choix multiple)</option>
+                <option value="CHARADE">Charade</option>
+                <option value="CODE_CAESAR">Code César</option>
+                <option value="CALCUL_PYRAMIDAL">Calcul Pyramidal</option>
+                <option value="PUZZLE">Puzzle (photo à reconstituer)</option>
+                <option value="VALIDATION_LIEU">Validation de Lieu (GPS)</option>
+                <option value="ECO_GESTE">Éco-geste</option>
+              </select>
+            </div>
+
+            {/* Question */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Question ou Texte principal
+              </label>
+              <textarea
+                rows={3}
+                value={editingJeu.question || ''}
+                onChange={(e) => setEditingJeu({ ...editingJeu, question: e.target.value })}
+                placeholder="Ex: Quel oiseau voyez-vous ?"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
+              />
+            </div>
+
+            {/* ── QCM avec 3 modes ── */}
+            {editingJeu.type === 'QCM' && renderQcmOptions()}
+
+            {/* ── Code César ── */}
+            {editingJeu.type === 'CODE_CAESAR' && (
+              <div className="bg-card border border-border rounded-md p-3 space-y-3">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="text-xs font-medium text-primary block mb-1">Mot à trouver (Réponse)</label>
+                    <input
+                      type="text"
+                      value={editingJeu.reponse || ''}
+                      onChange={(e) => setEditingJeu({ ...editingJeu, reponse: e.target.value })}
+                      placeholder="Ex: HIBOU"
+                      className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none uppercase"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-primary block mb-1">Décalage (+N)</label>
+                    <input
+                      type="number"
+                      min="1" max="25"
+                      value={editingJeu.donneesJeu?.decalage || 3}
+                      onChange={(e) => setEditingJeu({
+                        ...editingJeu,
+                        donneesJeu: { ...editingJeu.donneesJeu, decalage: parseInt(e.target.value) || 3 },
+                      })}
+                      className="w-20 px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Charade / Éco-geste ── */}
+            {(editingJeu.type === 'CHARADE' || editingJeu.type === 'ECO_GESTE') && (
+              <div className="bg-card border border-border rounded-md p-3">
+                <label className="text-xs font-medium text-primary block mb-1">Réponse attendue</label>
+                <input
+                  type="text"
+                  value={editingJeu.reponse || ''}
+                  onChange={(e) => setEditingJeu({ ...editingJeu, reponse: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                />
+              </div>
+            )}
+
+            {/* ── Calcul Pyramidal ── */}
+            {editingJeu.type === 'CALCUL_PYRAMIDAL' && (
+              <div className="bg-card border border-border rounded-md p-3 space-y-3">
+                <label className="text-xs font-medium text-primary block">Configuration de la pyramide</label>
+                <p className="text-[11px] text-muted-foreground">
+                  Définissez les 3 valeurs de la base. Les cases du haut sont calculées automatiquement
+                  (chaque case = somme des deux cases inférieures). Cochez les cases que le joueur doit trouver.
+                </p>
+                <div className="space-y-3">
+                  {/* Ligne 1 — base (3 valeurs) */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 1 — Base (3 valeurs)</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="space-y-1">
+                          <input
+                            type="number"
+                            placeholder={`Case ${i + 1}`}
+                            value={editingJeu.donneesJeu?.base?.[i] ?? ''}
+                            onChange={(e) => {
+                              const base = [...(editingJeu.donneesJeu?.base || [0, 0, 0])];
+                              base[i] = parseInt(e.target.value) || 0;
+                              setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, base } });
+                            }}
+                            className="w-full px-2 py-1.5 border border-input rounded bg-background text-sm text-center outline-none focus:ring-2 focus:ring-primary/50"
+                          />
+                          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={(editingJeu.donneesJeu?.cachees || []).includes(`L1-${i}`)}
+                              onChange={(e) => {
+                                const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
+                                const key = `L1-${i}`;
+                                if (e.target.checked) cachees.push(key);
+                                else cachees.splice(cachees.indexOf(key), 1);
+                                setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
+                              }}
+                              className="accent-primary"
+                            />
+                            Masquée
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Ligne 2 — calculée : sum(0+1), sum(1+2) */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 2 — Calculée</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[0, 1].map((i) => {
+                        const base = editingJeu.donneesJeu?.base || [0, 0, 0];
+                        const val = (base[i] || 0) + (base[i + 1] || 0);
+                        return (
+                          <div key={i} className="space-y-1">
+                            <div className="w-full px-2 py-1.5 border border-border rounded bg-muted/40 text-sm text-center font-mono text-muted-foreground">
+                              {val}
+                            </div>
+                            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(editingJeu.donneesJeu?.cachees || []).includes(`L2-${i}`)}
+                                onChange={(e) => {
+                                  const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
+                                  const key = `L2-${i}`;
+                                  if (e.target.checked) cachees.push(key);
+                                  else cachees.splice(cachees.indexOf(key), 1);
+                                  setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
+                                }}
+                                className="accent-primary"
+                              />
+                              Masquée
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Ligne 3 — sommet */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 3 — Sommet</p>
+                    <div className="space-y-1 w-1/3 mx-auto">
+                      {(() => {
+                        const base = editingJeu.donneesJeu?.base || [0, 0, 0];
+                        const l2a = (base[0] || 0) + (base[1] || 0);
+                        const l2b = (base[1] || 0) + (base[2] || 0);
+                        const sommet = l2a + l2b;
+                        return (
+                          <>
+                            <div className="w-full px-2 py-1.5 border border-border rounded bg-muted/40 text-sm text-center font-mono font-bold text-foreground">
+                              {sommet}
+                            </div>
+                            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer justify-center">
+                              <input
+                                type="checkbox"
+                                checked={(editingJeu.donneesJeu?.cachees || []).includes('L3-0')}
+                                onChange={(e) => {
+                                  const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
+                                  const key = 'L3-0';
+                                  if (e.target.checked) cachees.push(key);
+                                  else cachees.splice(cachees.indexOf(key), 1);
+                                  setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
+                                }}
+                                className="accent-primary"
+                              />
+                              Masquée
+                            </label>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Puzzle ── */}
+            {editingJeu.type === 'PUZZLE' && (
+              <div className="bg-card border border-border rounded-md p-3 space-y-3">
+                <label className="text-xs font-medium text-primary block">Configuration du puzzle</label>
+
+                {/* Image du puzzle */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" /> Photo à découper
+                    <span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  {editingJeu.imageUrl ? (
+                    <div className="relative group">
+                      <img
+                        src={editingJeu.imageUrl}
+                        className="h-32 w-full object-cover rounded border border-border"
+                        alt="Image du puzzle"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditingJeu({ ...editingJeu, imageUrl: '' })}
+                        className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
+                        Cette image sera découpée en pièces
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setGalleryType('image')}
+                      className="w-full h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded hover:bg-muted/50 text-xs text-muted-foreground transition-colors"
+                    >
+                      <ImageIcon className="h-6 w-6 opacity-50" />
+                      Choisir la photo du puzzle
+                    </button>
+                  )}
+                </div>
+
+                {/* Nombre de pièces */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Nombre de pièces</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5, 6, 7, 10].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setEditingJeu({
+                          ...editingJeu,
+                          donneesJeu: { ...editingJeu.donneesJeu, nbPieces: n },
+                        })}
+                        className={`py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                          (editingJeu.donneesJeu?.nbPieces ?? 6) === n
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:border-primary/50'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    L'image sera découpée en {editingJeu.donneesJeu?.nbPieces ?? 6} pièces à repositionner.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Explication ── */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Explication (Après avoir répondu / lu)
+              </label>
+              <textarea
+                rows={2}
+                value={editingJeu.explication || ''}
+                onChange={(e) => setEditingJeu({ ...editingJeu, explication: e.target.value })}
+                placeholder="Ex: Le Héron cendré est très commun ici..."
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
+              />
+            </div>
+
+            {/* ── Indices ── */}
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-md p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                  💡 Indices
+                  <span className="text-[10px] font-normal text-amber-600/70 dark:text-amber-500/70">
+                    ({(editingJeu.donneesJeu?.indices || []).length}/{MAX_INDICES})
+                  </span>
+                </label>
+                {(editingJeu.donneesJeu?.indices || []).length < MAX_INDICES && (
+                  <button
+                    type="button"
+                    onClick={handleAddIndice}
+                    className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 font-medium transition-colors"
+                  >
+                    <Plus className="h-3 w-3" /> Ajouter un indice
+                  </button>
+                )}
+              </div>
+
+              {(editingJeu.donneesJeu?.indices || []).length === 0 ? (
+                <p className="text-[11px] text-amber-600/70 dark:text-amber-500/60 italic">
+                  Aucun indice — l'application peut en proposer un si le joueur bloque.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {(editingJeu.donneesJeu?.indices as string[]).map((indice, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-[10px] font-bold shrink-0">
+                        {i + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={indice}
+                        onChange={(e) => handleIndiceChange(i, e.target.value)}
+                        placeholder={`Indice ${i + 1}...`}
+                        className="flex-1 px-2.5 py-1.5 text-sm border border-amber-200 dark:border-amber-800/60 rounded bg-white dark:bg-amber-950/30 outline-none focus:ring-2 focus:ring-amber-400/50 text-foreground"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIndice(i)}
+                        className="text-amber-400 hover:text-red-500 transition-colors"
+                        title="Supprimer cet indice"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Image & Audio d'illustration ── */}
+            <div className="flex gap-4 pt-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3" /> Image d&apos;illustration
+                </label>
+                {editingJeu.imageUrl ? (
+                  <div className="relative group">
+                    <img src={editingJeu.imageUrl} className="h-16 w-full object-cover rounded border border-border" alt="" />
+                    <button
+                      onClick={() => setEditingJeu({ ...editingJeu, imageUrl: '' })}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setGalleryType('image')}
+                    className="w-full flex items-center justify-center h-16 border-2 border-dashed border-border rounded hover:bg-muted/50 text-xs text-muted-foreground transition-colors"
+                  >
+                    Parcourir / Uploader
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-1">
+                <label className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                  <Music className="h-3 w-3" /> Audio (Voix mascotte)
+                </label>
+                {editingJeu.audioUrl ? (
+                  <div className="h-16 bg-card border border-border rounded flex flex-col items-center justify-center p-2 relative group">
+                    <span className="text-xs truncate max-w-[100px] text-primary font-medium">Audio chargé</span>
+                    <button
+                      onClick={() => setEditingJeu({ ...editingJeu, audioUrl: '' })}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setGalleryType('audio')}
+                    className="w-full flex items-center justify-center h-16 border-2 border-dashed border-border rounded hover:bg-muted/50 text-xs text-muted-foreground transition-colors"
+                  >
+                    Parcourir / Uploader
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveJeu}
+              disabled={isPending}
+              className="w-full bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 flex justify-center items-center gap-2 mt-4"
+            >
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Enregistrer ce module
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {(etape.jeux || []).length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground border border-dashed border-border rounded-xl">
+              Aucun mini-jeu ou info pour cette étape.
+            </div>
+          ) : (
+            [...(etape.jeux || [])].sort((a, b) => a.order - b.order).map((jeu) => (
+              <div key={jeu.id} className="flex items-center justify-between p-3 border border-border rounded-lg bg-card hover:border-primary/30 transition-colors">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary flex items-center gap-1">
+                      {jeu.type}
+                      {jeu.type === 'QCM' && jeu.donneesJeu?.qcmType === 'image' && <ImageIcon className="h-3 w-3 opacity-70" />}
+                      {jeu.type === 'QCM' && jeu.donneesJeu?.qcmType === 'audio' && <Music className="h-3 w-3 opacity-70" />}
+                    </span>
+                    <span className="text-sm font-medium text-foreground line-clamp-1 max-w-[200px]">
+                      {jeu.question}
+                    </span>
+                  </div>
+                  {(jeu.imageUrl || jeu.audioUrl || (jeu.donneesJeu?.indices?.length > 0)) && (
+                    <div className="flex gap-2 mt-1">
+                      {jeu.imageUrl && <span className="text-[10px] text-muted-foreground flex items-center gap-1"><ImageIcon className="h-3 w-3" />Image</span>}
+                      {jeu.audioUrl && <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Music className="h-3 w-3" />Audio</span>}
+                      {jeu.donneesJeu?.indices?.length > 0 && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                          💡 {jeu.donneesJeu.indices.length} indice{jeu.donneesJeu.indices.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setEditingJeu(jeu)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors">
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => handleDelete(jeu.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Galerie pour l'illustration du jeu (image ou audio) */}
+      {galleryType && (
+        <MediaGalleryModal
+          type={galleryType}
+          onClose={() => setGalleryType(null)}
+          onSelect={(url) => {
+            setEditingJeu(prev => {
+              if (!prev) return prev;
+              return { ...prev, [galleryType === 'image' ? 'imageUrl' : 'audioUrl']: url };
+            });
+          }}
+        />
+      )}
+
+      {/* Galerie pour les options image/audio du QCM */}
+      {qcmMediaPicker && (
+        <MediaGalleryModal
+          type={qcmMediaPicker.mediaType}
+          onClose={() => setQcmMediaPicker(null)}
+          onSelect={handleQcmMediaSelect}
+        />
+      )}
+    </div>
+  );
+}

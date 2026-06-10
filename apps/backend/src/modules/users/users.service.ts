@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DatabaseService } from '../../database/database.service';
 import { MailService } from '../../providers/mail/mail.service';
+import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
@@ -51,19 +52,68 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async findAll() {
-    const users = await this.databaseService.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isEmailVerified: true,
-        createdAt: true,
-      },
-    });
-    return users;
+  async findAll(userRole: Role, userOrganismeId: string | null, page = 1, limit = 20, search?: string, filterRole?: string, filterOrganismeId?: string) {
+    const where: any = {};
+    
+    // Rôle : Par défaut on affiche ADMIN, EDITOR (et SUPER_ADMIN pour superadmin).
+    // Si un filtre de rôle est fourni, on l'utilise, sinon on restreint aux rôles autorisés.
+    if (filterRole && ([Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] as string[]).includes(filterRole)) {
+      where.role = filterRole;
+    } else {
+      where.role = { in: [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR] };
+    }
+
+    // Organisme : Si l'utilisateur est SUPER_ADMIN il voit tout ou peut filtrer par organisme.
+    // Sinon, il ne voit que son propre organisme.
+    if (userRole === Role.SUPER_ADMIN) {
+      if (filterOrganismeId) {
+        where.organismeId = filterOrganismeId;
+      }
+    } else {
+      where.organismeId = userOrganismeId;
+    }
+
+    // Recherche par email, firstName ou lastName
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.databaseService.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          organismeId: true,
+          organisme: { select: { id: true, nom: true } },
+          isEmailVerified: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.databaseService.user.count({ where }),
+    ]);
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async removeById(id: string) {
+    const user = await this.databaseService.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable.');
+    await this.databaseService.user.delete({ where: { id } });
+    return { message: 'Compte supprimé.' };
   }
 
   async findOne(id: string) {
@@ -71,12 +121,11 @@ export class UsersService {
       where: { id },
     });
 
-    if (user) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    }
-    return null;
+    if (!user) return null; // Retourner null est intentionnel (auth utilise ce cas)
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
   // Cette méthode est utilisée pour l'auth interne (Login) car elle doit récupérer le password
@@ -101,13 +150,43 @@ export class UsersService {
     return userWithoutPassword;
   }
 
-  async remove(id: string) {
-    const deletedUser = await this.databaseService.user.delete({
-      where: { id },
+  /**
+   * Changer son mot de passe (authentifié) :
+   * vérifie l'ancien mot de passe, puis hache et sauvegarde le nouveau.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.databaseService.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable.');
+    if (!user.password) throw new BadRequestException('Ce compte utilise une connexion externe (OAuth) et n\'a pas de mot de passe.');
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new UnauthorizedException('Mot de passe actuel incorrect.');
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: { password: hashed },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = deletedUser;
-    return userWithoutPassword;
+    // Invalider toutes les sessions pour forcer une reconnexion sur les autres appareils
+    await this.databaseService.session.deleteMany({ where: { userId } });
+
+    return { message: 'Mot de passe modifié avec succès.' };
+  }
+
+  /**
+   * Suppression RGPD : supprime toutes les données personnelles liées au compte.
+   * Exigé par Apple et Google pour accéder aux stores.
+   * Prisma gère la cascade sur les sessions, tokens OAuth, observations, badges, etc.
+   * (via onDelete: Cascade défini dans le schema Prisma)
+   */
+  async remove(id: string) {
+    const user = await this.databaseService.user.findUnique({ where: { id } });
+    if (!user) {
+      return { message: 'Compte déjà supprimé' };
+    }
+
+    await this.databaseService.user.delete({ where: { id } });
+    return { message: 'Votre compte et toutes vos données ont été supprimés définitivement.' };
   }
 }

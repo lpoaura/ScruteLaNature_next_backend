@@ -1,0 +1,62 @@
+services:
+  # ── Base de données PostgreSQL ──────────────────────────────────────────────
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: lpo_postgres_prod
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-lpo_user}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpo_password}
+  #     POSTGRES_DB: ${POSTGRES_DB:-lpo_db}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+    # Ne pas exposer le port en production — le backend y accède via le réseau Docker
+    # Décommenter la ligne suivante si besoin d'un accès direct depuis l'hôte
+    # ports:
+    #   - "5434:5432"
+
+  # ── API Backend (NestJS + Prisma) ───────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: lpo_backend_prod
+    restart: always
+    # depends_on:
+    #   - postgres
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-lpo_user}:${POSTGRES_PASSWORD:-lpo_password}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-lpo_db}?schema=public"
+      # APP_URL est utilisé par AppConfigService pour construire les URLs des médias
+      # et les liens dans les e-mails. Mettre l'URL publique du backend.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      BACKOFFICE_URL: ${BACKOFFICE_URL:-http://localhost:3001}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-180d}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - backend_uploads:/app/apps/backend/uploads
+
+  # ── Interface Backoffice (Next.js) ──────────────────────────────────────────
+  backoffice:
+    build:
+      context: .
+      dockerfile: apps/backoffice/Dockerfile
+      args:
+        # NEXT_PUBLIC_* est injecté au BUILD TIME dans le bundle JS.
+        # Passer ici l'URL publique du backend telle que vue par le navigateur.
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3000/api}
+    container_name: lpo_backoffice_prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
+
+volumes:
+
+  # postgres_data:
+  backend_uploads:

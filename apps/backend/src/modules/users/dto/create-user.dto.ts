@@ -73,10 +73,13 @@ export class CreateUserDto {
   role: Role;
 
   @ApiPropertyOptional({
-    example: 'uuid-agence-1234',
-    description: "L'agence LPO de rattachement (si ADMIN ou EDITOR)",
+    example: 'uuid-organisme-1234',
+    description: "L'organisme LPO de rattachement (si ADMIN ou EDITOR)",
   })
   @IsOptional()
   @IsString()
-  agenceId?: string;
+  @Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i, {
+    message: 'organismeId doit être un UUID v4 valide',
+  })
+  organismeId?: string;
 }
