@@ -23,8 +23,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # NEXT_PUBLIC_* est une variable build-time : elle doit être passée en ARG
 # pour être injectée dans le bundle JS au moment du build.
-# ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:3000/api
-# ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:3000/api
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 RUN npm run build --workspace=backoffice
 
