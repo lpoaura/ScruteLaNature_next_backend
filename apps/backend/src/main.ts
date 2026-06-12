@@ -22,7 +22,12 @@ async function bootstrap() {
   });
 
   // Activation de CORS avec configuration par défaut (à adapter en prod)
-  app.enableCors();
+  // autoriser toutes les origines
+  app.enableCors(
+    {
+      origin: '*',
+    }
+  );
 
   // Helmet pour sécuriser les en-têtes HTTP
   app.use(helmet());

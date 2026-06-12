@@ -105,7 +105,7 @@ export default function StatistiquesClient() {
       // Populate reference lists from first unfiltered load
       if (!params) {
         setAllOrganismes(data.byOrganisme.map(o => ({ id: o.id, nom: o.nom })));
-        setAllZonages(data.byZonage.map(z => ({ id: z.id, nom: z.nom })));
+        setAllZonages(data.byZonage.map(z => ({ id: z.id, nom: z.nom, code: z.code })));
       }
     } catch (err) {
       console.error(err);

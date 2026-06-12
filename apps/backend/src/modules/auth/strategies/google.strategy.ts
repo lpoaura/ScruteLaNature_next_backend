@@ -9,13 +9,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientID = configService.get<string>('GOOGLE_CLIENT_ID');
     const clientSecret = configService.get<string>('GOOGLE_CLIENT_SECRET');
     const callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
- 
+
     if (!clientID || !clientSecret || !callbackURL) {
       throw new Error(
         'Google OAuth est désactivé : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET et GOOGLE_CALLBACK_URL sont requis.',
       );
     }
- 
+
     super({
       clientID,
       clientSecret,
