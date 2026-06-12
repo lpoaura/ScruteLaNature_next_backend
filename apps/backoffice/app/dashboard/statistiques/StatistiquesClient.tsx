@@ -79,7 +79,9 @@ export default function StatistiquesClient() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [allOrganismes, setAllOrganismes] = useState<{ id: string; nom: string }[]>([]);
-  const [allZonages, setAllZonages] = useState<{ id: string; nom: string; code?: string }[]>([]);
+  const [allZonages, setAllZonages] = useState<{
+    code ?: any; id: string; nom: string 
+}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);

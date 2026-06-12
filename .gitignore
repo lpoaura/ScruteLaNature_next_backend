@@ -3,6 +3,4 @@ node_modules
 backend.log
 dev.log
 dev.pid
-
-.env.example
 .env

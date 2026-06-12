@@ -1,8 +1,8 @@
 # apps/backend/Dockerfile
-# Context: racine du monorepo (docker build -f apps/backend/Dockerfile .)
+# Context: racine du workspace backend (docker build -f apps/backend/Dockerfile .)
 
 # --- 1. Base ---
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN apk add --no-cache openssl
 WORKDIR /app
 
@@ -16,6 +16,7 @@ RUN npm ci
 # --- 3. Builder ---
 FROM base AS builder
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN cd apps/backend && npx prisma generate
@@ -35,6 +36,7 @@ COPY --from=builder /app/apps/backend/dist ./dist
 
 # Copier les fichiers Prisma (schéma + migrations pour prisma migrate deploy)
 COPY --from=builder /app/apps/backend/prisma ./prisma
+COPY --from=builder /app/apps/backend/prisma.config.ts ./prisma.config.ts
 
 # Copier le package.json du backend (pour les scripts npm éventuels)
 COPY --from=builder /app/apps/backend/package.json ./package.json
@@ -46,9 +48,10 @@ COPY --from=builder /app/apps/backend/public ./public
 RUN mkdir -p uploads/images uploads/audio uploads/gpx uploads/specific_images uploads/specific_audio uploads/specific_gpx
 
 # Script d'entrypoint : migration auto + démarrage
-RUN printf '#!/bin/sh\nset -e\necho "Running Prisma Migrations..."\nnpx prisma migrate deploy\necho "Starting application..."\nnode dist/src/main\n' > /app/apps/backend/start.sh \
-    && chmod +x /app/apps/backend/start.sh
+COPY apps/backend/entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x ./entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["./start.sh"]
+CMD ["./entrypoint.sh"]
