@@ -33,7 +33,19 @@ import { GoogleStrategy } from './strategies/google.strategy';
     LocalStrategy,
     JwtStrategy,
     JwtRefreshStrategy,
-    GoogleStrategy,
+    {
+      provide: GoogleStrategy,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        if (!config.get<string>('GOOGLE_CLIENT_ID')) {
+          console.warn(
+            '[AuthModule] Google OAuth désactivé : GOOGLE_CLIENT_ID absent → routes /auth/google non disponibles',
+          );
+          return null;
+        }
+        return new GoogleStrategy(config);
+      },
+    },
   ],
   exports: [AuthService],
 })

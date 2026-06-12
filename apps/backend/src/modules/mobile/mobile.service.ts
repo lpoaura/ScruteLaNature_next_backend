@@ -179,6 +179,11 @@ export class MobileService {
         organisme: {
           select: { id: true, nom: true },
         },
+        etapes: {
+          orderBy: { order: 'asc' },
+          take: 1, // Prendre uniquement la première étape pour les coordonnées de départ
+          select: { latitude: true, longitude: true },
+        },
         _count: {
           select: { etapes: true, reviews: true },
         },

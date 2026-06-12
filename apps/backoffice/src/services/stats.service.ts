@@ -26,6 +26,7 @@ export interface DashboardStats {
   byZonage: {
     id: string;
     nom: string;
+    code?: string;
     nbParcours: number;
   }[];
   byParcours: ParcoursActivity[];

@@ -32,6 +32,7 @@ docker-compose up -d        # Lance PostgreSQL sur le port 5434
 
 # Migrations & seed
 cd apps/backend
+npx prisma migrate deploy
 npx prisma migrate dev
 npx prisma db seed          # Crée les comptes superadmin, admin et editor rattachés à LPO AURA
 

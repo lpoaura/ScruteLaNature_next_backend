@@ -79,7 +79,7 @@ export default function StatistiquesClient() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [allOrganismes, setAllOrganismes] = useState<{ id: string; nom: string }[]>([]);
-  const [allZonages, setAllZonages] = useState<{ id: string; nom: string }[]>([]);
+  const [allZonages, setAllZonages] = useState<{ id: string; nom: string; code?: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -103,7 +103,7 @@ export default function StatistiquesClient() {
       // Populate reference lists from first unfiltered load
       if (!params) {
         setAllOrganismes(data.byOrganisme.map(o => ({ id: o.id, nom: o.nom })));
-        setAllZonages(data.byZonage.map(z => ({ id: z.id, nom: z.nom })));
+        setAllZonages(data.byZonage.map(z => ({ id: z.id, nom: z.nom, code: z.code })));
       }
     } catch (err) {
       console.error(err);
