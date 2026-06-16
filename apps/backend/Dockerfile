@@ -48,9 +48,7 @@ COPY --from=builder /app/apps/backend/public ./public
 RUN mkdir -p uploads/images uploads/audio uploads/gpx uploads/specific_images uploads/specific_audio uploads/specific_gpx
 
 # Script d'entrypoint : migration auto + démarrage
-COPY apps/backend/entrypoint.sh ./entrypoint.sh
-
-RUN chmod +x ./entrypoint.sh
+COPY --from=builder /app/apps/backend/.entrypoint.sh ./entrypoint.sh
 
 EXPOSE 3000
 
