@@ -28,8 +28,10 @@ export class MailService {
     }
   }
 
-  async sendPasswordResetEmail(email: string, token: string) {
-    const url = this.appConfig.buildResetPasswordUrl(token);
+  async sendPasswordResetEmail(email: string, token: string, role: string) {
+    const url = role === 'USER'
+      ? this.appConfig.buildMobileResetPasswordUrl(token)
+      : this.appConfig.buildResetPasswordUrl(token);
     const logoUrl = `${this.appConfig.appUrl}/public/logo_lpo.png`;
 
     try {

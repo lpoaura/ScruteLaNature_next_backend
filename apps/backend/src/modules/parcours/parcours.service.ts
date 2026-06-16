@@ -122,11 +122,15 @@ export class ParcoursService {
       organismeId = userOrganismeId;
     }
 
+    const { badge, zonageId, ...parcoursData } = dto;
+
     return this.db.parcours.create({
       data: {
-        ...dto,
-        organismeId,
-        ...(createdById ? { createdById } : {}),
+        ...parcoursData,
+        zonage: { connect: { id: zonageId } },
+        organisme: { connect: { id: organismeId } },
+        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
+        ...(badge ? { badge: { create: badge } } : {}),
       },
     });
   }
@@ -184,16 +188,31 @@ export class ParcoursService {
     }
 
     // Exclure le champ status du dto pour EDITOR (double sécurité)
-    const safeDto = userRole === Role.EDITOR ? (({ status, ...rest }) => rest)(dto as any) : dto;
+    const { badge, ...rawRest } = dto;
+    const safeRest = userRole === Role.EDITOR ? (({ status, ...rest }) => rest)(rawRest as any) : rawRest;
+
+    const dataToUpdate: any = { ...safeRest };
+
+    if (badge !== undefined) {
+      if (badge === null) {
+        if (existing.badgeId) {
+          dataToUpdate.badge = { delete: true }; // On supprime le badge de la BDD
+        }
+      } else if (existing.badgeId) {
+        dataToUpdate.badge = { update: badge };
+      } else {
+        dataToUpdate.badge = { create: badge };
+      }
+    }
 
     const updated = await this.db.parcours.update({
       where: { id },
-      data: safeDto,
+      data: dataToUpdate,
     });
 
     // Nettoyage des anciennes images spécifiques si elles ont été modifiées
-    if (safeDto.coverImage !== undefined) {
-      this.cleanupOldSpecificImage(existing.coverImage, safeDto.coverImage);
+    if (dataToUpdate.coverImage !== undefined) {
+      this.cleanupOldSpecificImage(existing.coverImage, dataToUpdate.coverImage);
     }
 
 

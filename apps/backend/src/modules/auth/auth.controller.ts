@@ -159,6 +159,16 @@ export class AuthController {
   }
 
   @Public()
+  @Get('reset-password-mobile')
+  @ApiOperation({ summary: "Redirige vers l'application mobile pour réinitialiser le mot de passe" })
+  @ApiQuery({ name: 'token', required: true })
+  @ApiResponse({ status: 200, description: 'Page HTML avec deep link vers l\'app.' })
+  resetPasswordMobile(@Query('token') token: string, @Res() res: Response) {
+    const htmlPath = join(process.cwd(), 'dist', 'src', 'providers', 'mail', 'templates', 'reset-password-mobile.html');
+    res.sendFile(htmlPath);
+  }
+
+  @Public()
   @Post('forgot-password')
   @ApiOperation({ summary: 'Demander une réinitialisation de mot de passe' })
   @ApiBody({ type: ForgotPasswordDto })

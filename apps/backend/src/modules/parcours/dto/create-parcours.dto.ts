@@ -10,9 +10,12 @@ import {
   Min,
   Max,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Difficulty, PublishStatus } from '@prisma/client';
+import { CreateBadgeDto } from './badge.dto';
 
 export class CreateParcoursDto {
   @ApiProperty({ example: 'La Forêt des Oiseaux', description: 'Titre du parcours' })
@@ -85,4 +88,10 @@ export class CreateParcoursDto {
   @IsOptional()
   @IsBoolean()
   isMentalHandicapFriendly?: boolean;
+
+  @ApiPropertyOptional({ type: CreateBadgeDto, description: 'Badge associé au parcours' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateBadgeDto)
+  badge?: CreateBadgeDto;
 }

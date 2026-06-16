@@ -107,14 +107,14 @@ model User {
   verificationTokens VerificationToken[]
 
   // Relations (LPO)
-  sentRequests     Friendship[]   @relation("SentRequests")
-  receivedRequests Friendship[]   @relation("ReceivedRequests")
+  sentRequests     Friendship[]       @relation("SentRequests")
+  receivedRequests Friendship[]       @relation("ReceivedRequests")
   observations     Observation[]
   badges           UserBadge[]
   parcoursDone     UserParcours[]
   reviews          Review[]
-  parcoursCreated  Parcours[]          @relation("ParcoursCreatedBy")
-  downloads        ParcoursDownload[]  @relation("UserDownloads")
+  parcoursCreated  Parcours[]         @relation("ParcoursCreatedBy")
+  downloads        ParcoursDownload[] @relation("UserDownloads")
 
   @@index([organismeId])
   @@map("users")
@@ -236,13 +236,16 @@ model Parcours {
   pathGeoJSON String? @db.Text
 
   createdById String?
-  createdBy   User?     @relation("ParcoursCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?   @relation("ParcoursCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
 
   zonageId String
   zonage   Zonage @relation(fields: [zonageId], references: [id], onDelete: Restrict)
+
+  badgeId String?
+  badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
 
   isPMRFriendly            Boolean @default(false)
   isChildFriendly          Boolean @default(false)
@@ -270,10 +273,10 @@ model Etape {
   parcoursId String
   parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
 
-  order          Int
-  latitude       Float
-  longitude      Float
-  title          String
+  order     Int
+  latitude  Float
+  longitude Float
+  title     String
 
   jeux Jeu[]
 
@@ -330,7 +333,7 @@ model ParcoursDownload {
   id           String   @id @default(uuid())
   parcoursId   String
   parcours     Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
-  userId       String?  // null = invité non connecté
+  userId       String? // null = invité non connecté
   user         User?    @relation("UserDownloads", fields: [userId], references: [id], onDelete: SetNull)
   downloadedAt DateTime @default(now())
 
@@ -362,12 +365,11 @@ model Observation {
 }
 
 model Badge {
-  id          String      @id @default(uuid())
-  name        String
-  description String      @db.Text
-  imageUrl    String
-  category    String
-  users       UserBadge[]
+  id       String      @id @default(uuid())
+  name     String
+  imageUrl String
+  users    UserBadge[]
+  parcours Parcours[]
 
   @@map("badges")
 }
