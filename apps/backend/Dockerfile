@@ -46,9 +46,8 @@ COPY --from=builder /app/apps/backend/public ./public
 RUN mkdir -p uploads/images uploads/audio uploads/gpx uploads/specific_images uploads/specific_audio uploads/specific_gpx
 
 # Script d'entrypoint : migration auto + démarrage
-RUN printf '#!/bin/sh\nset -e\necho "Running Prisma Migrations..."\nnpx prisma migrate deploy\necho "Starting application..."\nnode dist/src/main\n' > /app/apps/backend/start.sh \
-    && chmod +x /app/apps/backend/start.sh
+COPY --from=builder /app/apps/backend/.entrypoint.sh ./entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["./start.sh"]
+CMD ["./entrypoint.sh"]
