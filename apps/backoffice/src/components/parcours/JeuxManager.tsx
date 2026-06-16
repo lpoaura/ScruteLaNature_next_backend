@@ -42,7 +42,8 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
       try {
         let savedJeu: Jeu;
         if ('id' in editingJeu && editingJeu.id) {
-          savedJeu = await updateJeu(editingJeu.id, editingJeu);
+          const { id, etapeId, createdAt, updatedAt, etape, ...payload } = editingJeu as any;
+          savedJeu = await updateJeu(id, payload);
         } else {
           savedJeu = await createJeu(editingJeu);
         }

@@ -444,9 +444,6 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                   value={formData.coverImage} 
                   required 
                 />
-                <p className="text-[11px] text-muted-foreground pt-1">
-                  L'image doit d'abord être uploadée dans l'onglet Médiathèque.
-                </p>
               </div>
 
               {/* Paramètres d'activité */}

@@ -44,6 +44,10 @@ export class AppConfigService {
     return `${this.backofficeUrl}/reset-password?token=${token}`;
   }
 
+  buildMobileResetPasswordUrl(token: string): string {
+    return `${this.apiUrl}/auth/reset-password-mobile?token=${token}`;
+  }
+
   // ─── URLs Médias (Fichiers statiques) ──────────────────────────────────────
 
   buildMediaUrl(subfolder: 'images' | 'audio' | 'gpx' | string, filename: string): string {

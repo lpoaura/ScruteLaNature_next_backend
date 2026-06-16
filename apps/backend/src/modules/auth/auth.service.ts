@@ -276,7 +276,7 @@ export class AuthService {
         },
       });
 
-      this.mailService.sendPasswordResetEmail(user.email!, token).catch(() => {
+      this.mailService.sendPasswordResetEmail(user.email!, token, user.role).catch(() => {
         // Log ou ignorer
       });
     }
