@@ -56,6 +56,12 @@ export interface CreateZonageDto {
 
 export type PublishStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
+export interface Badge {
+  id: string;
+  name: string;
+  imageUrl: string;
+}
+
 export interface Parcours {
   id: string;
   title: string;
@@ -73,6 +79,8 @@ export interface Parcours {
   zonageId: string;
   zonage?: Zonage;
   organisme?: Organisme;
+  badgeId?: string | null;
+  badge?: Badge | null;
   createdBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
   etapes?: Etape[];
   createdAt: string;

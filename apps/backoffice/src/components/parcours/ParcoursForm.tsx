@@ -60,6 +60,12 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   const [publishRequested, setPublishRequested] = useState(false);
   const [isRequestingPublish, setIsRequestingPublish] = useState(false);
 
+  const [hasBadge, setHasBadge] = useState<boolean>(!!initialData?.badge);
+  const [badgeData, setBadgeData] = useState({
+    name: initialData?.badge?.name || '',
+    imageUrl: initialData?.badge?.imageUrl || '',
+  });
+
   useEffect(() => {
     const fetchRefs = async () => {
       try {
@@ -137,12 +143,22 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
       return;
     }
 
+    if (hasBadge && (!badgeData.name || !badgeData.imageUrl)) {
+      setError('Veuillez remplir toutes les informations du badge (nom et image).');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      badge: hasBadge ? badgeData : null,
+    };
+
     startTransition(async () => {
       try {
         if (isEdit && initialData) {
-          await updateParcours(initialData.id, formData);
+          await updateParcours(initialData.id, payload as any);
         } else {
-          await createParcours(formData, isSuperAdmin ? selectedOrganismeId : undefined);
+          await createParcours(payload as any, isSuperAdmin ? selectedOrganismeId : undefined);
         }
         router.push('/dashboard/parcours');
         router.refresh();
@@ -156,7 +172,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     });
   };
 
-  const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | null>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState<'cover' | 'badge' | null>(null);
   const [gallerySearch, setGallerySearch] = useState('');
   const [activeTab, setActiveTab] = useState<'info' | 'map'>('info');
   
@@ -207,7 +223,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     value, 
     required = false 
   }: { 
-    type: 'cover', 
+    type: 'cover' | 'badge', 
     label: string, 
     value: string,
     required?: boolean
@@ -446,6 +462,39 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                 />
               </div>
 
+              {/* Badge (Récompense) */}
+              <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <h2 className="text-lg font-semibold">Récompense (Badge)</h2>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={hasBadge} onChange={(e) => setHasBadge(e.target.checked)} />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+                
+                {hasBadge && (
+                  <div className="space-y-4 pt-2">
+                    <ImagePicker 
+                      type="badge" 
+                      label="Image du badge" 
+                      value={badgeData.imageUrl} 
+                      required 
+                    />
+                    <div className="space-y-2">
+                      <label htmlFor="badgeName" className="text-sm font-medium">Nom du badge <span className="text-destructive">*</span></label>
+                      <input
+                        id="badgeName"
+                        type="text"
+                        value={badgeData.name}
+                        onChange={(e) => setBadgeData(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                        placeholder="Ex: Aigle Royal"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Paramètres d'activité */}
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
                 <h2 className="text-lg font-semibold border-b border-border pb-3">Données de l'activité</h2>
@@ -558,10 +607,11 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
           type="image"
           onClose={() => setIsGalleryOpen(null)}
           onSelect={(url) => {
-            setFormData(prev => ({ 
-              ...prev, 
-              ...(isGalleryOpen === 'cover' ? { coverImage: url } : {}) 
-            }));
+            if (isGalleryOpen === 'cover') {
+              setFormData(prev => ({ ...prev, coverImage: url }));
+            } else if (isGalleryOpen === 'badge') {
+              setBadgeData(prev => ({ ...prev, imageUrl: url }));
+            }
           }}
         />
       )}

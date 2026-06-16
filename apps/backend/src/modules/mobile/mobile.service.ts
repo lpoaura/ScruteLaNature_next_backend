@@ -173,6 +173,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
+        badge: true,
         zonage: {
           select: { id: true, nom: true, code: true },
         },
@@ -205,6 +206,7 @@ export class MobileService {
         status: PublishStatus.PUBLISHED,
       },
       include: {
+        badge: true,
         organisme: {
           select: { id: true, nom: true },
         },
@@ -255,6 +257,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
+        badge: true,
         zonage: { select: { nom: true } },
         etapes: {
           orderBy: { order: 'asc' },
