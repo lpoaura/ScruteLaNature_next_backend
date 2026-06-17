@@ -11,6 +11,9 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Faire confiance au reverse proxy pour que express-rate-limit lise bien l'IP d'origine
+  app.set('trust proxy', 1);
+
   // Servir les fichiers uploadés en statique sous /uploads
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
