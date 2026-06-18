@@ -188,10 +188,18 @@ export class ParcoursService {
     }
 
     // Exclure le champ status du dto pour EDITOR (double sécurité)
-    const { badge, ...rawRest } = dto;
+    const { badge, zonageId, ...rawRest } = dto as any;
     const safeRest = userRole === Role.EDITOR ? (({ status, ...rest }) => rest)(rawRest as any) : rawRest;
 
     const dataToUpdate: any = { ...safeRest };
+
+    // Nettoyage explicite : supprimer les IDs scalaires du payload pour éviter les conflits Prisma (Unknown argument zonageId)
+    delete dataToUpdate.zonageId;
+    delete dataToUpdate.badge;
+
+    if (zonageId) {
+      dataToUpdate.zonage = { connect: { id: zonageId } };
+    }
 
     if (badge !== undefined) {
       if (badge === null) {
