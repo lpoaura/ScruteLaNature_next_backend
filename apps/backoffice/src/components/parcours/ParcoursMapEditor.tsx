@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical } from 'lucide-react';
+import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route } from 'lucide-react';
 import { updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
@@ -37,8 +37,61 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number} | null>(null);
   const [editingEtape, setEditingEtape] = useState<Etape | Partial<Etape> | null>(null);
   const [draggedEtapeId, setDraggedEtapeId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateRouteForEtapes = async (etapesList: Etape[], skipConfirm = false) => {
+    if (etapesList.length < 2) {
+      if (!skipConfirm) alert("Il faut au moins 2 étapes pour générer un tracé.");
+      return;
+    }
+
+    if (!skipConfirm && pathGeoJSON && !confirm("Un tracé existe déjà. Voulez-vous l'écraser avec un tracé généré automatiquement ?")) {
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const sortedEtapes = [...etapesList].sort((a, b) => a.order - b.order);
+      const coordsString = sortedEtapes.map(e => `${e.longitude},${e.latitude}`).join(';');
+      
+      const response = await fetch(`https://router.project-osrm.org/route/v1/foot/${coordsString}?overview=full&geometries=geojson`);
+      if (!response.ok) throw new Error("Erreur de l'API OSRM");
+
+      const data = await response.json();
+      if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+        throw new Error("Impossible de trouver un chemin piéton entre ces étapes sur la carte OpenStreetMap.");
+      }
+
+      const geometry = data.routes[0].geometry;
+
+      const featureCollection = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: { name: "Tracé généré automatiquement" },
+            geometry: geometry
+          }
+        ]
+      };
+
+      const geoJSONStr = JSON.stringify(featureCollection);
+      await updateParcours(parcours.id, { pathGeoJSON: geoJSONStr });
+      
+      setPathGeoJSON(featureCollection);
+      if (!skipConfirm) alert('Tracé généré avec succès !');
+
+    } catch (err: any) {
+      console.error(err);
+      if (!skipConfirm) alert(err.message || 'Erreur lors de la génération du tracé.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateRoute = () => generateRouteForEtapes(etapes, false);
 
   const handleGPXUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -166,6 +219,12 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
     setEtapes(updatedEtapes);
     setDraggedEtapeId(null);
 
+    // Régénérer automatiquement le tracé si c'était un tracé auto
+    const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+    if (isAutoRoute) {
+      generateRouteForEtapes(updatedEtapes, true);
+    }
+
     // Update backend
     startTransition(async () => {
       try {
@@ -189,7 +248,16 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
             </p>
           </div>
           
-          <div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleGenerateRoute}
+              disabled={isGenerating || isPending || etapes.length < 2}
+              className="flex items-center gap-2 bg-primary/10 text-primary hover:bg-primary/20 px-3 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+              title={etapes.length < 2 ? "Placez au moins 2 étapes sur la carte" : "Générer automatiquement le chemin piéton entre les étapes"}
+            >
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
+              Générer auto
+            </button>
             <input 
               type="file" 
               accept=".gpx" 
@@ -199,11 +267,11 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
             />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              disabled={isPending}
-              className="flex items-center gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              disabled={isPending || isGenerating}
+              className="flex items-center gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 px-3 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             >
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Importer un tracé (.GPX)
+              Importer .GPX
             </button>
           </div>
         </div>
@@ -262,9 +330,11 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
               <div className="pt-2 flex gap-3">
                 <button 
                   onClick={saveEtape}
-                  className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 flex justify-center items-center gap-2"
+                  disabled={isPending}
+                  className="flex-1 bg-primary text-primary-foreground py-2 rounded-md text-sm font-medium hover:bg-primary/90 flex justify-center items-center gap-2 disabled:opacity-50"
                 >
-                  <Save className="h-4 w-4" /> Enregistrer l'étape
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 
+                  {isPending ? 'Enregistrement...' : 'Enregistrer l\'étape'}
                 </button>
               </div>
 
@@ -304,7 +374,7 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
                   <p className="text-xs mt-1">Cliquez sur la carte pour commencer le tracé.</p>
                 </div>
               ) : (
-                etapes.sort((a, b) => a.order - b.order).map((etape) => (
+                [...etapes].sort((a, b) => a.order - b.order).map((etape) => (
                   <div 
                     key={etape.id} 
                     draggable

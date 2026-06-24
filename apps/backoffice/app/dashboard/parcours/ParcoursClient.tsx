@@ -215,7 +215,8 @@ export default function ParcoursClient() {
                   <th className="px-4 py-3 font-medium text-muted-foreground">Créé par</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Zonage</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Statut</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Difficulté</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">Énigmes</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">Accessibilité</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground text-right">Actions</th>
                 </tr>
               </thead>
@@ -263,6 +264,7 @@ export default function ParcoursClient() {
                       <td className="px-4 py-3 text-muted-foreground">{parcours.zonage?.nom || '-'}</td>
                       <td className="px-4 py-3"><StatusBadge status={parcours.status} /></td>
                       <td className="px-4 py-3"><DifficultyBadge level={parcours.difficulty} /></td>
+                      <td className="px-4 py-3"><DifficultyBadge level={parcours.accessibility} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link

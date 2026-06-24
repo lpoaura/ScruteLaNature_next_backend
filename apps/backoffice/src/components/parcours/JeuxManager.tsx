@@ -13,6 +13,51 @@ interface QcmMediaPicker {
   mediaType: 'image' | 'audio';
 }
 
+function generatePyramid(target: number) {
+  if (target < 8) target = 8;
+  
+  let b1 = Math.floor(Math.random() * Math.floor((target - 5) / 3)) + 1;
+  if (b1 < 1) b1 = 1;
+  let maxB2 = Math.floor((target - 3 * b1 - 2) / 3);
+  if (maxB2 < 1) maxB2 = 1;
+  let b2 = Math.floor(Math.random() * maxB2) + 1;
+  let maxB0 = target - 3 * b1 - 3 * b2 - 1;
+  if (maxB0 < 1) maxB0 = 1;
+  let b0 = Math.floor(Math.random() * maxB0) + 1;
+  let b3 = target - 3 * b1 - 3 * b2 - b0;
+  
+  if (b3 < 1) {
+    b0 = 1; b1 = 1; b2 = 1; b3 = target - 5;
+    if (b3 < 1) b3 = 1; // Failsafe
+  }
+  
+  const r3 = [b0, b1, b2, b3];
+  const r2 = [b0 + b1, b1 + b2, b2 + b3];
+  const r1 = [r2[0] + r2[1], r2[1] + r2[2]];
+  const r0 = [r1[0] + r1[1]];
+  
+  const fullGrid = [r0, r1, r2, r3];
+  const pattern = Math.random() > 0.5 ? 1 : 2;
+  
+  const grille = fullGrid.map((row, rIdx) => 
+    row.map((val, cIdx) => {
+      if (rIdx === 0 && cIdx === 0) return val; // Sommet
+      if (pattern === 1) {
+        if (rIdx === 2 && cIdx === 0) return val;
+        if (rIdx === 3 && cIdx === 0) return val;
+        if (rIdx === 3 && cIdx === 2) return val;
+      } else {
+        if (rIdx === 2 && cIdx === 2) return val;
+        if (rIdx === 3 && cIdx === 1) return val;
+        if (rIdx === 3 && cIdx === 3) return val;
+      }
+      return null;
+    })
+  );
+  
+  return { grille, fullGrid };
+}
+
 interface JeuxManagerProps {
   etape: Etape;
   onUpdateEtape: (etape: Etape) => void;
@@ -288,11 +333,18 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Type de jeu/contenu</label>
               <select
                 value={editingJeu.type}
-                onChange={(e) => setEditingJeu({
-                  ...editingJeu,
-                  type: e.target.value as JeuType,
-                  donneesJeu: {},
-                })}
+                onChange={(e) => {
+                  const type = e.target.value as JeuType;
+                  let donneesJeu: any = {};
+                  if (type === 'CALCUL_PYRAMIDAL') {
+                    donneesJeu = { targetResult: 50, ...generatePyramid(50) };
+                  }
+                  setEditingJeu({
+                    ...editingJeu,
+                    type,
+                    donneesJeu,
+                  });
+                }}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm outline-none focus:ring-primary"
               >
                 <option value="INFO">Information simple (Texte/Audio)</option>
@@ -370,115 +422,66 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
             {/* ── Calcul Pyramidal ── */}
             {editingJeu.type === 'CALCUL_PYRAMIDAL' && (
               <div className="bg-card border border-border rounded-md p-3 space-y-3">
-                <label className="text-xs font-medium text-primary block">Configuration de la pyramide</label>
-                <p className="text-[11px] text-muted-foreground">
-                  Définissez les 3 valeurs de la base. Les cases du haut sont calculées automatiquement
-                  (chaque case = somme des deux cases inférieures). Cochez les cases que le joueur doit trouver.
+                <label className="text-xs font-medium text-primary block">Configuration de la pyramide (4 niveaux)</label>
+                <p className="text-[11px] text-muted-foreground mb-3">
+                  Entrez simplement le résultat que vous souhaitez au sommet. Le système générera automatiquement une combinaison valide et masquera les cases nécessaires pour qu'il n'y ait qu'une seule solution.
                 </p>
-                <div className="space-y-3">
-                  {/* Ligne 1 — base (3 valeurs) */}
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 1 — Base (3 valeurs)</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[0, 1, 2].map((i) => (
-                        <div key={i} className="space-y-1">
-                          <input
-                            type="number"
-                            placeholder={`Case ${i + 1}`}
-                            value={editingJeu.donneesJeu?.base?.[i] ?? ''}
-                            onChange={(e) => {
-                              const base = [...(editingJeu.donneesJeu?.base || [0, 0, 0])];
-                              base[i] = parseInt(e.target.value) || 0;
-                              setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, base } });
-                            }}
-                            className="w-full px-2 py-1.5 border border-input rounded bg-background text-sm text-center outline-none focus:ring-2 focus:ring-primary/50"
-                          />
-                          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={(editingJeu.donneesJeu?.cachees || []).includes(`L1-${i}`)}
-                              onChange={(e) => {
-                                const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
-                                const key = `L1-${i}`;
-                                if (e.target.checked) cachees.push(key);
-                                else cachees.splice(cachees.indexOf(key), 1);
-                                setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
-                              }}
-                              className="accent-primary"
-                            />
-                            Masquée
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Ligne 2 — calculée : sum(0+1), sum(1+2) */}
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 2 — Calculée</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[0, 1].map((i) => {
-                        const base = editingJeu.donneesJeu?.base || [0, 0, 0];
-                        const val = (base[i] || 0) + (base[i + 1] || 0);
-                        return (
-                          <div key={i} className="space-y-1">
-                            <div className="w-full px-2 py-1.5 border border-border rounded bg-muted/40 text-sm text-center font-mono text-muted-foreground">
-                              {val}
-                            </div>
-                            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={(editingJeu.donneesJeu?.cachees || []).includes(`L2-${i}`)}
-                                onChange={(e) => {
-                                  const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
-                                  const key = `L2-${i}`;
-                                  if (e.target.checked) cachees.push(key);
-                                  else cachees.splice(cachees.indexOf(key), 1);
-                                  setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
-                                }}
-                                className="accent-primary"
-                              />
-                              Masquée
-                            </label>
-                          </div>
-                        );
+                <div className="flex gap-4 items-end mb-4">
+                  <div className="flex-1">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Résultat cible (Sommet) - Min: 8</label>
+                    <input
+                      type="number"
+                      min="8"
+                      value={editingJeu.donneesJeu?.targetResult || 50}
+                      onChange={(e) => setEditingJeu({
+                        ...editingJeu,
+                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(8, parseInt(e.target.value) || 8) }
                       })}
-                    </div>
+                      className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                    />
                   </div>
-                  {/* Ligne 3 — sommet */}
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Ligne 3 — Sommet</p>
-                    <div className="space-y-1 w-1/3 mx-auto">
-                      {(() => {
-                        const base = editingJeu.donneesJeu?.base || [0, 0, 0];
-                        const l2a = (base[0] || 0) + (base[1] || 0);
-                        const l2b = (base[1] || 0) + (base[2] || 0);
-                        const sommet = l2a + l2b;
-                        return (
-                          <>
-                            <div className="w-full px-2 py-1.5 border border-border rounded bg-muted/40 text-sm text-center font-mono font-bold text-foreground">
-                              {sommet}
-                            </div>
-                            <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer justify-center">
-                              <input
-                                type="checkbox"
-                                checked={(editingJeu.donneesJeu?.cachees || []).includes('L3-0')}
-                                onChange={(e) => {
-                                  const cachees: string[] = [...(editingJeu.donneesJeu?.cachees || [])];
-                                  const key = 'L3-0';
-                                  if (e.target.checked) cachees.push(key);
-                                  else cachees.splice(cachees.indexOf(key), 1);
-                                  setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, cachees } });
-                                }}
-                                className="accent-primary"
-                              />
-                              Masquée
-                            </label>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = editingJeu.donneesJeu?.targetResult || 50;
+                      const pyData = generatePyramid(target);
+                      setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, ...pyData } });
+                    }}
+                    className="bg-primary/10 text-primary px-4 py-1.5 rounded text-sm font-medium hover:bg-primary/20 transition-colors"
+                  >
+                    Générer la pyramide
+                  </button>
                 </div>
+
+                {editingJeu.donneesJeu?.grille && (
+                  <div className="mt-4 p-4 bg-muted/30 rounded-lg flex flex-col items-center gap-2">
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Aperçu pour le joueur</p>
+                    {editingJeu.donneesJeu.grille.map((row: (number | null)[], rIndex: number) => (
+                      <div key={`prev-row-${rIndex}`} className="flex gap-2">
+                        {row.map((cell, cIndex) => (
+                          <div
+                            key={`prev-cell-${cIndex}`}
+                            className={`w-10 h-8 flex items-center justify-center rounded border text-sm font-bold relative ${
+                              cell !== null
+                                ? 'bg-white border-primary/40 text-primary'
+                                : 'bg-muted border-border text-transparent'
+                            }`}
+                          >
+                            {cell !== null ? cell : editingJeu.donneesJeu.fullGrid?.[rIndex]?.[cIndex]}
+                            {cell === null && (
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground opacity-30">
+                                ?
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-muted-foreground mt-2 italic text-center">
+                      Les cases avec "?" seront vides sur le téléphone.<br />Le joueur devra déduire les nombres grâce aux cases révélées.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

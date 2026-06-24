@@ -228,6 +228,7 @@ model Parcours {
   title       String
   description String        @db.Text
   difficulty  Difficulty
+  accessibility Difficulty  @default(FACILE)
   distanceKm  Float
   durationMin Int
   coverImage  String

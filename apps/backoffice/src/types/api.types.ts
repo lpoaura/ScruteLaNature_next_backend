@@ -70,6 +70,7 @@ export interface Parcours {
   durationMin: number | null;
   distanceKm: number | null;
   difficulty: string | null;
+  accessibility: string | null;
   isPMRFriendly: boolean;
   isChildFriendly: boolean;
   isMentalHandicapFriendly: boolean;

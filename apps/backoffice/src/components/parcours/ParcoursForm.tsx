@@ -46,6 +46,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     title: initialData?.title || '',
     description: initialData?.description || '',
     difficulty: initialData?.difficulty || 'FACILE',
+    accessibility: initialData?.accessibility || 'FACILE',
     distanceKm: initialData?.distanceKm || 0.1,
     durationMin: initialData?.durationMin || 30,
     zonageId: initialData?.zonageId || '',
@@ -500,7 +501,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                 <h2 className="text-lg font-semibold border-b border-border pb-3">Données de l'activité</h2>
                 
                 <div className="space-y-2">
-                  <label htmlFor="difficulty" className="text-sm font-medium">Difficulté</label>
+                  <label htmlFor="difficulty" className="text-sm font-medium">Difficulté des énigmes</label>
                   <div className="flex gap-2">
                     {['FACILE', 'MOYEN', 'DIFFICILE'].map((diff) => (
                       <button
@@ -510,6 +511,27 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                         className={cn(
                           "flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors",
                           formData.difficulty === diff 
+                            ? "bg-primary text-primary-foreground border-primary" 
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        )}
+                      >
+                        {diff.charAt(0) + diff.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="accessibility" className="text-sm font-medium">Accessibilité du parcours</label>
+                  <div className="flex gap-2">
+                    {['FACILE', 'MOYEN', 'DIFFICILE'].map((diff) => (
+                      <button
+                        key={`acc_${diff}`}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, accessibility: diff as any }))}
+                        className={cn(
+                          "flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                          formData.accessibility === diff 
                             ? "bg-primary text-primary-foreground border-primary" 
                             : "bg-background text-muted-foreground border-border hover:bg-muted"
                         )}
