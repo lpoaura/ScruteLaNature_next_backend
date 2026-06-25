@@ -197,6 +197,83 @@ export class SocialService {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // INVITATIONS DE PARCOURS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async sendParcoursInvitation(senderId: string, dto: { receiverId: string, parcoursId: string }) {
+    const receiver = await this.db.user.findUnique({
+      where: { id: dto.receiverId },
+    });
+
+    if (!receiver || receiver.isGuest) {
+      throw new BadRequestException('Impossible d\'inviter cet utilisateur.');
+    }
+
+    const existing = await this.db.parcoursInvitation.findFirst({
+      where: {
+        senderId,
+        receiverId: dto.receiverId,
+        parcoursId: dto.parcoursId,
+        status: FriendshipStatus.PENDING,
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('Une invitation est déjà en attente pour ce parcours et cet ami.');
+    }
+
+    const invitation = await this.db.parcoursInvitation.create({
+      data: {
+        senderId,
+        receiverId: dto.receiverId,
+        parcoursId: dto.parcoursId,
+        status: FriendshipStatus.PENDING,
+      },
+      include: {
+        parcours: { select: { id: true, title: true, coverImage: true, distanceKm: true, durationMin: true } },
+      },
+    });
+
+    return invitation;
+  }
+
+  async getReceivedInvitations(userId: string) {
+    return this.db.parcoursInvitation.findMany({
+      where: {
+        receiverId: userId,
+        status: FriendshipStatus.PENDING,
+      },
+      include: {
+        sender: { select: PUBLIC_USER_SELECT },
+        parcours: { select: { id: true, title: true, coverImage: true, distanceKm: true, durationMin: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async respondToInvitation(invitationId: string, userId: string, accept: boolean) {
+    const invitation = await this.db.parcoursInvitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation || invitation.receiverId !== userId) {
+      throw new NotFoundException('Invitation introuvable.');
+    }
+
+    if (accept) {
+      return this.db.parcoursInvitation.update({
+        where: { id: invitationId },
+        data: { status: FriendshipStatus.ACCEPTED },
+      });
+    } else {
+      await this.db.parcoursInvitation.delete({
+        where: { id: invitationId },
+      });
+      return { message: 'Invitation supprimée.' };
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // AVIS & NOTES (Reviews) — Tâche 4.3
   // ══════════════════════════════════════════════════════════════════════════
 

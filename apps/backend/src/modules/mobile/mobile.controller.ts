@@ -6,6 +6,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { MobileService } from './mobile.service';
 import { SearchParcoursDto } from './dto/search-parcours.dto';
@@ -59,16 +60,21 @@ export class MobileController {
     summary: 'Télécharger un parcours complet pour le mode hors-ligne (Chantier Critique)',
     description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la zonage et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Le parcours complet avec étapes et jeux.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Parcours introuvable ou non publié.',
-  })
-  download(@Param('id') id: string) {
+  @ApiParam({ name: 'id', description: 'ID du parcours' })
+  @ApiResponse({ status: 200, description: 'Le parcours complet.' })
+  @ApiResponse({ status: 404, description: 'Parcours introuvable ou non publié.' })
+  downloadParcours(@Param('id') id: string) {
     return this.mobileService.downloadParcours(id);
+  }
+
+  @Get('badges')
+  @ApiOperation({
+    summary: 'Récupérer tous les badges existants',
+    description: 'Retourne la liste de tous les badges du jeu pour affichage côté mobile.',
+  })
+  @ApiResponse({ status: 200, description: 'La liste de tous les badges.' })
+  getBadges() {
+    return this.mobileService.getBadges();
   }
 
   @Get('parcours/nearby')

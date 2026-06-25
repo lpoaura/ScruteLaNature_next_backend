@@ -23,6 +23,7 @@ import {
 import { SocialService } from './social.service';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { SendParcoursInvitationDto } from './dto/send-parcours-invitation.dto';
 
 @ApiTags('Social — Amis')
 @ApiBearerAuth()
@@ -79,6 +80,43 @@ export class SocialController {
   @ApiResponse({ status: 200, description: 'Relation supprimée.' })
   remove(@Param('id') id: string, @Request() req: any) {
     return this.socialService.removeFriendship(id, req.user.id);
+  }
+}
+
+// ── Invitations de Parcours ──────────────────────────────────────────────────
+
+@ApiTags('Social — Invitations de Parcours')
+@ApiBearerAuth()
+@Controller('social/invitations')
+export class InvitationsController {
+  constructor(private readonly socialService: SocialService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Envoyer une invitation pour un parcours à un ami' })
+  @ApiResponse({ status: 201, description: 'Invitation envoyée.' })
+  sendInvitation(@Body() dto: SendParcoursInvitationDto, @Request() req: any) {
+    return this.socialService.sendParcoursInvitation(req.user.id, dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Lister les invitations de parcours reçues' })
+  @ApiResponse({ status: 200, description: 'Liste des invitations.' })
+  getInvitations(@Request() req: any) {
+    return this.socialService.getReceivedInvitations(req.user.id);
+  }
+
+  @Patch(':id/accept')
+  @ApiOperation({ summary: 'Accepter une invitation de parcours' })
+  @ApiResponse({ status: 200, description: 'Invitation acceptée.' })
+  acceptInvitation(@Param('id') id: string, @Request() req: any) {
+    return this.socialService.respondToInvitation(id, req.user.id, true);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Refuser une invitation de parcours' })
+  @ApiResponse({ status: 200, description: 'Invitation refusée.' })
+  declineInvitation(@Param('id') id: string, @Request() req: any) {
+    return this.socialService.respondToInvitation(id, req.user.id, false);
   }
 }
 

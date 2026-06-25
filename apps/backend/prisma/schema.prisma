@@ -115,6 +115,8 @@ model User {
   reviews          Review[]
   parcoursCreated  Parcours[]         @relation("ParcoursCreatedBy")
   downloads        ParcoursDownload[] @relation("UserDownloads")
+  sentInvitations  ParcoursInvitation[] @relation("SentInvitations")
+  receivedInvitations ParcoursInvitation[] @relation("ReceivedInvitations")
 
   @@index([organismeId])
   @@map("users")
@@ -194,6 +196,30 @@ model Friendship {
 }
 
 // ======================================================
+//  INVITATIONS DE PARCOURS
+// ======================================================
+
+model ParcoursInvitation {
+  id         String           @id @default(uuid())
+  status     FriendshipStatus @default(PENDING)
+
+  senderId   String
+  receiverId String
+  parcoursId String
+
+  sender     User     @relation("SentInvitations", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedInvitations", fields: [receiverId], references: [id], onDelete: Cascade)
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([receiverId])
+  @@index([parcoursId])
+  @@map("parcours_invitations")
+}
+
+// ======================================================
 //  COMMUNES & ORGANISMES
 // ======================================================
 
@@ -247,6 +273,8 @@ model Parcours {
 
   badgeId String?
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+
+  invitations ParcoursInvitation[]
 
   isPMRFriendly            Boolean @default(false)
   isChildFriendly          Boolean @default(false)

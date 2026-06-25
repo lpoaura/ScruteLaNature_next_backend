@@ -58,6 +58,23 @@ function generatePyramid(target: number) {
   return { grille, fullGrid };
 }
 
+function cipherCaesar(text: string, shift: number): string {
+  if (!text) return '';
+  const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const normalized = normalize(text);
+  let result = '';
+  for (let i = 0; i < normalized.length; i++) {
+    const c = normalized.charCodeAt(i);
+    if (c >= 65 && c <= 90) {
+      const shifted = ((c - 65 + shift) % 26 + 26) % 26 + 65;
+      result += String.fromCharCode(shifted);
+    } else {
+      result += normalized.charAt(i);
+    }
+  }
+  return result;
+}
+
 interface JeuxManagerProps {
   etape: Etape;
   onUpdateEtape: (etape: Etape) => void;
@@ -85,12 +102,23 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
     if (!editingJeu) return;
     startTransition(async () => {
       try {
+        let payloadToSave = { ...editingJeu };
+        // Si c'est un code césar, on s'assure que la phrase chiffrée est bien générée avant de sauvegarder
+        if (payloadToSave.type === 'CODE_CAESAR') {
+          const shift = payloadToSave.donneesJeu?.decalage ?? 3;
+          payloadToSave.donneesJeu = {
+            ...payloadToSave.donneesJeu,
+            decalage: shift,
+            phraseChiffree: cipherCaesar(payloadToSave.reponse || '', shift)
+          };
+        }
+
         let savedJeu: Jeu;
-        if ('id' in editingJeu && editingJeu.id) {
-          const { id, etapeId, createdAt, updatedAt, etape, ...payload } = editingJeu as any;
+        if ('id' in payloadToSave && payloadToSave.id) {
+          const { id, etapeId, createdAt, updatedAt, etape, ...payload } = payloadToSave as any;
           savedJeu = await updateJeu(id, payload);
         } else {
-          savedJeu = await createJeu(editingJeu);
+          savedJeu = await createJeu(payloadToSave);
         }
         const newJeux = etape.jeux ? [...etape.jeux] : [];
         const index = newJeux.findIndex(j => j.id === savedJeu.id);
@@ -384,24 +412,52 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                     <input
                       type="text"
                       value={editingJeu.reponse || ''}
-                      onChange={(e) => setEditingJeu({ ...editingJeu, reponse: e.target.value })}
+                      onChange={(e) => {
+                        const newReponse = e.target.value.toUpperCase();
+                        const shift = editingJeu.donneesJeu?.decalage ?? 3;
+                        setEditingJeu({ 
+                          ...editingJeu, 
+                          reponse: newReponse,
+                          donneesJeu: {
+                            ...editingJeu.donneesJeu,
+                            decalage: shift,
+                            phraseChiffree: cipherCaesar(newReponse, shift)
+                          }
+                        });
+                      }}
                       placeholder="Ex: HIBOU"
                       className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none uppercase"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-primary block mb-1">Décalage (+N)</label>
+                    <label className="text-xs font-medium text-primary block mb-1">Décalage (+/- N)</label>
                     <input
                       type="number"
-                      min="1" max="25"
-                      value={editingJeu.donneesJeu?.decalage || 3}
-                      onChange={(e) => setEditingJeu({
-                        ...editingJeu,
-                        donneesJeu: { ...editingJeu.donneesJeu, decalage: parseInt(e.target.value) || 3 },
-                      })}
+                      min="-25" max="25"
+                      value={editingJeu.donneesJeu?.decalage ?? 3}
+                      onChange={(e) => {
+                        const shift = parseInt(e.target.value) || 0;
+                        setEditingJeu({
+                          ...editingJeu,
+                          donneesJeu: { 
+                            ...editingJeu.donneesJeu, 
+                            decalage: shift,
+                            phraseChiffree: cipherCaesar(editingJeu.reponse || '', shift)
+                          },
+                        });
+                      }}
                       className="w-20 px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Aperçu du mot chiffré (Affiché au joueur)</label>
+                  <input
+                    type="text"
+                    value={cipherCaesar(editingJeu.reponse || '', editingJeu.donneesJeu?.decalage ?? 3)}
+                    readOnly
+                    className="w-full px-3 py-1.5 border border-input rounded bg-muted/50 text-sm outline-none text-primary font-mono cursor-not-allowed"
+                  />
                 </div>
               </div>
             )}

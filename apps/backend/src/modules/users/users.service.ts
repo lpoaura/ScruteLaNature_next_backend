@@ -119,6 +119,13 @@ export class UsersService {
   async findOne(id: string) {
     const user = await this.databaseService.user.findUnique({
       where: { id },
+      include: {
+        badges: {
+          include: {
+            badge: true,
+          },
+        },
+      },
     });
 
     if (!user) return null; // Retourner null est intentionnel (auth utilise ce cas)
