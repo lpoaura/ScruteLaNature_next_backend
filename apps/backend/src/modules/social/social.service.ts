@@ -23,6 +23,29 @@ const PUBLIC_USER_SELECT = {
 export class SocialService {
   constructor(private readonly db: DatabaseService) {}
 
+  // ── 0. Rechercher un utilisateur ──────────────────────────────────────────
+  
+  async searchUsers(currentUserId: string, query: string) {
+    if (!query || query.length < 2) return [];
+    
+    return this.db.user.findMany({
+      where: {
+        pseudo: {
+          contains: query,
+          mode: 'insensitive',
+        },
+        // Exclure l'utilisateur courant et les invités
+        id: { not: currentUserId },
+        isGuest: false,
+      },
+      select: {
+        id: true,
+        pseudo: true,
+      },
+      take: 10,
+    });
+  }
+
   // ── 1. Envoyer une demande d'ami ──────────────────────────────────────────
 
   async sendFriendRequest(requesterId: string, dto: SendFriendRequestDto) {

@@ -25,6 +25,20 @@ import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { SendParcoursInvitationDto } from './dto/send-parcours-invitation.dto';
 
+@ApiTags('Social — Recherche Utilisateurs')
+@ApiBearerAuth()
+@Controller('social/users')
+export class UsersSearchController {
+  constructor(private readonly socialService: SocialService) {}
+
+  @Get('search')
+  @ApiOperation({ summary: 'Rechercher des utilisateurs par pseudo' })
+  @ApiResponse({ status: 200, description: 'Liste des utilisateurs correspondants.' })
+  searchUsers(@Query('q') query: string, @Request() req: any) {
+    return this.socialService.searchUsers(req.user.id, query);
+  }
+}
+
 @ApiTags('Social — Amis')
 @ApiBearerAuth()
 @Controller('social/friends')
