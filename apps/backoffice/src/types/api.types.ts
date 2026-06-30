@@ -114,7 +114,10 @@ export interface Jeu {
   audioUrl: string | null;
   imageUrl: string | null;
   donneesJeu: any | null;
-  reponse: string | null;
+  reponse?: string;
+  maxAttempts?: number;
+  messageEchec?: string;
+  isBlocking?: boolean;
 }
 
 // ── Stats investisseurs ───────────────────────────────────────────────────────

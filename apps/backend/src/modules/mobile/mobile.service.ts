@@ -103,6 +103,21 @@ export class MobileService {
                 });
               }
             }
+            
+            // Recalculer le niveau (incrémentation et remise à zéro des points)
+            const updatedUser = await tx.user.findUnique({ where: { id: userId } });
+            if (updatedUser && updatedUser.totalPoints >= 1000) {
+              const levelsGained = Math.floor(updatedUser.totalPoints / 1000);
+              const remainingPoints = updatedUser.totalPoints % 1000;
+              
+              await tx.user.update({
+                where: { id: userId },
+                data: { 
+                  level: updatedUser.level + levelsGained,
+                  totalPoints: remainingPoints
+                },
+              });
+            }
           });
 
           results.parcoursCompleted.synced++;

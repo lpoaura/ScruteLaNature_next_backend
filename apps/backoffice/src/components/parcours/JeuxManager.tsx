@@ -677,6 +677,53 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               )}
             </div>
 
+            {/* ── Paramètres globaux du jeu ── */}
+            <div className="bg-muted/30 border border-border rounded-md p-3 space-y-4">
+              <h4 className="text-sm font-semibold text-primary">Options du jeu</h4>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Nombre de tentatives autorisées
+                  </label>
+                  <input
+                    type="number"
+                    min="1" max="10"
+                    value={editingJeu.maxAttempts ?? 2}
+                    onChange={(e) => setEditingJeu({ ...editingJeu, maxAttempts: parseInt(e.target.value) || 2 })}
+                    className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                  />
+                </div>
+                
+                <div className="flex-1 flex flex-col justify-center pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingJeu.isBlocking ?? false}
+                      onChange={(e) => setEditingJeu({ ...editingJeu, isBlocking: e.target.checked })}
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span className="text-sm font-medium text-foreground">Étape obligatoire (Bloquant)</span>
+                  </label>
+                  <p className="text-[10px] text-muted-foreground mt-1 ml-6">Le joueur ne peut pas passer sans avoir essayé.</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Message en cas d&apos;échec (Optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={editingJeu.messageEchec || ''}
+                  onChange={(e) => setEditingJeu({ ...editingJeu, messageEchec: e.target.value })}
+                  placeholder="Oups ! Ce n'était pas la bonne réponse."
+                  className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Affiché si le joueur épuise toutes ses tentatives.</p>
+              </div>
+            </div>
+
             {/* ── Image & Audio d'illustration ── */}
             <div className="flex gap-4 pt-2">
               <div className="flex-1">

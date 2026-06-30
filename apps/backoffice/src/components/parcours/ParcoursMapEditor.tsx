@@ -143,17 +143,29 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
     
     startTransition(async () => {
       try {
+        let newEtapesList = [...etapes];
+
         if ('id' in editingEtape && editingEtape.id) {
           const { order, title, latitude, longitude, parcoursId } = editingEtape;
           const updated = await updateEtape(editingEtape.id, { order, title, latitude, longitude, parcoursId });
-          setEtapes(prev => prev.map(e => e.id === updated.id ? updated : e));
+          newEtapesList = newEtapesList.map(e => e.id === updated.id ? updated : e);
+          setEtapes(newEtapesList);
         } else {
           // Create
           const created = await createEtape(editingEtape);
-          setEtapes(prev => [...prev, created]);
+          newEtapesList = [...newEtapesList, created];
+          setEtapes(newEtapesList);
         }
         setEditingEtape(null);
         setSelectedLocation(null);
+
+        // Régénérer automatiquement le tracé si c'était un tracé auto
+        const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+        
+        if (isAutoRoute && newEtapesList.length >= 2) {
+          generateRouteForEtapes(newEtapesList, true);
+        }
+
       } catch (err) {
         console.error(err);
         alert("Erreur lors de l'enregistrement de l'étape");
@@ -168,9 +180,20 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
     startTransition(async () => {
       try {
         await deleteEtape(id);
-        setEtapes(prev => prev.filter(e => e.id !== id));
+        const filteredEtapes = etapes.filter(e => e.id !== id);
+        setEtapes(filteredEtapes);
         if (editingEtape && 'id' in editingEtape && editingEtape.id === id) {
           setEditingEtape(null);
+        }
+
+        // Régénérer automatiquement le tracé si c'était un tracé auto
+        const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+        if (isAutoRoute && filteredEtapes.length >= 2) {
+          generateRouteForEtapes(filteredEtapes, true);
+        } else if (isAutoRoute && filteredEtapes.length < 2) {
+          // S'il reste moins de 2 étapes, le tracé auto n'est plus valide, on le supprime
+          await updateParcours(parcours.id, { pathGeoJSON: null });
+          setPathGeoJSON(null);
         }
       } catch (err) {
         console.error(err);
