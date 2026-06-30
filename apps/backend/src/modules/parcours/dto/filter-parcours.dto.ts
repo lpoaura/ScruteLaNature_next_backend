@@ -14,6 +14,11 @@ export class FilterParcoursDto {
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
 
+  @ApiPropertyOptional({ enum: Difficulty, description: 'Filtrer par accessibilité' })
+  @IsOptional()
+  @IsEnum(Difficulty)
+  accessibility?: Difficulty;
+
   @ApiPropertyOptional({ description: 'Filtrer par zonageId' })
   @IsOptional()
   @IsString()

@@ -70,6 +70,7 @@ export interface Parcours {
   durationMin: number | null;
   distanceKm: number | null;
   difficulty: string | null;
+  accessibility: string | null;
   isPMRFriendly: boolean;
   isChildFriendly: boolean;
   isMentalHandicapFriendly: boolean;
@@ -113,7 +114,10 @@ export interface Jeu {
   audioUrl: string | null;
   imageUrl: string | null;
   donneesJeu: any | null;
-  reponse: string | null;
+  reponse?: string;
+  maxAttempts?: number;
+  messageEchec?: string;
+  isBlocking?: boolean;
 }
 
 // ── Stats investisseurs ───────────────────────────────────────────────────────

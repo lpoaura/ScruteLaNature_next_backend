@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsEnum,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { JeuType } from '@prisma/client';
 
@@ -56,4 +57,19 @@ export class CreateJeuDto {
   @IsString()
   @IsOptional()
   reponse?: string;
+
+  @ApiPropertyOptional({ description: 'Nombre maximum de tentatives' })
+  @IsInt()
+  @IsOptional()
+  maxAttempts?: number;
+
+  @ApiPropertyOptional({ description: 'Message affiché en cas déchec total' })
+  @IsString()
+  @IsOptional()
+  messageEchec?: string;
+
+  @ApiPropertyOptional({ description: 'Le jeu bloque-t-il la progression sil nest pas réussi ?' })
+  @IsBoolean()
+  @IsOptional()
+  isBlocking?: boolean;
 }

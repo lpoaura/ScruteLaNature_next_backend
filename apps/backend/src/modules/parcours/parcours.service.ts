@@ -86,6 +86,7 @@ export class ParcoursService {
       include: {
         zonage: true,
         organisme: true,
+        badge: true,
         etapes: {
           include: { jeux: { orderBy: { order: 'asc' } } },
           orderBy: { order: 'asc' },

@@ -92,6 +92,31 @@ export class MobileService {
                   co2Saved: { increment: event.co2Saved ?? 0 },
                 },
               });
+              
+              // Attribution du badge si le parcours en a un
+              const parcours = await tx.parcours.findUnique({ where: { id: event.parcoursId } });
+              if (parcours?.badgeId) {
+                await tx.userBadge.upsert({
+                  where: { userId_badgeId: { userId, badgeId: parcours.badgeId } },
+                  create: { userId, badgeId: parcours.badgeId },
+                  update: {},
+                });
+              }
+            }
+            
+            // Recalculer le niveau (incrémentation et remise à zéro des points)
+            const updatedUser = await tx.user.findUnique({ where: { id: userId } });
+            if (updatedUser && updatedUser.totalPoints >= 1000) {
+              const levelsGained = Math.floor(updatedUser.totalPoints / 1000);
+              const remainingPoints = updatedUser.totalPoints % 1000;
+              
+              await tx.user.update({
+                where: { id: userId },
+                data: { 
+                  level: updatedUser.level + levelsGained,
+                  totalPoints: remainingPoints
+                },
+              });
             }
           });
 
@@ -232,6 +257,15 @@ export class MobileService {
     // Les URLs (coverImage, imageUrl, audioUrl) sont généralement déjà absolues 
     // dans la base (car générées par MediasService à l'upload).
     return parcours;
+  }
+
+  /**
+   * Récupère la liste de tous les badges du jeu pour affichage côté mobile
+   */
+  async getBadges() {
+    return this.db.badge.findMany({
+      orderBy: { name: 'asc' },
+    });
   }
 
   /**

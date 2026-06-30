@@ -36,7 +36,12 @@ export class CreateParcoursDto {
   @IsEnum(Difficulty)
   difficulty: Difficulty;
 
-  @ApiProperty({ example: 3.5, description: 'Distance en kilomètres' })
+  @ApiProperty({ enum: Difficulty, description: 'Accessibility level of the parcours', required: false })
+  @IsOptional()
+  @IsEnum(Difficulty)
+  accessibility?: Difficulty;
+
+  @ApiProperty({ description: 'Distance in km', example: 5.5 })
   @IsNumber()
   @Min(0.1)
   @Max(100)

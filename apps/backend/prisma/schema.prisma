@@ -107,14 +107,16 @@ model User {
   verificationTokens VerificationToken[]
 
   // Relations (LPO)
-  sentRequests     Friendship[]       @relation("SentRequests")
-  receivedRequests Friendship[]       @relation("ReceivedRequests")
-  observations     Observation[]
-  badges           UserBadge[]
-  parcoursDone     UserParcours[]
-  reviews          Review[]
-  parcoursCreated  Parcours[]         @relation("ParcoursCreatedBy")
-  downloads        ParcoursDownload[] @relation("UserDownloads")
+  sentRequests        Friendship[]         @relation("SentRequests")
+  receivedRequests    Friendship[]         @relation("ReceivedRequests")
+  observations        Observation[]
+  badges              UserBadge[]
+  parcoursDone        UserParcours[]
+  reviews             Review[]
+  parcoursCreated     Parcours[]           @relation("ParcoursCreatedBy")
+  downloads           ParcoursDownload[]   @relation("UserDownloads")
+  sentInvitations     ParcoursInvitation[] @relation("SentInvitations")
+  receivedInvitations ParcoursInvitation[] @relation("ReceivedInvitations")
 
   @@index([organismeId])
   @@map("users")
@@ -194,6 +196,30 @@ model Friendship {
 }
 
 // ======================================================
+//  INVITATIONS DE PARCOURS
+// ======================================================
+
+model ParcoursInvitation {
+  id     String           @id @default(uuid())
+  status FriendshipStatus @default(PENDING)
+
+  senderId   String
+  receiverId String
+  parcoursId String
+
+  sender   User     @relation("SentInvitations", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User     @relation("ReceivedInvitations", fields: [receiverId], references: [id], onDelete: Cascade)
+  parcours Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([receiverId])
+  @@index([parcoursId])
+  @@map("parcours_invitations")
+}
+
+// ======================================================
 //  COMMUNES & ORGANISMES
 // ======================================================
 
@@ -224,14 +250,15 @@ model Zonage {
 // ======================================================
 
 model Parcours {
-  id          String        @id @default(uuid())
-  title       String
-  description String        @db.Text
-  difficulty  Difficulty
-  distanceKm  Float
-  durationMin Int
-  coverImage  String
-  status      PublishStatus @default(DRAFT)
+  id            String        @id @default(uuid())
+  title         String
+  description   String        @db.Text
+  difficulty    Difficulty
+  accessibility Difficulty    @default(FACILE)
+  distanceKm    Float
+  durationMin   Int
+  coverImage    String
+  status        PublishStatus @default(DRAFT)
 
   pathGeoJSON String? @db.Text
 
@@ -246,6 +273,8 @@ model Parcours {
 
   badgeId String?
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+
+  invitations ParcoursInvitation[]
 
   isPMRFriendly            Boolean @default(false)
   isChildFriendly          Boolean @default(false)
@@ -300,6 +329,10 @@ model Jeu {
   imageUrl    String?
   donneesJeu  Json?
   reponse     String?
+
+  maxAttempts  Int     @default(2)
+  messageEchec String? @db.Text
+  isBlocking   Boolean @default(false)
 
   @@index([etapeId])
   @@map("jeux")

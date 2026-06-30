@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { UserPlus, Trash2, Loader2, Users, CheckCircle2, Clock, Search, X } from 'lucide-react';
+import { UserPlus, Trash2, Loader2, Users, CheckCircle2, Clock, Search, X, Wand2 } from 'lucide-react';
 import { getTeam, createTeamMember, deleteTeamMember, type TeamMember, type CreateTeamMemberDto } from '@/src/services/users.service';
 import { getOrganismes, type OrganismeDetail } from '@/src/services/organismes.service';
 import { useAuth } from '@/src/hooks/use-auth';
@@ -65,6 +65,23 @@ export default function EquipeClient() {
     role: 'EDITOR',
     organismeId: '',
   });
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let pass = '';
+    // Ensure requirements
+    pass += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+    pass += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+    pass += '0123456789'[Math.floor(Math.random() * 10)];
+    pass += '!@#$%^&*'[(Math.floor(Math.random() * 8))];
+    
+    for (let i = 0; i < 8; i++) {
+      pass += chars[Math.floor(Math.random() * chars.length)];
+    }
+    // Shuffle
+    pass = pass.split('').sort(() => 0.5 - Math.random()).join('');
+    setForm((f) => ({ ...f, password: pass }));
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -237,7 +254,12 @@ export default function EquipeClient() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Mot de passe temporaire <span className="text-destructive">*</span></label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Mot de passe temporaire <span className="text-destructive">*</span></label>
+                <button type="button" onClick={generatePassword} className="text-xs text-primary flex items-center gap-1 hover:underline">
+                  <Wand2 className="h-3 w-3" /> Générer
+                </button>
+              </div>
               <input type="text" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 placeholder="Min 8 car., maj, chiffre, spécial"
                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm outline-none focus:ring-2 focus:ring-primary" />
