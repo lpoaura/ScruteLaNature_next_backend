@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { CreateParcoursDto } from './dto/create-parcours.dto';
@@ -214,6 +215,24 @@ export class ParcoursService {
       }
     }
 
+    // Validation stricte lors de la publication
+    if (dataToUpdate.status === PublishStatus.PUBLISHED || dataToUpdate.status === PublishStatus.PENDING_REVIEW) {
+      const parcoursWithEtapes = await this.db.parcours.findUnique({
+        where: { id },
+        include: { etapes: { include: { jeux: true } } }
+      });
+      if (parcoursWithEtapes) {
+        if (parcoursWithEtapes.etapes.length === 0) {
+          throw new BadRequestException(`Impossible de publier : Le parcours n'a aucune étape.`);
+        }
+        for (const etape of parcoursWithEtapes.etapes) {
+          if (!etape.jeux || etape.jeux.length === 0) {
+            throw new BadRequestException(`Impossible de publier : L'étape "${etape.title}" n'a aucun contenu (Mini-jeu ou Info). Chaque étape doit avoir au moins un élément.`);
+          }
+        }
+      }
+    }
+
     const updated = await this.db.parcours.update({
       where: { id },
       data: dataToUpdate,
@@ -239,6 +258,21 @@ export class ParcoursService {
     }
     if (existing.status === PublishStatus.PENDING_REVIEW) {
       throw new ForbiddenException('Une demande de publication est déjà en cours.');
+    }
+
+    const parcoursWithEtapes = await this.db.parcours.findUnique({
+      where: { id },
+      include: { etapes: { include: { jeux: true } } }
+    });
+    if (parcoursWithEtapes) {
+      if (parcoursWithEtapes.etapes.length === 0) {
+        throw new BadRequestException(`Impossible de soumettre : Le parcours n'a aucune étape.`);
+      }
+      for (const etape of parcoursWithEtapes.etapes) {
+        if (!etape.jeux || etape.jeux.length === 0) {
+          throw new BadRequestException(`Impossible de soumettre : L'étape "${etape.title}" n'a aucun contenu (Mini-jeu ou Info). Chaque étape doit avoir au moins un élément.`);
+        }
+      }
     }
 
     return this.db.parcours.update({
