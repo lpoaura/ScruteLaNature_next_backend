@@ -270,6 +270,13 @@ export class MobileService {
    */
   async getBadges() {
     return this.db.badge.findMany({
+      where: {
+        parcours: {
+          some: {
+            status: PublishStatus.PUBLISHED,
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }
