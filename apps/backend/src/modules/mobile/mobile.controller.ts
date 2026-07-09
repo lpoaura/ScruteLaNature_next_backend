@@ -67,6 +67,18 @@ export class MobileController {
     return this.mobileService.downloadParcours(id);
   }
 
+  @Get('parcours/:id/preview')
+  @ApiOperation({
+    summary: 'Prévisualiser un parcours (Mode Test)',
+    description: 'Retourne la structure complète du parcours même s\'il n\'est pas publié. Destiné au test depuis le back-office.',
+  })
+  @ApiParam({ name: 'id', description: 'ID du parcours' })
+  @ApiResponse({ status: 200, description: 'Le parcours complet.' })
+  @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
+  previewParcours(@Param('id') id: string) {
+    return this.mobileService.downloadParcours(id, true);
+  }
+
   @Get('badges')
   @ApiOperation({
     summary: 'Récupérer tous les badges existants',
