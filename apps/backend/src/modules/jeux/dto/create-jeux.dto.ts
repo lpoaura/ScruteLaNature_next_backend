@@ -33,6 +33,11 @@ export class CreateJeuDto {
   @IsNotEmpty()
   question: string;
 
+  @ApiPropertyOptional({ description: 'Le titre personnalisé du jeu' })
+  @IsString()
+  @IsOptional()
+  titre?: string;
+
   @ApiPropertyOptional({ description: 'Explication affichée après la réponse' })
   @IsString()
   @IsOptional()

@@ -224,11 +224,11 @@ export class MobileService {
    * tous ses jeux, son organisme et sa zonage, prêt à être téléchargé
    * pour le mode hors-ligne de l'application mobile.
    */
-  async downloadParcours(id: string) {
+  async downloadParcours(id: string, isPreview = false) {
     const parcours = await this.db.parcours.findFirst({
       where: {
         id,
-        status: PublishStatus.PUBLISHED,
+        ...(isPreview ? {} : { status: PublishStatus.PUBLISHED }),
       },
       include: {
         badge: true,
@@ -253,6 +253,12 @@ export class MobileService {
       throw new NotFoundException('Parcours introuvable ou non publié');
     }
 
+    // Filtrer les étapes vides pour ne pas faire crasher l'application mobile
+    // si un Super Admin ajoute une étape sans la remplir sur un parcours déjà publié.
+    if (parcours.etapes) {
+      parcours.etapes = parcours.etapes.filter((etape) => etape.jeux && etape.jeux.length > 0);
+    }
+
     // Le backend renvoie tel quel. 
     // Les URLs (coverImage, imageUrl, audioUrl) sont généralement déjà absolues 
     // dans la base (car générées par MediasService à l'upload).
@@ -264,6 +270,13 @@ export class MobileService {
    */
   async getBadges() {
     return this.db.badge.findMany({
+      where: {
+        parcours: {
+          some: {
+            status: PublishStatus.PUBLISHED,
+          },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }

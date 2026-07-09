@@ -108,6 +108,7 @@ export interface Jeu {
   id: string;
   etapeId: string;
   order: number;
+  titre?: string;
   type: JeuType;
   question: string;
   explication: string | null;

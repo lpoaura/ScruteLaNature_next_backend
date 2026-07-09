@@ -386,6 +386,20 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               </select>
             </div>
 
+            {/* Titre personnalisé */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                Titre personnalisé (Optionnel)
+              </label>
+              <input
+                type="text"
+                value={editingJeu.titre || ''}
+                onChange={(e) => setEditingJeu({ ...editingJeu, titre: e.target.value })}
+                placeholder="Ex: Attention Spéciale ! (Par défaut: 'Le saviez-vous ?' ou nom du jeu)"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none"
+              />
+            </div>
+
             {/* Question */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">

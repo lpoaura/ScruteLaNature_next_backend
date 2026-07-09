@@ -323,6 +323,7 @@ model Jeu {
 
   order       Int
   type        JeuType
+  titre       String? @db.Text
   question    String  @db.Text
   explication String? @db.Text
   audioUrl    String?

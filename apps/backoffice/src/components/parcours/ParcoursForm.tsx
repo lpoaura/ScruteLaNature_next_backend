@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload, SendHorizonal, Lock } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload, SendHorizonal, Lock, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 import { createParcours, updateParcours, requestPublishParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
@@ -15,6 +15,7 @@ import type { Media } from '@/src/services/medias.service';
 import { cn } from '@/lib/utils';
 import ParcoursMapEditor from './ParcoursMapEditor';
 import MediaGalleryModal from './MediaGalleryModal';
+import MobileTestModal from './MobileTestModal';
 import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
 import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 
@@ -60,6 +61,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   const [error, setError] = useState<string | null>(null);
   const [publishRequested, setPublishRequested] = useState(false);
   const [isRequestingPublish, setIsRequestingPublish] = useState(false);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   const [hasBadge, setHasBadge] = useState<boolean>(!!initialData?.badge);
   const [badgeData, setBadgeData] = useState({
@@ -297,15 +299,27 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
           </div>
         )}
         {activeTab === 'info' && (
-          <button
-            type="submit"
-            form="parcours-form"
-            disabled={isPending || isLockedForEdit}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Enregistrer
-          </button>
+          <div className="flex items-center gap-3">
+            {isEdit && initialData && (
+              <button
+                type="button"
+                onClick={() => setIsTestModalOpen(true)}
+                className="flex items-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors"
+              >
+                <Smartphone className="h-4 w-4" />
+                Test Mobile
+              </button>
+            )}
+            <button
+              type="submit"
+              form="parcours-form"
+              disabled={isPending || isLockedForEdit}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Enregistrer
+            </button>
+          </div>
         )}
       </div>
 
@@ -635,6 +649,15 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
               setBadgeData(prev => ({ ...prev, imageUrl: url }));
             }
           }}
+        />
+      )}
+
+      {/* Modal de Test Mobile */}
+      {isEdit && initialData && (
+        <MobileTestModal 
+          isOpen={isTestModalOpen}
+          onClose={() => setIsTestModalOpen(false)}
+          parcoursId={initialData.id}
         />
       )}
     </>
