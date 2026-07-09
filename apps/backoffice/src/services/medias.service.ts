@@ -19,6 +19,7 @@ export interface MediasQuery {
   page?: number;
   limit?: number;
   type?: 'image' | 'audio' | 'gpx';
+  sortBy?: 'date' | 'name';
 }
 
 /**
@@ -29,6 +30,7 @@ export async function getMedias(query?: MediasQuery): Promise<PaginatedMedias> {
   if (query?.page)  params.set('page',  String(query.page));
   if (query?.limit) params.set('limit', String(query.limit));
   if (query?.type)  params.set('type',  query.type);
+  if (query?.sortBy) params.set('sortBy', query.sortBy);
   const q = params.toString() ? `?${params.toString()}` : '';
   return apiClient<PaginatedMedias>(`/medias${q}`);
 }

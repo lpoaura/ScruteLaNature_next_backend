@@ -22,21 +22,22 @@ export default function MediasClient() {
   const [meta, setMeta]           = useState({ total: 0, page: 1, totalPages: 1 });
   const [page, setPage]           = useState(1);
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [sortBy, setSortBy]       = useState<'date' | 'name'>('date');
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset page à 1 quand on change d'onglet
-  useEffect(() => { setPage(1); }, [activeTab]);
+  // Reset page à 1 quand on change d'onglet ou de tri
+  useEffect(() => { setPage(1); }, [activeTab, sortBy]);
 
   const fetchMedias = useCallback(() => {
     setIsLoading(true);
     const typeParam = activeTab === 'image' || activeTab === 'audio' || activeTab === 'gpx'
       ? activeTab
       : undefined;
-    getMedias({ page, limit: LIMIT, type: typeParam })
+    getMedias({ page, limit: LIMIT, type: typeParam, sortBy })
       .then((res) => {
         // Pour l'onglet "unused", on filtre côté client (le backend ne gère pas ce filtre)
         const data = activeTab === 'unused' ? res.data.filter(m => !m.isUsed) : res.data;
@@ -45,7 +46,7 @@ export default function MediasClient() {
       })
       .catch(() => setError('Impossible de charger les médias.'))
       .finally(() => setIsLoading(false));
-  }, [page, activeTab]);
+  }, [page, activeTab, sortBy]);
 
   useEffect(() => { fetchMedias(); }, [fetchMedias]);
 
@@ -151,9 +152,19 @@ export default function MediasClient() {
             </button>
           ))}
         </div>
-        <span className="text-sm text-muted-foreground shrink-0 ml-4">
-          {isLoading ? '' : `${meta.total} fichier${meta.total > 1 ? 's' : ''}`}
-        </span>
+        <div className="flex items-center gap-4 shrink-0 ml-4">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
+            className="pl-3 pr-8 py-1.5 text-sm border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+          >
+            <option value="date">Plus récents</option>
+            <option value="name">Alphabétique</option>
+          </select>
+          <span className="text-sm text-muted-foreground hidden sm:inline">
+            {isLoading ? '' : `${meta.total} fichier${meta.total > 1 ? 's' : ''}`}
+          </span>
+        </div>
       </div>
 
       {/* Grille */}

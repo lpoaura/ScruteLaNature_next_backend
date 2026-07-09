@@ -74,13 +74,15 @@ export class MediasController {
   @ApiQuery({ name: 'page',  required: false, type: Number, description: 'Page (défaut: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items par page (défaut: 24)' })
   @ApiQuery({ name: 'type',  required: false, enum: ['image', 'audio', 'gpx'], description: 'Filtrer par type' })
+  @ApiQuery({ name: 'sortBy', required: false, enum: ['date', 'name'], description: 'Tri par date ou par nom' })
   @ApiResponse({ status: 200, description: 'Liste paginée des fichiers.' })
   findAll(
     @Query('page')  page  = '1',
     @Query('limit') limit = '24',
     @Query('type')  type?: string,
+    @Query('sortBy') sortBy?: string,
   ) {
-    return this.mediasService.findAllFiles(+page, +limit, type);
+    return this.mediasService.findAllFiles(+page, +limit, type, sortBy);
   }
 
   @Delete(':filename')
