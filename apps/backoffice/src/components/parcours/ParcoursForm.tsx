@@ -33,7 +33,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   const isAdminOnly = role === 'ADMIN';
 
   const isPublished = initialData?.status === 'PUBLISHED';
-  const isLockedForEdit = isPublished && !isSuperAdmin;
+  const isLockedForEdit = isPublished && isEditor;
 
   // Données de base de données pour les selects
   const [zonages, setZonages] = useState<Zonage[]>([]);
@@ -451,7 +451,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                       >
                         <option value="DRAFT">Brouillon (invisible)</option>
                         <option value="PENDING_REVIEW">En attente de validation</option>
-                        {isSuperAdmin && <option value="PUBLISHED">Publié (visible dans l'app)</option>}
+                        <option value="PUBLISHED">Publié (visible dans l'app)</option>
                         <option value="ARCHIVED">Archivé</option>
                       </select>
                     )}

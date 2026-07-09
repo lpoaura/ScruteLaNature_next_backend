@@ -174,9 +174,9 @@ export class ParcoursService {
   ) {
     const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
 
-    // Un parcours publié ne peut pas être modifié par un ADMIN ou EDITOR
-    if (existing.status === PublishStatus.PUBLISHED && userRole !== Role.SUPER_ADMIN) {
-      throw new ForbiddenException('Un parcours publié ne peut pas être modifié. Contactez un Super Admin.');
+    // Un parcours publié ne peut pas être modifié par un EDITOR
+    if (existing.status === PublishStatus.PUBLISHED && userRole === Role.EDITOR) {
+      throw new ForbiddenException('Un parcours publié ne peut pas être modifié. Contactez un Admin.');
     }
 
     // Un EDITOR ne peut jamais toucher au statut
@@ -184,10 +184,7 @@ export class ParcoursService {
       throw new ForbiddenException('Les éditeurs ne peuvent pas modifier le statut d\'un parcours.');
     }
 
-    // Un ADMIN ne peut pas publier directement
-    if (dto.status === PublishStatus.PUBLISHED && userRole === Role.ADMIN) {
-      throw new ForbiddenException('Seul un Super Admin peut publier un parcours.');
-    }
+    // Un ADMIN peut publier directement (suppression de la restriction)
 
     // Exclure le champ status du dto pour EDITOR (double sécurité)
     const { badge, zonageId, ...rawRest } = dto as any;
