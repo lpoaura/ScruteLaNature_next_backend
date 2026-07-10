@@ -424,7 +424,6 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                 <option value="CODE_CAESAR">Code César</option>
                 <option value="CALCUL_PYRAMIDAL">Calcul Pyramidal</option>
                 <option value="PUZZLE">Puzzle (photo à reconstituer)</option>
-                <option value="VALIDATION_LIEU">Validation de Lieu (GPS)</option>
                 <option value="ECO_GESTE">Éco-geste</option>
               </select>
             </div>
