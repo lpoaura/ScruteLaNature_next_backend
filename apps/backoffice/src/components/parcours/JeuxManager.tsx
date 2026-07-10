@@ -87,10 +87,12 @@ function generatePyramid(target: number, levels: number = 4) {
         if (rIdx === 2 && cIdx === 0) return val;
         if (rIdx === 3 && cIdx === 0) return val;
         if (rIdx === 3 && cIdx === 2) return val;
+        if (rIdx === 3 && cIdx === 3) return val; // Un chiffre en plus
       } else {
         if (rIdx === 2 && cIdx === 2) return val;
         if (rIdx === 3 && cIdx === 1) return val;
         if (rIdx === 3 && cIdx === 3) return val;
+        if (rIdx === 3 && cIdx === 0) return val; // Un chiffre en plus
       }
       return null;
     })
