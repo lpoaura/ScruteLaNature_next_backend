@@ -31,6 +31,12 @@ export default function MediaGalleryModal({ type, onSelect, onClose }: MediaGall
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type.startsWith('image/') && file.size > 3 * 1024 * 1024) {
+      alert('L\'image ne doit pas dépasser 3 Mo. Veuillez la compresser.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsUploading(true);
     try {
       // Pour une étape/mini-jeu, on stocke en spécifique pour ne pas polluer la galerie

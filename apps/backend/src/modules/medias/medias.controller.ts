@@ -7,6 +7,7 @@ import {
   Query,
   UploadedFile,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -65,6 +66,19 @@ export class MediasController {
   })
   @ApiResponse({ status: 400, description: 'Type de fichier non supporté ou aucun fichier.' })
   uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Aucun fichier fourni.');
+    }
+    
+    // Vérification de la taille pour les images (3 Mo max)
+    if (file.mimetype.startsWith('image/') && file.size > 3 * 1024 * 1024) {
+      const fs = require('fs');
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+      throw new BadRequestException('L\'image ne doit pas dépasser 3 Mo. Veuillez la compresser.');
+    }
+    
     return this.mediasService.buildUploadResponse(file);
   }
 

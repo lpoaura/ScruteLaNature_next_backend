@@ -25,6 +25,8 @@ import { SocialModule } from './modules/social/social.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { DownloadsModule } from './modules/downloads/downloads.module';
 
+import { HistoryModule } from './modules/history/history.module';
+
 @Module({
   imports: [ 
     ConfigModule.forRoot({ isGlobal: true }),
@@ -68,6 +70,7 @@ import { DownloadsModule } from './modules/downloads/downloads.module';
     SocialModule,
     StatsModule,
     DownloadsModule,
+    HistoryModule,
   ],
   controllers: [AppController],
   providers: [

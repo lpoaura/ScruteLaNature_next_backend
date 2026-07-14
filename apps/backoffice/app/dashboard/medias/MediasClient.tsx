@@ -57,6 +57,7 @@ export default function MediasClient() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (file.type.startsWith('image/') && file.size > 3 * 1024 * 1024) throw new Error(`L'image ${file.name} dépasse 3Mo.`);
         if (file.size > 20 * 1024 * 1024) throw new Error(`Le fichier ${file.name} dépasse 20Mo.`);
         await uploadMedia(file);
       }

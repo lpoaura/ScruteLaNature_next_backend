@@ -94,6 +94,17 @@ export class CreateParcoursDto {
   @IsBoolean()
   isMentalHandicapFriendly?: boolean;
 
+  @ApiPropertyOptional({ example: false, description: 'Active le mode Escape Game' })
+  @IsOptional()
+  @IsBoolean()
+  isEscapeGame?: boolean;
+
+  @ApiPropertyOptional({ example: 60, description: 'Temps limite pour l\'Escape Game en minutes' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  timeLimitMinutes?: number;
+
   @ApiPropertyOptional({ type: CreateBadgeDto, description: 'Badge associé au parcours' })
   @IsOptional()
   @ValidateNested()

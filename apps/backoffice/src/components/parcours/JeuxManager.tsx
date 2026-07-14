@@ -143,6 +143,20 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
 
   const handleSaveJeu = async () => {
     if (!editingJeu) return;
+    
+    // Validation QCM
+    if (editingJeu.type === 'QCM') {
+      const { options, bonneReponseIndex } = editingJeu.donneesJeu || {};
+      if (!options || options.length !== 4 || options.some((opt: string) => !opt || opt.trim() === '')) {
+        alert("Veuillez renseigner les 4 éléments du QCM.");
+        return;
+      }
+      if (bonneReponseIndex === null || bonneReponseIndex === undefined) {
+        alert("Veuillez choisir une bonne réponse parmi les 4 éléments.");
+        return;
+      }
+    }
+
     startTransition(async () => {
       try {
         let payloadToSave = { ...editingJeu };
