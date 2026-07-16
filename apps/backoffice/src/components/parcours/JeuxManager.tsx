@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, X, Edit2, Loader2, Image as ImageIcon, Music, Type 
 import { createJeu, updateJeu, deleteJeu } from '@/src/services/jeux.service';
 import type { Etape, Jeu, JeuType } from '@/src/types/api.types';
 import MediaGalleryModal from './MediaGalleryModal';
+import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
 
 type QcmMode = 'text' | 'image' | 'audio';
 
@@ -461,12 +462,11 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Question ou Texte principal
               </label>
-              <textarea
-                rows={3}
+              <MarkdownEditor
                 value={editingJeu.question || ''}
-                onChange={(e) => setEditingJeu({ ...editingJeu, question: e.target.value })}
+                onChange={(value) => setEditingJeu({ ...editingJeu, question: value })}
                 placeholder="Ex: Quel oiseau voyez-vous ?"
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
+                height="min-h-[120px]"
               />
             </div>
 

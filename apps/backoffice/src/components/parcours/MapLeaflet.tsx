@@ -188,13 +188,14 @@ export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerCl
         zoom={defaultZoom} 
         scrollWheelZoom={true} 
         style={{ height: '100%', width: '100%' }}
-        maxZoom={19}
+        maxZoom={22}
       >
         <MapSearch />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
+          maxZoom={22}
+          maxNativeZoom={19}
         />
         
         <MapEvents onMapClick={onMapClick} />

@@ -103,11 +103,12 @@ Password : LpoEditor123!
 | **Mobile — Search** | `GET /mobile/parcours/search` (zonage + accessibilité PMR/enfants) |
 | **Mobile — Nearby** | `GET /mobile/parcours/nearby` (Haversine, rayon configurable) |
 
-### ✅ Sprint 3 — Contenu & Mode Hors-Ligne
+### ✅ Sprint 3 — Contenu, Mode Hors-Ligne & Escape Game
 | Module | Routes principales |
 |---|---|
 | **Étapes** | `GET/POST/PATCH/DELETE /admin/etapes` (cloisonné par organisme) |
 | **Jeux** | `GET/POST/PATCH/DELETE /admin/jeux` (types : QCM, texte, photo…) |
+| **Parcours** | Mode Escape Game : Ajout des attributs chronométrés sur les parcours (`isEscapeGame`, `timeLimitMinutes`) |
 | **Mobile — Download** | `GET /mobile/parcours/:id/download` (payload complet pour SQLite offline) |
 
 ### ✅ Sprint 4 — Social, Synchronisation & Statistiques
