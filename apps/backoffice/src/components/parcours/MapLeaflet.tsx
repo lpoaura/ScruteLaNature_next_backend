@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, GeoJSON } from 'react-leaflet';
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, GeoJSON, useMap } from 'react-leaflet';
+import { Search, Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Etape } from '@/src/types/api.types';
@@ -98,8 +99,6 @@ function MapEvents({ onMapClick }: { onMapClick?: (lat: number, lng: number) => 
   return null;
 }
 
-import { useMap } from 'react-leaflet';
-
 function FitBounds({ geoJSON }: { geoJSON: any }) {
   const map = useMap();
   useEffect(() => {
@@ -118,13 +117,69 @@ function FitBounds({ geoJSON }: { geoJSON: any }) {
   return null;
 }
 
+function MapSearch() {
+  const map = useMap();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setResults(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  return (
+    <div className="absolute top-2 right-2 z-[400] w-64 bg-background rounded-md shadow-md border border-border">
+      <div className="flex items-center p-2">
+        <input 
+          type="text" 
+          value={query} 
+          onChange={(e) => setQuery(e.target.value)} 
+          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          placeholder="Rechercher un lieu..." 
+          className="flex-1 bg-transparent text-sm outline-none px-2 text-foreground"
+        />
+        <button onClick={handleSearch} className="text-muted-foreground hover:text-foreground">
+          {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+        </button>
+      </div>
+      {results.length > 0 && (
+        <ul className="max-h-48 overflow-y-auto border-t border-border bg-background">
+          {results.map((r, i) => (
+            <li 
+              key={i} 
+              className="px-3 py-2 text-xs cursor-pointer hover:bg-muted text-foreground border-b border-border last:border-b-0"
+              onClick={() => {
+                map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 16);
+                setResults([]);
+                setQuery('');
+              }}
+            >
+              {r.display_name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerClick, activeEtapeId }: MapLeafletProps) {
   // Center map on the first etape, or a default location (e.g., center of France)
   const defaultCenter: [number, number] = etapes.length > 0 
     ? [etapes[0].latitude, etapes[0].longitude] 
     : [46.603354, 1.888334];
     
-  const defaultZoom = etapes.length > 0 ? 14 : 6;
+  const defaultZoom = etapes.length > 0 ? 16 : 10;
 
   return (
     <div className="h-[500px] w-full rounded-xl overflow-hidden border border-border relative z-0">
@@ -133,10 +188,14 @@ export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerCl
         zoom={defaultZoom} 
         scrollWheelZoom={true} 
         style={{ height: '100%', width: '100%' }}
+        maxZoom={22}
       >
+        <MapSearch />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={22}
+          maxNativeZoom={19}
         />
         
         <MapEvents onMapClick={onMapClick} />

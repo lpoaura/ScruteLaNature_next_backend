@@ -93,7 +93,8 @@ export default function ParcoursClient() {
   const filteredParcours = useMemo(() => {
     if (!debouncedSearch) return parcoursList;
     return parcoursList.filter(p =>
-      p.title.toLowerCase().includes(debouncedSearch.toLowerCase()),
+      p.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (p.zonage?.nom && p.zonage.nom.toLowerCase().includes(debouncedSearch.toLowerCase())),
     );
   }, [parcoursList, debouncedSearch]);
 

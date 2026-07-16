@@ -267,7 +267,7 @@ User → Session[], VerificationToken[], OAuthAccount[]
 User → UserBadge[], UserParcours[], Observation[]*, Review[], Friendship[]
 Organisme → User[] (employes), Parcours[]
 Zonage → Parcours[]
-Parcours → Etape[] → Jeu[]
+Parcours (inclut isEscapeGame, timeLimitMinutes) → Etape[] → Jeu[]
 Parcours → Review[], UserParcours[]
 ```
 

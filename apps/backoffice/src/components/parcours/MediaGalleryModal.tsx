@@ -16,19 +16,26 @@ export default function MediaGalleryModal({ type, onSelect, onClose }: MediaGall
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Fetch generic illustrations — on passe le type au serveur pour filtrer directement
-    getMedias({ type, limit: 200 })
+    getMedias({ type, limit: 200, sortBy })
       .then(res => setMedias(res.data))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
-  }, [type]);
+  }, [type, sortBy]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.type.startsWith('image/') && file.size > 3 * 1024 * 1024) {
+      alert('L\'image ne doit pas dépasser 3 Mo. Veuillez la compresser.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -55,12 +62,20 @@ export default function MediaGalleryModal({ type, onSelect, onClose }: MediaGall
           </h3>
           
           <div className="flex items-center gap-3 w-full sm:w-auto">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
+              className="px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
+            >
+              <option value="date">Plus récents</option>
+              <option value="name">Alphabétique</option>
+            </select>
             <input 
               type="text" 
               placeholder="Rechercher..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 sm:w-64 px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
+              className="flex-1 sm:w-48 px-3 py-1.5 text-sm rounded-md border border-input focus:ring-2 focus:ring-primary outline-none"
             />
             
             <input 

@@ -260,6 +260,10 @@ model Parcours {
   coverImage    String
   status        PublishStatus @default(DRAFT)
 
+  // Mode Escape Game
+  isEscapeGame     Boolean @default(false)
+  timeLimitMinutes Int?
+
   pathGeoJSON String? @db.Text
 
   createdById String?

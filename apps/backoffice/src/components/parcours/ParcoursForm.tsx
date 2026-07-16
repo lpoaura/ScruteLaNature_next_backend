@@ -33,7 +33,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
   const isAdminOnly = role === 'ADMIN';
 
   const isPublished = initialData?.status === 'PUBLISHED';
-  const isLockedForEdit = isPublished && !isSuperAdmin;
+  const isLockedForEdit = isPublished && isEditor;
 
   // Données de base de données pour les selects
   const [zonages, setZonages] = useState<Zonage[]>([]);
@@ -56,6 +56,8 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     isPMRFriendly: initialData?.isPMRFriendly || false,
     isChildFriendly: initialData?.isChildFriendly || false,
     isMentalHandicapFriendly: initialData?.isMentalHandicapFriendly || false,
+    isEscapeGame: (initialData as any)?.isEscapeGame || false,
+    timeLimitMinutes: (initialData as any)?.timeLimitMinutes || 60,
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +188,12 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     const file = e.target.files?.[0];
     if (!file) return;
     
+    if (file.type.startsWith('image/') && file.size > 3 * 1024 * 1024) {
+      alert('L\'image ne doit pas dépasser 3 Mo. Veuillez la compresser.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsUploading(true);
     try {
       const uploaded = await uploadMedia(file, 'specific');
@@ -451,7 +459,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                       >
                         <option value="DRAFT">Brouillon (invisible)</option>
                         <option value="PENDING_REVIEW">En attente de validation</option>
-                        {isSuperAdmin && <option value="PUBLISHED">Publié (visible dans l'app)</option>}
+                        <option value="PUBLISHED">Publié (visible dans l'app)</option>
                         <option value="ARCHIVED">Archivé</option>
                       </select>
                     )}
@@ -626,6 +634,44 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                     />
                     <span className="text-sm text-foreground">Adapté handicap mental</span>
                   </label>
+                </div>
+              </div>
+
+              {/* Mode Escape Game */}
+              <div className={`rounded-xl border p-6 shadow-sm space-y-4 transition-colors ${formData.isEscapeGame ? 'border-amber-500 bg-amber-50/10 dark:bg-amber-950/20' : 'border-border bg-card'}`}>
+                <h2 className="text-lg font-semibold border-b border-border pb-3 flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-amber-500" />
+                  Mode Escape Game
+                </h2>
+                
+                <div className="space-y-4">
+                  <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border border-transparent hover:border-border">
+                    <input
+                      type="checkbox"
+                      name="isEscapeGame"
+                      checked={formData.isEscapeGame}
+                      onChange={handleChange}
+                      className="h-5 w-5 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-foreground block">Activer le mode Escape Game</span>
+                      <span className="text-xs text-muted-foreground">Transforme le parcours en aventure chronométrée stricte.</span>
+                    </div>
+                  </label>
+
+                  {formData.isEscapeGame && (
+                    <div className="pl-11 pr-2 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-sm font-medium mb-2 block">Temps limite (en minutes)</label>
+                      <input
+                        type="number"
+                        name="timeLimitMinutes"
+                        min="1"
+                        value={formData.timeLimitMinutes}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

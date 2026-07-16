@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, X, Edit2, Loader2, Image as ImageIcon, Music, Type 
 import { createJeu, updateJeu, deleteJeu } from '@/src/services/jeux.service';
 import type { Etape, Jeu, JeuType } from '@/src/types/api.types';
 import MediaGalleryModal from './MediaGalleryModal';
+import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
 
 type QcmMode = 'text' | 'image' | 'audio';
 
@@ -13,7 +14,48 @@ interface QcmMediaPicker {
   mediaType: 'image' | 'audio';
 }
 
-function generatePyramid(target: number) {
+function generatePyramid(target: number, levels: number = 4) {
+  if (levels === 3) {
+    if (target < 4) target = 4;
+    
+    let maxB1 = Math.floor((target - 2) / 2);
+    if (maxB1 < 1) maxB1 = 1;
+    let b1 = Math.floor(Math.random() * maxB1) + 1;
+    
+    let maxB0 = target - 2 * b1 - 1;
+    if (maxB0 < 1) maxB0 = 1;
+    let b0 = Math.floor(Math.random() * maxB0) + 1;
+    
+    let b2 = target - 2 * b1 - b0;
+    if (b2 < 1) {
+       b0 = 1; b1 = 1; b2 = target - 3;
+       if (b2 < 1) b2 = 1;
+    }
+    
+    const r2 = [b0, b1, b2];
+    const r1 = [r2[0] + r2[1], r2[1] + r2[2]];
+    const r0 = [r1[0] + r1[1]];
+    
+    const fullGrid = [r0, r1, r2];
+    const pattern = Math.random() > 0.5 ? 1 : 2;
+    
+    const grille = fullGrid.map((row, rIdx) => 
+      row.map((val, cIdx) => {
+        if (rIdx === 0 && cIdx === 0) return val; // Sommet
+        if (pattern === 1) {
+          if (rIdx === 2 && cIdx === 0) return val;
+          if (rIdx === 2 && cIdx === 2) return val;
+        } else {
+          if (rIdx === 1 && cIdx === 0) return val;
+          if (rIdx === 2 && cIdx === 2) return val;
+        }
+        return null;
+      })
+    );
+    return { grille, fullGrid };
+  }
+
+  // Default: 4 levels
   if (target < 8) target = 8;
   
   let b1 = Math.floor(Math.random() * Math.floor((target - 5) / 3)) + 1;
@@ -46,10 +88,12 @@ function generatePyramid(target: number) {
         if (rIdx === 2 && cIdx === 0) return val;
         if (rIdx === 3 && cIdx === 0) return val;
         if (rIdx === 3 && cIdx === 2) return val;
+        if (rIdx === 3 && cIdx === 3) return val; // Un chiffre en plus
       } else {
         if (rIdx === 2 && cIdx === 2) return val;
         if (rIdx === 3 && cIdx === 1) return val;
         if (rIdx === 3 && cIdx === 3) return val;
+        if (rIdx === 3 && cIdx === 0) return val; // Un chiffre en plus
       }
       return null;
     })
@@ -100,6 +144,20 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
 
   const handleSaveJeu = async () => {
     if (!editingJeu) return;
+    
+    // Validation QCM
+    if (editingJeu.type === 'QCM') {
+      const { options, bonneReponseIndex } = editingJeu.donneesJeu || {};
+      if (!options || options.length !== 4 || options.some((opt: string) => !opt || opt.trim() === '')) {
+        alert("Veuillez renseigner les 4 éléments du QCM.");
+        return;
+      }
+      if (bonneReponseIndex === null || bonneReponseIndex === undefined) {
+        alert("Veuillez choisir une bonne réponse parmi les 4 éléments.");
+        return;
+      }
+    }
+
     startTransition(async () => {
       try {
         let payloadToSave = { ...editingJeu };
@@ -381,7 +439,6 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                 <option value="CODE_CAESAR">Code César</option>
                 <option value="CALCUL_PYRAMIDAL">Calcul Pyramidal</option>
                 <option value="PUZZLE">Puzzle (photo à reconstituer)</option>
-                <option value="VALIDATION_LIEU">Validation de Lieu (GPS)</option>
                 <option value="ECO_GESTE">Éco-geste</option>
               </select>
             </div>
@@ -405,12 +462,11 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Question ou Texte principal
               </label>
-              <textarea
-                rows={3}
+              <MarkdownEditor
                 value={editingJeu.question || ''}
-                onChange={(e) => setEditingJeu({ ...editingJeu, question: e.target.value })}
+                onChange={(value) => setEditingJeu({ ...editingJeu, question: value })}
                 placeholder="Ex: Quel oiseau voyez-vous ?"
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
+                height="min-h-[120px]"
               />
             </div>
 
@@ -492,20 +548,34 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
             {/* ── Calcul Pyramidal ── */}
             {editingJeu.type === 'CALCUL_PYRAMIDAL' && (
               <div className="bg-card border border-border rounded-md p-3 space-y-3">
-                <label className="text-xs font-medium text-primary block">Configuration de la pyramide (4 niveaux)</label>
+                <label className="text-xs font-medium text-primary block">Configuration de la pyramide</label>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  Entrez simplement le résultat que vous souhaitez au sommet. Le système générera automatiquement une combinaison valide et masquera les cases nécessaires pour qu'il n'y ait qu'une seule solution.
+                  Choisissez la difficulté (Niveaux) et le résultat cible. Le système générera automatiquement une combinaison valide.
                 </p>
                 <div className="flex gap-4 items-end mb-4">
                   <div className="flex-1">
-                    <label className="text-xs font-medium text-muted-foreground block mb-1">Résultat cible (Sommet) - Min: 8</label>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Difficulté</label>
+                    <select
+                      value={editingJeu.donneesJeu?.levels || 4}
+                      onChange={(e) => setEditingJeu({
+                        ...editingJeu,
+                        donneesJeu: { ...editingJeu.donneesJeu, levels: parseInt(e.target.value) }
+                      })}
+                      className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                    >
+                      <option value={3}>Facile (3 Niveaux)</option>
+                      <option value={4}>Normal (4 Niveaux)</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Résultat cible (Sommet)</label>
                     <input
                       type="number"
-                      min="8"
+                      min={editingJeu.donneesJeu?.levels === 3 ? "4" : "8"}
                       value={editingJeu.donneesJeu?.targetResult || 50}
                       onChange={(e) => setEditingJeu({
                         ...editingJeu,
-                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(8, parseInt(e.target.value) || 8) }
+                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(editingJeu.donneesJeu?.levels === 3 ? 4 : 8, parseInt(e.target.value) || (editingJeu.donneesJeu?.levels === 3 ? 4 : 8)) }
                       })}
                       className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
                     />
@@ -513,9 +583,10 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                   <button
                     type="button"
                     onClick={() => {
-                      const target = editingJeu.donneesJeu?.targetResult || 50;
-                      const pyData = generatePyramid(target);
-                      setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, ...pyData } });
+                      const levels = editingJeu.donneesJeu?.levels || 4;
+                      const target = editingJeu.donneesJeu?.targetResult || (levels === 3 ? 20 : 50);
+                      const pyData = generatePyramid(target, levels);
+                      setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, targetResult: target, ...pyData } });
                     }}
                     className="bg-primary/10 text-primary px-4 py-1.5 rounded text-sm font-medium hover:bg-primary/20 transition-colors"
                   >

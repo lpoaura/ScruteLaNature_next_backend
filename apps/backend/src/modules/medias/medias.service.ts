@@ -97,7 +97,7 @@ export class MediasService {
     return { message: `Fichier "${filename}" supprimé avec succès` };
   }
 
-  async findAllFiles(page = 1, limit = 24, type?: string) {
+  async findAllFiles(page = 1, limit = 24, type?: string, sortBy?: string) {
     const subfolders = ['images', 'audio', 'gpx'] as const;
     const allFiles: { filename: string; originalName: string; mimetype: string; size: number; url: string; createdAt: Date; isUsed: boolean }[] = [];
 
@@ -148,8 +148,12 @@ export class MediasService {
       }
     }
 
-    // Trier du plus récent au plus ancien
-    allFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    // Trier du plus récent au plus ancien par défaut, ou alphabétique
+    if (sortBy === 'name') {
+      allFiles.sort((a, b) => a.filename.localeCompare(b.filename));
+    } else {
+      allFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
 
     // Pagination
     const total = allFiles.length;

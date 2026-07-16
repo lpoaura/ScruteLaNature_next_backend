@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route } from 'lucide-react';
+import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle } from 'lucide-react';
 import { updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
@@ -380,13 +380,20 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
           <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col h-full max-h-[600px]">
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold text-lg">Les Étapes ({etapes.length})</h3>
-              <button 
-                onClick={() => alert("Cliquez directement sur la carte pour ajouter une étape !")}
-                className="h-8 w-8 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors"
-                title="Ajouter une étape"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
+              <div className="relative group">
+                <button 
+                  type="button"
+                  className="h-8 w-8 text-muted-foreground rounded-full flex items-center justify-center hover:bg-muted transition-colors cursor-help"
+                  aria-label="Comment ajouter une étape"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </button>
+                
+                <div className="absolute right-0 top-full mt-2 w-56 p-3 bg-popover text-popover-foreground text-xs rounded-md shadow-md border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                  <span className="font-semibold block mb-1">Ajouter une étape</span>
+                  Cliquez directement sur la carte pour y placer un nouveau point d'arrêt.
+                </div>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-2 space-y-2">
