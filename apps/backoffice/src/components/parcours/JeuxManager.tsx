@@ -466,7 +466,7 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                 value={editingJeu.question || ''}
                 onChange={(value) => setEditingJeu({ ...editingJeu, question: value })}
                 placeholder="Ex: Quel oiseau voyez-vous ?"
-                height="min-h-[120px]"
+                minHeight={120}
               />
             </div>
 
