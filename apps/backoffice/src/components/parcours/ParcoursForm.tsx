@@ -284,7 +284,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
   return (
     <>
-      <div className="space-y-8 max-w-5xl mx-auto pb-10">
+      <div className="space-y-8 max-w-7xl mx-auto pb-10 px-4 xl:px-0">
       
       {/* Header Actions */}
       <div className="flex items-center justify-between">
