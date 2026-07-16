@@ -268,13 +268,7 @@ export default function ParcoursClient() {
                       <td className="px-4 py-3"><DifficultyBadge level={parcours.accessibility} /></td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Link
-                            href={`/dashboard/parcours/${parcours.id}`}
-                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                            title="Voir les détails"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Link>
+                          
                           <Link
                             href={`/dashboard/parcours/${parcours.id}/edit`}
                             className="p-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-100 rounded-md transition-colors"
