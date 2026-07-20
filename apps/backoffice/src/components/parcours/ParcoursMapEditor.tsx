@@ -266,8 +266,9 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
         <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border shadow-sm">
           <div>
             <h3 className="font-semibold text-lg">Carte du parcours</h3>
-            <p className="text-sm text-muted-foreground">
-              Cliquez sur la carte pour placer un point d'arrêt (étape).
+            <p className="text-sm text-muted-foreground mt-1">
+              Cliquez sur la carte pour placer un point d'arrêt (étape).<br/>
+              <span className="text-xs">Besoin de dessiner un tracé complexe ? <a href="https://www.visorando.com/logiciel-randonnee.html" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Créer un fichier GPX avec Visorando</a>.</span>
             </p>
           </div>
           
