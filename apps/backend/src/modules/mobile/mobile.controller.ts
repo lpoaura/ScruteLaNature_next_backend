@@ -63,8 +63,8 @@ export class MobileController {
   @ApiParam({ name: 'id', description: 'ID du parcours' })
   @ApiResponse({ status: 200, description: 'Le parcours complet.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable ou non publié.' })
-  downloadParcours(@Param('id') id: string) {
-    return this.mobileService.downloadParcours(id);
+  downloadParcours(@Param('id') id: string, @Request() req: any) {
+    return this.mobileService.downloadParcours(id, false, req.user?.id);
   }
 
   @Get('parcours/:id/preview')

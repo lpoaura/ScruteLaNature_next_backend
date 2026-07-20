@@ -265,7 +265,14 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
     if (!editingJeu || editingJeu.type !== 'QCM') return null;
     const qcmMode: QcmMode = editingJeu.donneesJeu?.qcmType || 'text';
     const options: string[] = editingJeu.donneesJeu?.options || ['', '', '', ''];
+    const optionsCaptions: string[] = editingJeu.donneesJeu?.optionsCaptions || ['', '', '', ''];
     const bonneReponseIndex: number | null = editingJeu.donneesJeu?.bonneReponseIndex ?? null;
+
+    const handleQcmCaptionChange = (index: number, val: string) => {
+      const newCaptions = [...optionsCaptions];
+      newCaptions[index] = val;
+      setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, optionsCaptions: newCaptions } });
+    };
 
     return (
       <div className="bg-card border border-border rounded-md p-3 space-y-4">
@@ -323,19 +330,28 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               {/* Image */}
               {qcmMode === 'image' && (
                 options[i] ? (
-                  <div className="relative flex-1 group">
-                    <img
-                      src={options[i]}
-                      alt={`Option ${i + 1}`}
-                      className="h-16 w-full object-cover rounded border border-border"
+                  <div className="flex-1 space-y-2">
+                    <div className="relative group">
+                      <img
+                        src={options[i]}
+                        alt={`Option ${i + 1}`}
+                        className="h-16 w-full object-cover rounded border border-border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleQcmTextChange(i, '')}
+                        className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Légende (Optionnelle)"
+                      value={optionsCaptions[i] || ''}
+                      onChange={(e) => handleQcmCaptionChange(i, e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-input rounded bg-background outline-none focus:ring-1 focus:ring-primary/50"
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleQcmTextChange(i, '')}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
                   </div>
                 ) : (
                   <button
@@ -351,16 +367,25 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               {/* Audio */}
               {qcmMode === 'audio' && (
                 options[i] ? (
-                  <div className="relative flex-1 bg-card border border-border rounded px-3 py-2 flex items-center gap-2">
-                    <Music className="h-4 w-4 text-primary shrink-0" />
-                    <audio controls src={options[i]} className="flex-1 h-8" />
-                    <button
-                      type="button"
-                      onClick={() => handleQcmTextChange(i, '')}
-                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div className="flex-1 space-y-2">
+                    <div className="relative bg-card border border-border rounded px-3 py-2 flex items-center gap-2">
+                      <Music className="h-4 w-4 text-primary shrink-0" />
+                      <audio controls src={options[i]} className="flex-1 h-8" />
+                      <button
+                        type="button"
+                        onClick={() => handleQcmTextChange(i, '')}
+                        className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Légende (Optionnelle)"
+                      value={optionsCaptions[i] || ''}
+                      onChange={(e) => handleQcmCaptionChange(i, e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-input rounded bg-background outline-none focus:ring-1 focus:ring-primary/50"
+                    />
                   </div>
                 ) : (
                   <button
@@ -466,7 +491,7 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                 value={editingJeu.question || ''}
                 onChange={(value) => setEditingJeu({ ...editingJeu, question: value })}
                 placeholder="Ex: Quel oiseau voyez-vous ?"
-                minHeight={120}
+                minHeight={270}
               />
             </div>
 
@@ -555,27 +580,19 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                 <div className="flex gap-4 items-end mb-4">
                   <div className="flex-1">
                     <label className="text-xs font-medium text-muted-foreground block mb-1">Difficulté</label>
-                    <select
-                      value={editingJeu.donneesJeu?.levels || 4}
-                      onChange={(e) => setEditingJeu({
-                        ...editingJeu,
-                        donneesJeu: { ...editingJeu.donneesJeu, levels: parseInt(e.target.value) }
-                      })}
-                      className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
-                    >
-                      <option value={3}>Facile (3 Niveaux)</option>
-                      <option value={4}>Normal (4 Niveaux)</option>
-                    </select>
+                    <div className="w-full px-3 py-1.5 border border-input rounded bg-muted text-sm text-muted-foreground cursor-not-allowed">
+                      Normal (4 Niveaux)
+                    </div>
                   </div>
                   <div className="flex-1">
                     <label className="text-xs font-medium text-muted-foreground block mb-1">Résultat cible (Sommet)</label>
                     <input
                       type="number"
-                      min={editingJeu.donneesJeu?.levels === 3 ? "4" : "8"}
+                      min="8"
                       value={editingJeu.donneesJeu?.targetResult || 50}
                       onChange={(e) => setEditingJeu({
                         ...editingJeu,
-                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(editingJeu.donneesJeu?.levels === 3 ? 4 : 8, parseInt(e.target.value) || (editingJeu.donneesJeu?.levels === 3 ? 4 : 8)) }
+                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(8, parseInt(e.target.value) || 8), levels: 4 }
                       })}
                       className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
                     />
@@ -583,8 +600,8 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                   <button
                     type="button"
                     onClick={() => {
-                      const levels = editingJeu.donneesJeu?.levels || 4;
-                      const target = editingJeu.donneesJeu?.targetResult || (levels === 3 ? 20 : 50);
+                      const levels = 4;
+                      const target = editingJeu.donneesJeu?.targetResult || 50;
                       const pyData = generatePyramid(target, levels);
                       setEditingJeu({ ...editingJeu, donneesJeu: { ...editingJeu.donneesJeu, targetResult: target, ...pyData } });
                     }}
@@ -696,118 +713,122 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               </div>
             )}
 
-            {/* ── Explication ── */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                Explication (Après avoir répondu / lu)
-              </label>
-              <textarea
-                rows={2}
-                value={editingJeu.explication || ''}
-                onChange={(e) => setEditingJeu({ ...editingJeu, explication: e.target.value })}
-                placeholder="Ex: Le Héron cendré est très commun ici..."
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
-              />
-            </div>
-
-            {/* ── Indices ── */}
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-md p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                  💡 Indices
-                  <span className="text-[10px] font-normal text-amber-600/70 dark:text-amber-500/70">
-                    ({(editingJeu.donneesJeu?.indices || []).length}/{MAX_INDICES})
-                  </span>
-                </label>
-                {(editingJeu.donneesJeu?.indices || []).length < MAX_INDICES && (
-                  <button
-                    type="button"
-                    onClick={handleAddIndice}
-                    className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 font-medium transition-colors"
-                  >
-                    <Plus className="h-3 w-3" /> Ajouter un indice
-                  </button>
-                )}
-              </div>
-
-              {(editingJeu.donneesJeu?.indices || []).length === 0 ? (
-                <p className="text-[11px] text-amber-600/70 dark:text-amber-500/60 italic">
-                  Aucun indice — l'application peut en proposer un si le joueur bloque.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {(editingJeu.donneesJeu?.indices as string[]).map((indice, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-[10px] font-bold shrink-0">
-                        {i + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={indice}
-                        onChange={(e) => handleIndiceChange(i, e.target.value)}
-                        placeholder={`Indice ${i + 1}...`}
-                        className="flex-1 px-2.5 py-1.5 text-sm border border-amber-200 dark:border-amber-800/60 rounded bg-white dark:bg-amber-950/30 outline-none focus:ring-2 focus:ring-amber-400/50 text-foreground"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveIndice(i)}
-                        className="text-amber-400 hover:text-red-500 transition-colors"
-                        title="Supprimer cet indice"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ── Paramètres globaux du jeu ── */}
-            <div className="bg-muted/30 border border-border rounded-md p-3 space-y-4">
-              <h4 className="text-sm font-semibold text-primary">Options du jeu</h4>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
+            {editingJeu.type !== 'INFO' && editingJeu.type !== 'ECO_GESTE' && (
+              <>
+                {/* ── Explication ── */}
+                <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                    Nombre de tentatives autorisées
+                    Explication (Après avoir répondu / lu)
                   </label>
-                  <input
-                    type="number"
-                    min="1" max="10"
-                    value={editingJeu.maxAttempts ?? 2}
-                    onChange={(e) => setEditingJeu({ ...editingJeu, maxAttempts: parseInt(e.target.value) || 2 })}
-                    className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                  <textarea
+                    rows={2}
+                    value={editingJeu.explication || ''}
+                    onChange={(e) => setEditingJeu({ ...editingJeu, explication: e.target.value })}
+                    placeholder="Ex: Le Héron cendré est très commun ici..."
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
                   />
                 </div>
-                
-                <div className="flex-1 flex flex-col justify-center pt-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editingJeu.isBlocking ?? false}
-                      onChange={(e) => setEditingJeu({ ...editingJeu, isBlocking: e.target.checked })}
-                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span className="text-sm font-medium text-foreground">Étape obligatoire (Bloquant)</span>
-                  </label>
-                  <p className="text-[10px] text-muted-foreground mt-1 ml-6">Le joueur ne peut pas passer sans avoir essayé.</p>
-                </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Message en cas d&apos;échec (Optionnel)
-                </label>
-                <input
-                  type="text"
-                  value={editingJeu.messageEchec || ''}
-                  onChange={(e) => setEditingJeu({ ...editingJeu, messageEchec: e.target.value })}
-                  placeholder="Oups ! Ce n'était pas la bonne réponse."
-                  className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">Affiché si le joueur épuise toutes ses tentatives.</p>
-              </div>
-            </div>
+                {/* ── Indices ── */}
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                      💡 Indices
+                      <span className="text-[10px] font-normal text-amber-600/70 dark:text-amber-500/70">
+                        {(editingJeu.donneesJeu?.indices || []).length}/{MAX_INDICES}
+                      </span>
+                    </label>
+                    {(editingJeu.donneesJeu?.indices || []).length < MAX_INDICES && (
+                      <button
+                        type="button"
+                        onClick={handleAddIndice}
+                        className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 font-medium transition-colors"
+                      >
+                        <Plus className="h-3 w-3" /> Ajouter un indice
+                      </button>
+                    )}
+                  </div>
+
+                  {(editingJeu.donneesJeu?.indices || []).length === 0 ? (
+                    <p className="text-[11px] text-amber-600/70 dark:text-amber-500/60 italic">
+                      Aucun indice — l'application peut en proposer un si le joueur bloque.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(editingJeu.donneesJeu?.indices as string[]).map((indice, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-[10px] font-bold shrink-0">
+                            {i + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={indice}
+                            onChange={(e) => handleIndiceChange(i, e.target.value)}
+                            placeholder={`Indice ${i + 1}...`}
+                            className="flex-1 px-2.5 py-1.5 text-sm border border-amber-200 dark:border-amber-800/60 rounded bg-white dark:bg-amber-950/30 outline-none focus:ring-2 focus:ring-amber-400/50 text-foreground"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIndice(i)}
+                            className="text-amber-400 hover:text-red-500 transition-colors"
+                            title="Supprimer cet indice"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Paramètres globaux du jeu ── */}
+                <div className="bg-muted/30 border border-border rounded-md p-3 space-y-4">
+                  <h4 className="text-sm font-semibold text-primary">Options du jeu</h4>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                        Nombre de tentatives autorisées
+                      </label>
+                      <input
+                        type="number"
+                        min="1" max="10"
+                        value={editingJeu.maxAttempts ?? 2}
+                        onChange={(e) => setEditingJeu({ ...editingJeu, maxAttempts: parseInt(e.target.value) || 2 })}
+                        className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col justify-center pt-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingJeu.isBlocking ?? false}
+                          onChange={(e) => setEditingJeu({ ...editingJeu, isBlocking: e.target.checked })}
+                          className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <span className="text-sm font-medium text-foreground">Étape obligatoire (Bloquant)</span>
+                      </label>
+                      <p className="text-[10px] text-muted-foreground mt-1 ml-6">Le joueur ne peut pas passer sans avoir essayé.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                      Message en cas d&apos;échec (Optionnel)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingJeu.messageEchec || ''}
+                      onChange={(e) => setEditingJeu({ ...editingJeu, messageEchec: e.target.value })}
+                      placeholder="Oups ! Ce n'était pas la bonne réponse."
+                      className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Affiché si le joueur épuise toutes ses tentatives.</p>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* ── Image & Audio d'illustration ── */}
             <div className="flex gap-4 pt-2">

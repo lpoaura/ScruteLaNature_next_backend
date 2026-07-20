@@ -224,7 +224,7 @@ export class MobileService {
    * tous ses jeux, son organisme et sa zonage, prêt à être téléchargé
    * pour le mode hors-ligne de l'application mobile.
    */
-  async downloadParcours(id: string, isPreview = false) {
+  async downloadParcours(id: string, isPreview = false, userId?: string) {
     const parcours = await this.db.parcours.findFirst({
       where: {
         id,
@@ -257,6 +257,17 @@ export class MobileService {
     // si un Super Admin ajoute une étape sans la remplir sur un parcours déjà publié.
     if (parcours.etapes) {
       parcours.etapes = parcours.etapes.filter((etape) => etape.jeux && etape.jeux.length > 0);
+    }
+
+    // Tracker le téléchargement pour les statistiques (si pas en prévisualisation)
+    if (!isPreview) {
+      // On log le download en asynchrone pour ne pas ralentir la réponse
+      this.db.parcoursDownload.create({
+        data: {
+          parcoursId: parcours.id,
+          userId: userId || null,
+        },
+      }).catch(err => this.logger.error(`[STATS] Erreur log download parcours ${id}:`, err.message));
     }
 
     // Le backend renvoie tel quel. 

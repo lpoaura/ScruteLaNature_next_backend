@@ -123,25 +123,23 @@ export default function ZonagesClient() {
           />
         </div>
 
-        {/* Bouton ajouter — SUPER_ADMIN seulement */}
-        {isSuperAdmin && (
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className={cn(
-              'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-              showForm
-                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90',
-            )}
-          >
-            <Plus className="h-4 w-4" />
-            Ajouter un zonage
-          </button>
-        )}
+        {/* Bouton ajouter */}
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+            showForm
+              ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90',
+          )}
+        >
+          <Plus className="h-4 w-4" />
+          Ajouter un zonage
+        </button>
       </div>
 
-      {/* Formulaire d'ajout (accordéon) — SUPER_ADMIN seulement */}
-      {isSuperAdmin && showForm && (
+      {/* Formulaire d'ajout (accordéon) */}
+      {showForm && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-foreground">Nouveau zonage</h3>
           <form onSubmit={handleCreate} className="flex items-end gap-3">

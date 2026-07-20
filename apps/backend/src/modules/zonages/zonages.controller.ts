@@ -31,8 +31,8 @@ export class ZonagesController {
   }
 
   @Post('admin/zonages')
-  @Roles(Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Ajouter une zonage dans le référentiel (SUPER_ADMIN uniquement)' })
+  @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Ajouter une zonage dans le référentiel' })
   @ApiResponse({ status: 201, description: 'Zonage ajoutée.' })
   @ApiResponse({ status: 409, description: 'Cette zonage existe déjà.' })
   create(@Body() dto: CreateZonageDto) {
