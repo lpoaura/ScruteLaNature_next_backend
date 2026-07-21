@@ -50,6 +50,7 @@ export class JeuxService {
     return this.db.jeu.create({
       data: {
         ...createJeuDto,
+        question: createJeuDto.question ?? '',
         donneesJeu: createJeuDto.donneesJeu ? createJeuDto.donneesJeu : undefined,
       },
     });

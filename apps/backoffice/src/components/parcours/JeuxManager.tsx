@@ -133,7 +133,7 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
       etapeId: etape.id,
       order: (etape.jeux?.length || 0) + 1,
       type: 'INFO',
-      question: 'Nouvelle information ou question',
+      question: '',
       explication: '',
       donneesJeu: {},
       reponse: '',
