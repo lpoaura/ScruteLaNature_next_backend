@@ -5,8 +5,6 @@ import { Plus, Trash2, Save, X, Edit2, Loader2, Image as ImageIcon, Music, Type 
 import { createJeu, updateJeu, deleteJeu } from '@/src/services/jeux.service';
 import type { Etape, Jeu, JeuType } from '@/src/types/api.types';
 import MediaGalleryModal from './MediaGalleryModal';
-import { MarkdownEditor } from '@/src/components/ui/MarkdownEditor';
-
 type QcmMode = 'text' | 'image' | 'audio';
 
 interface QcmMediaPicker {
@@ -487,11 +485,12 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
                 Question ou Texte principal
               </label>
-              <MarkdownEditor
+              <textarea
+                rows={10}
                 value={editingJeu.question || ''}
-                onChange={(value) => setEditingJeu({ ...editingJeu, question: value })}
+                onChange={(e) => setEditingJeu({ ...editingJeu, question: e.target.value })}
                 placeholder="Ex: Quel oiseau voyez-vous ?"
-                minHeight={270}
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm focus:ring-primary outline-none resize-none"
               />
             </div>
 
@@ -567,6 +566,37 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                   onChange={(e) => setEditingJeu({ ...editingJeu, reponse: e.target.value })}
                   className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
                 />
+              </div>
+            )}
+
+            {/* ── Éco-geste (Lien d'engagement optionnel) ── */}
+            {editingJeu.type === 'ECO_GESTE' && (
+              <div className="bg-card border border-border rounded-md p-3 space-y-3">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Optionnel : Lien d'engagement</p>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Titre du lien (ex: Comment fabriquer un gîte à chauve-souris)</label>
+                  <input
+                    type="text"
+                    value={editingJeu.donneesJeu?.linkTitle || ''}
+                    onChange={(e) => setEditingJeu({
+                      ...editingJeu,
+                      donneesJeu: { ...editingJeu.donneesJeu, linkTitle: e.target.value }
+                    })}
+                    className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">URL (ex: https://lpo.fr/...)</label>
+                  <input
+                    type="url"
+                    value={editingJeu.donneesJeu?.linkUrl || ''}
+                    onChange={(e) => setEditingJeu({
+                      ...editingJeu,
+                      donneesJeu: { ...editingJeu.donneesJeu, linkUrl: e.target.value }
+                    })}
+                    className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
+                  />
+                </div>
               </div>
             )}
 

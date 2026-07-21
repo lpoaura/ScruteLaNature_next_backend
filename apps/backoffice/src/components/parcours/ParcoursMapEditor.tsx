@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
+import { useState, useEffect, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle } from 'lucide-react';
-import { updateParcours } from '@/src/services/parcours.service';
+import { getParcoursById, updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
 import { cn } from '@/lib/utils';
@@ -24,22 +24,48 @@ const MapLeaflet = dynamic(() => import('./MapLeaflet'), {
 
 interface ParcoursMapEditorProps {
   parcours: Parcours;
+  onUpdate?: (parcours: Parcours) => void;
 }
 
-export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) {
+export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEditorProps) {
   const [isPending, startTransition] = useTransition();
   const [etapes, setEtapes] = useState<Etape[]>(parcours.etapes || []);
   const [pathGeoJSON, setPathGeoJSON] = useState<any>(
     parcours.pathGeoJSON ? JSON.parse(parcours.pathGeoJSON) : null
   );
+  const [isLoadingData, setIsLoadingData] = useState(false);
   
   // State for the editor
   const [selectedLocation, setSelectedLocation] = useState<{lat: number, lng: number} | null>(null);
   const [editingEtape, setEditingEtape] = useState<Etape | Partial<Etape> | null>(null);
   const [draggedEtapeId, setDraggedEtapeId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasLoadedFresh, setHasLoadedFresh] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Recharger les données fraîches depuis le serveur à chaque montage
+  // Cela garantit que les données sont à jour après un changement d'onglet
+  useEffect(() => {
+    let cancelled = false;
+    async function reload() {
+      setIsLoadingData(true);
+      try {
+        const fresh = await getParcoursById(parcours.id);
+        if (cancelled) return;
+        setEtapes(fresh.etapes || []);
+        setPathGeoJSON(fresh.pathGeoJSON ? JSON.parse(fresh.pathGeoJSON) : null);
+        setHasLoadedFresh(true);
+      } catch (err) {
+        console.error('Erreur lors du rechargement des données du parcours:', err);
+        // Fallback: utiliser les données du prop
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
+      }
+    }
+    reload();
+    return () => { cancelled = true; };
+  }, [parcours.id]);
 
   const generateRouteForEtapes = async (etapesList: Etape[], skipConfirm = false) => {
     if (etapesList.length < 2) {
@@ -258,6 +284,15 @@ export default function ParcoursMapEditor({ parcours }: ParcoursMapEditorProps) 
       }
     });
   };
+
+  if (!hasLoadedFresh && isLoadingData) {
+    return (
+      <div className="h-[600px] w-full rounded-xl border border-border bg-muted/20 flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+        <span className="text-muted-foreground font-medium">Actualisation des données du parcours...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">

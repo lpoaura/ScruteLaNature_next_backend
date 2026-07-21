@@ -33,7 +33,7 @@ export async function getParcours(filters?: ParcoursFilters): Promise<PaginatedP
  * Récupère un parcours complet avec ses étapes et jeux.
  */
 export async function getParcoursById(id: string): Promise<Parcours> {
-  return apiClient<Parcours>(`/admin/parcours/${id}`);
+  return apiClient<Parcours>(`/admin/parcours/${id}`, { cache: 'no-store' });
 }
 
 /**

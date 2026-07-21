@@ -288,6 +288,13 @@ export class MobileService {
           },
         },
       },
+      include: {
+        parcours: {
+          where: { status: PublishStatus.PUBLISHED },
+          select: { id: true },
+          take: 1,
+        }
+      },
       orderBy: { name: 'asc' },
     });
   }
