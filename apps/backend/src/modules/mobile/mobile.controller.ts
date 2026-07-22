@@ -12,6 +12,7 @@ import { MobileService } from './mobile.service';
 import { SearchParcoursDto } from './dto/search-parcours.dto';
 import { NearbyParcoursDto } from './dto/nearby-parcours.dto';
 import { SyncMobileDto } from './dto/sync-mobile.dto';
+import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
 
 @ApiTags('Mobile')
 @ApiBearerAuth()
@@ -56,6 +57,7 @@ export class MobileController {
   }
 
   @Get('parcours/:id/download')
+  @OptionalAuth()
   @ApiOperation({
     summary: 'Télécharger un parcours complet pour le mode hors-ligne (Chantier Critique)',
     description: 'Retourne la structure complète du parcours avec toutes ses étapes, ses jeux et les informations de la zonage et de l\'organisme. Destiné à être stocké dans la base SQLite locale de l\'application mobile.',

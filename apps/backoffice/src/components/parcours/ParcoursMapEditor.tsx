@@ -2,12 +2,16 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle } from 'lucide-react';
+import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle, ArrowLeftRight } from 'lucide-react';
 import { getParcoursById, updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
 import { cn } from '@/lib/utils';
 import { createEtape, updateEtape, deleteEtape, reorderEtapes } from '@/src/services/etapes.service';
+import { updateJeu } from '@/src/services/jeux.service';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import JeuxManager from './JeuxManager';
 
@@ -43,6 +47,10 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
   const [hasLoadedFresh, setHasLoadedFresh] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   // Recharger les données fraîches depuis le serveur à chaque montage
   // Cela garantit que les données sont à jour après un changement d'onglet
@@ -228,53 +236,32 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     });
   };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedEtapeId(id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedEtapeId || draggedEtapeId === targetId) {
-      setDraggedEtapeId(null);
-      return;
-    }
+  const handleSortEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
     const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
-    const draggedIndex = currentEtapes.findIndex(et => et.id === draggedEtapeId);
-    const targetIndex = currentEtapes.findIndex(et => et.id === targetId);
+    const draggedIndex = currentEtapes.findIndex(et => et.id === active.id);
+    const targetIndex = currentEtapes.findIndex(et => et.id === over.id);
 
-    if (draggedIndex < 0 || targetIndex < 0) {
-      setDraggedEtapeId(null);
-      return;
-    }
+    if (draggedIndex < 0 || targetIndex < 0) return;
 
-    // Reorder locally
     const newEtapes = [...currentEtapes];
     const [draggedItem] = newEtapes.splice(draggedIndex, 1);
     newEtapes.splice(targetIndex, 0, draggedItem);
 
-    // Update order values
     const updatedEtapes = newEtapes.map((etape, index) => ({
       ...etape,
       order: index + 1
     }));
 
     setEtapes(updatedEtapes);
-    setDraggedEtapeId(null);
 
-    // Régénérer automatiquement le tracé si c'était un tracé auto
     const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
     if (isAutoRoute) {
       generateRouteForEtapes(updatedEtapes, true);
     }
 
-    // Update backend
     startTransition(async () => {
       try {
         await reorderEtapes(updatedEtapes.map(et => ({ id: et.id, order: et.order })));
@@ -284,6 +271,100 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
       }
     });
   };
+
+  const moveEtape = (etapeId: string, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
+    const index = currentEtapes.findIndex(et => et.id === etapeId);
+    if (index < 0) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentEtapes.length - 1) return;
+
+    const newEtapes = [...currentEtapes];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap
+    const temp = newEtapes[index];
+    newEtapes[index] = newEtapes[targetIndex];
+    newEtapes[targetIndex] = temp;
+
+    // Update order values
+    const updatedEtapes = newEtapes.map((etape, i) => ({
+      ...etape,
+      order: i + 1
+    }));
+
+    setEtapes(updatedEtapes);
+
+    const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+    if (isAutoRoute) {
+      generateRouteForEtapes(updatedEtapes, true);
+    }
+
+    startTransition(async () => {
+      try {
+        await reorderEtapes(updatedEtapes.map(et => ({ id: et.id, order: et.order })));
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la sauvegarde du nouvel ordre.');
+      }
+    });
+  };
+
+  const swapContent = (etapeId: string, direction: 'next' | 'prev', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
+    const index = currentEtapes.findIndex(et => et.id === etapeId);
+    if (index < 0) return;
+    if (direction === 'prev' && index === 0) return;
+    if (direction === 'next' && index === currentEtapes.length - 1) return;
+
+    const targetIndex = direction === 'prev' ? index - 1 : index + 1;
+    const etape1 = currentEtapes[index];
+    const etape2 = currentEtapes[targetIndex];
+
+    // Swap locally: garder les lat/lng, n'echanger que titre, description et jeux
+    const newEtapes = currentEtapes.map(e => {
+      if (e.id === etape1.id) {
+        return {
+          ...e,
+          title: etape2.title,
+          description: etape2.description,
+          jeux: (etape2.jeux ?? []).map(j => ({ ...j, etapeId: etape1.id })),
+        };
+      }
+      if (e.id === etape2.id) {
+        return {
+          ...e,
+          title: etape1.title,
+          description: etape1.description,
+          jeux: (etape1.jeux ?? []).map(j => ({ ...j, etapeId: etape2.id })),
+        };
+      }
+      return e;
+    });
+
+    setEtapes(newEtapes);
+
+    // Persister en base
+    startTransition(async () => {
+      try {
+        await Promise.all([
+          // Echanger les champs texte
+          updateEtape(etape1.id, { title: etape2.title, description: etape2.description }),
+          updateEtape(etape2.id, { title: etape1.title, description: etape1.description }),
+          // Reassigner les jeux de l'etape1 vers etape2
+          ...(etape1.jeux ?? []).map(j => updateJeu(j.id, { etapeId: etape2.id })),
+          // Reassigner les jeux de l'etape2 vers etape1
+          ...(etape2.jeux ?? []).map(j => updateJeu(j.id, { etapeId: etape1.id })),
+        ]);
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'inversion du contenu.');
+      }
+    });
+  };
+
 
   if (!hasLoadedFresh && isLoadingData) {
     return (
@@ -440,47 +521,92 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                   <p className="text-xs mt-1">Cliquez sur la carte pour commencer le tracé.</p>
                 </div>
               ) : (
-                [...etapes].sort((a, b) => a.order - b.order).map((etape) => (
-                  <div 
-                    key={etape.id} 
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, etape.id)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, etape.id)}
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-lg border bg-background hover:border-primary/50 cursor-pointer transition-colors relative",
-                      draggedEtapeId === etape.id ? "opacity-50 border-dashed border-primary" : "border-border"
-                    )}
-                    onClick={() => setEditingEtape(etape)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-2"
-                        title="Glisser pour réorganiser"
-                      >
-                        <GripVertical className="h-4 w-4" />
-                      </div>
-                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                        {etape.order}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-foreground line-clamp-1">{etape.title}</p>
-                        <p className="text-xs text-muted-foreground">{etape.jeux?.length || 0} mini-jeu(x)</p>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      onClick={(e) => handleDeleteEtape(etape.id, e)}
-                      className="text-muted-foreground hover:text-destructive p-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSortEnd}>
+                  <SortableContext items={[...etapes].sort((a, b) => a.order - b.order).map(e => e.id)} strategy={verticalListSortingStrategy}>
+                    {[...etapes].sort((a, b) => a.order - b.order).map((etape, index) => (
+                      <SortableEtapeItem
+                        key={etape.id}
+                        etape={etape}
+                        index={index}
+                        totalCount={etapes.length}
+                        onEdit={setEditingEtape}
+                        onDelete={handleDeleteEtape}
+                        onSwapContent={swapContent}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// --- Composant sortable pour chaque étape ---
+function SortableEtapeItem({ etape, index, totalCount, onEdit, onDelete, onSwapContent }: {
+  etape: Etape;
+  index: number;
+  totalCount: number;
+  onEdit: (etape: Etape) => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+  onSwapContent: (id: string, direction: 'next' | 'prev', e: React.MouseEvent) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: etape.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center justify-between p-3 rounded-lg border bg-background hover:border-primary/50 cursor-pointer transition-colors relative",
+        isDragging ? "border-dashed border-primary shadow-lg" : "border-border"
+      )}
+      onClick={() => onEdit(etape)}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1 touch-none"
+          title="Glisser pour réorganiser"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+          {etape.order}
+        </div>
+        <div>
+          <p className="font-medium text-sm text-foreground line-clamp-1">{etape.title}</p>
+          <p className="text-xs text-muted-foreground">{etape.jeux?.length || 0} mini-jeu(x)</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); onSwapContent(etape.id, 'next', e); }}
+          className="text-muted-foreground hover:text-primary p-1 disabled:opacity-30 disabled:hover:text-muted-foreground"
+          disabled={index === totalCount - 1}
+          title="Échanger le contenu (titre + mini-jeux) avec l'étape suivante"
+        >
+          <ArrowLeftRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={(e) => onDelete(etape.id, e)}
+          className="text-muted-foreground hover:text-destructive p-1"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

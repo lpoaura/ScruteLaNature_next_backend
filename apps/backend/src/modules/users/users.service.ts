@@ -196,4 +196,22 @@ export class UsersService {
     await this.databaseService.user.delete({ where: { id } });
     return { message: 'Votre compte et toutes vos données ont été supprimés définitivement.' };
   }
+
+  async removeHistoryItem(userId: string, syncId: string) {
+    // Delete the history item matching userId and syncId
+    // SyncId might be unique, but checking userId ensures a user only deletes their own history
+    const historyItem = await this.databaseService.userParcours.findUnique({
+      where: { syncId },
+    });
+
+    if (!historyItem || historyItem.userId !== userId) {
+      throw new NotFoundException('Historique introuvable ou vous n\'avez pas les droits.');
+    }
+
+    await this.databaseService.userParcours.delete({
+      where: { syncId },
+    });
+
+    return { message: 'Historique supprimé.' };
+  }
 }

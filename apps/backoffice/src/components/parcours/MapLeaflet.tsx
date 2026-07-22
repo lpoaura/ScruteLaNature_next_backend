@@ -211,7 +211,7 @@ export default function MapLeaflet({ etapes, pathGeoJSON, onMapClick, onMarkerCl
           };
           return traceOnly.features.length > 0 ? (
             <GeoJSON
-              key={JSON.stringify(traceOnly).length}
+              key={JSON.stringify(traceOnly)}
               data={traceOnly}
               style={{ color: '#10b981', weight: 4, opacity: 0.8 }}
             />

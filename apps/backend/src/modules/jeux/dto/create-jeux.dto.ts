@@ -28,10 +28,10 @@ export class CreateJeuDto {
   @IsNotEmpty()
   type: JeuType;
 
-  @ApiProperty({ description: 'La question ou consigne du jeu' })
+  @ApiPropertyOptional({ description: 'La question ou consigne du jeu' })
   @IsString()
-  @IsNotEmpty()
-  question: string;
+  @IsOptional()
+  question?: string;
 
   @ApiPropertyOptional({ description: 'Le titre personnalisé du jeu' })
   @IsString()
