@@ -44,6 +44,7 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
   const [hasLoadedFresh, setHasLoadedFresh] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDragging = useRef(false);
 
   // Recharger les données fraîches depuis le serveur à chaque montage
   // Cela garantit que les données sont à jour après un changement d'onglet
@@ -230,8 +231,15 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
+    isDragging.current = true;
     setDraggedEtapeId(id);
     e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggedEtapeId(null);
+    // Delay reset so onClick can check isDragging
+    setTimeout(() => { isDragging.current = false; }, 0);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -537,25 +545,25 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
               ) : (
                 [...etapes].sort((a, b) => a.order - b.order).map((etape, index) => (
                   <div 
-                    key={etape.id} 
+                    key={etape.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, etape.id)}
+                    onDragEnd={handleDragEnd}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, etape.id)}
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg border bg-background hover:border-primary/50 cursor-pointer transition-colors relative",
                       draggedEtapeId === etape.id ? "opacity-50 border-dashed border-primary" : "border-border"
                     )}
-                    onClick={() => setEditingEtape(etape)}
+                    onClick={() => {
+                      if (isDragging.current) return;
+                      setEditingEtape(etape);
+                    }}
                   >
                     <div className="flex items-center gap-2">
                       <div 
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation();
-                          handleDragStart(e, etape.id);
-                        }}
                         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
                         title="Glisser pour réorganiser"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         <GripVertical className="h-4 w-4" />
                       </div>
