@@ -8,6 +8,7 @@ import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
 import { cn } from '@/lib/utils';
 import { createEtape, updateEtape, deleteEtape, reorderEtapes } from '@/src/services/etapes.service';
+import { updateJeu } from '@/src/services/jeux.service';
 
 import JeuxManager from './JeuxManager';
 
@@ -324,7 +325,7 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     });
   };
 
-  const swapLocation = (etapeId: string, direction: 'next' | 'prev', e: React.MouseEvent) => {
+  const swapContent = (etapeId: string, direction: 'next' | 'prev', e: React.MouseEvent) => {
     e.stopPropagation();
     const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
     const index = currentEtapes.findIndex(et => et.id === etapeId);
@@ -336,35 +337,44 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     const etape1 = currentEtapes[index];
     const etape2 = currentEtapes[targetIndex];
 
-    const tempLat = etape1.latitude;
-    const tempLng = etape1.longitude;
-
+    // Swap locally: garder les lat/lng, n'echanger que titre, description et jeux
     const newEtapes = currentEtapes.map(e => {
       if (e.id === etape1.id) {
-        return { ...e, latitude: etape2.latitude, longitude: etape2.longitude };
+        return {
+          ...e,
+          title: etape2.title,
+          description: etape2.description,
+          jeux: (etape2.jeux ?? []).map(j => ({ ...j, etapeId: etape1.id })),
+        };
       }
       if (e.id === etape2.id) {
-        return { ...e, latitude: tempLat, longitude: tempLng };
+        return {
+          ...e,
+          title: etape1.title,
+          description: etape1.description,
+          jeux: (etape1.jeux ?? []).map(j => ({ ...j, etapeId: etape2.id })),
+        };
       }
       return e;
     });
 
     setEtapes(newEtapes);
 
-    const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
-    if (isAutoRoute) {
-      generateRouteForEtapes(newEtapes, true);
-    }
-
+    // Persister en base
     startTransition(async () => {
       try {
         await Promise.all([
-          updateEtape(etape1.id, { latitude: etape2.latitude, longitude: etape2.longitude }),
-          updateEtape(etape2.id, { latitude: tempLat, longitude: tempLng })
+          // Echanger les champs texte
+          updateEtape(etape1.id, { title: etape2.title, description: etape2.description }),
+          updateEtape(etape2.id, { title: etape1.title, description: etape1.description }),
+          // Reassigner les jeux de l'etape1 vers etape2
+          ...(etape1.jeux ?? []).map(j => updateJeu(j.id, { etapeId: etape2.id })),
+          // Reassigner les jeux de l'etape2 vers etape1
+          ...(etape2.jeux ?? []).map(j => updateJeu(j.id, { etapeId: etape1.id })),
         ]);
       } catch (err) {
         console.error(err);
-        alert('Erreur lors de l\'inversion des coordonnées.');
+        alert('Erreur lors de l\'inversion du contenu.');
       }
     });
   };
@@ -568,10 +578,10 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                     
                     <div className="flex items-center gap-1">
                       <button 
-                        onClick={(e) => swapLocation(etape.id, 'next', e)}
+                        onClick={(e) => swapContent(etape.id, 'next', e)}
                         className="text-muted-foreground hover:text-primary p-1 disabled:opacity-30 disabled:hover:text-muted-foreground"
                         disabled={index === etapes.length - 1}
-                        title="Échanger la position géographique avec l'étape suivante"
+                        title="Échanger le contenu (titre + mini-jeux) avec l'étape suivante, sans bouger les points sur la carte"
                       >
                         <ArrowLeftRight className="h-4 w-4" />
                       </button>
