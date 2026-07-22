@@ -538,8 +538,6 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                 [...etapes].sort((a, b) => a.order - b.order).map((etape, index) => (
                   <div 
                     key={etape.id} 
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, etape.id)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, etape.id)}
                     className={cn(
@@ -550,8 +548,14 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                   >
                     <div className="flex items-center gap-2">
                       <div 
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, etape.id);
+                        }}
                         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
                         title="Glisser pour réorganiser"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <GripVertical className="h-4 w-4" />
                       </div>
