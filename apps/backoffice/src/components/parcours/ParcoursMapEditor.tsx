@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle, ChevronUp, ChevronDown, ArrowLeftRight } from 'lucide-react';
 import { getParcoursById, updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
@@ -324,6 +324,51 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     });
   };
 
+  const swapLocation = (etapeId: string, direction: 'next' | 'prev', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
+    const index = currentEtapes.findIndex(et => et.id === etapeId);
+    if (index < 0) return;
+    if (direction === 'prev' && index === 0) return;
+    if (direction === 'next' && index === currentEtapes.length - 1) return;
+
+    const targetIndex = direction === 'prev' ? index - 1 : index + 1;
+    const etape1 = currentEtapes[index];
+    const etape2 = currentEtapes[targetIndex];
+
+    const tempLat = etape1.latitude;
+    const tempLng = etape1.longitude;
+
+    const newEtapes = currentEtapes.map(e => {
+      if (e.id === etape1.id) {
+        return { ...e, latitude: etape2.latitude, longitude: etape2.longitude };
+      }
+      if (e.id === etape2.id) {
+        return { ...e, latitude: tempLat, longitude: tempLng };
+      }
+      return e;
+    });
+
+    setEtapes(newEtapes);
+
+    const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+    if (isAutoRoute) {
+      generateRouteForEtapes(newEtapes, true);
+    }
+
+    startTransition(async () => {
+      try {
+        await Promise.all([
+          updateEtape(etape1.id, { latitude: etape2.latitude, longitude: etape2.longitude }),
+          updateEtape(etape2.id, { latitude: tempLat, longitude: tempLng })
+        ]);
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'inversion des coordonnées.');
+      }
+    });
+  };
+
 
   if (!hasLoadedFresh && isLoadingData) {
     return (
@@ -521,12 +566,22 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                       </div>
                     </div>
                     
-                    <button 
-                      onClick={(e) => handleDeleteEtape(etape.id, e)}
-                      className="text-muted-foreground hover:text-destructive p-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={(e) => swapLocation(etape.id, 'next', e)}
+                        className="text-muted-foreground hover:text-primary p-1 disabled:opacity-30 disabled:hover:text-muted-foreground"
+                        disabled={index === etapes.length - 1}
+                        title="Échanger la position géographique avec l'étape suivante"
+                      >
+                        <ArrowLeftRight className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDeleteEtape(etape.id, e)}
+                        className="text-muted-foreground hover:text-destructive p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
