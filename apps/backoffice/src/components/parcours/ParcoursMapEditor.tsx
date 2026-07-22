@@ -549,23 +549,11 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                     onClick={() => setEditingEtape(etape)}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="flex flex-col items-center text-muted-foreground mr-1">
-                        <button 
-                          onClick={(e) => moveEtape(etape.id, 'up', e)} 
-                          className="hover:text-foreground disabled:opacity-30 p-0.5"
-                          disabled={index === 0}
-                          title="Monter"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => moveEtape(etape.id, 'down', e)} 
-                          className="hover:text-foreground disabled:opacity-30 p-0.5"
-                          disabled={index === etapes.length - 1}
-                          title="Descendre"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
+                      <div 
+                        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-1"
+                        title="Glisser pour réorganiser"
+                      >
+                        <GripVertical className="h-4 w-4" />
                       </div>
                       <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                         {etape.order}
