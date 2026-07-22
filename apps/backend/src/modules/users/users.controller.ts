@@ -53,6 +53,13 @@ export class UsersController {
     return this.usersService.remove(req.user.sub || req.user.id);
   }
 
+  @Delete('users/me/history/:syncId')
+  @ApiOperation({ summary: 'Supprimer un élément de l\'historique' })
+  @ApiResponse({ status: 200, description: 'Historique supprimé.' })
+  removeHistoryItem(@Request() req: any, @Param('syncId') syncId: string) {
+    return this.usersService.removeHistoryItem(req.user.sub || req.user.id, syncId);
+  }
+
   @Post('users/me/change-password')
   @ApiOperation({ summary: 'Changer son mot de passe (ancien mdp requis)' })
   @ApiResponse({ status: 200, description: 'Mot de passe modifié.' })
