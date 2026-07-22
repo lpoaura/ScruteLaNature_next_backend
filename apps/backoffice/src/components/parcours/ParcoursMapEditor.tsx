@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle } from 'lucide-react';
+import { Loader2, Plus, MapPin, Upload, Trash2, Edit2, Save, X, GripVertical, Route, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { getParcoursById, updateParcours } from '@/src/services/parcours.service';
 import type { Parcours, Etape } from '@/src/types/api.types';
 import { gpx } from '@tmcw/togeojson';
@@ -285,6 +285,55 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     });
   };
 
+  const moveEtape = (etapeId: string, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentEtapes = [...etapes].sort((a, b) => a.order - b.order);
+    const index = currentEtapes.findIndex(et => et.id === etapeId);
+    if (index < 0) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentEtapes.length - 1) return;
+
+    const newEtapes = [...currentEtapes];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap
+    const temp = newEtapes[index];
+    newEtapes[index] = newEtapes[targetIndex];
+    newEtapes[targetIndex] = temp;
+
+    // Update order values
+    const updatedEtapes = newEtapes.map((etape, i) => ({
+      ...etape,
+      order: i + 1
+    }));
+
+    setEtapes(updatedEtapes);
+
+    const isAutoRoute = pathGeoJSON?.features?.[0]?.properties?.name === "Tracé généré automatiquement";
+    if (isAutoRoute) {
+      generateRouteForEtapes(updatedEtapes, true);
+    }
+
+    startTransition(async () => {
+      try {
+        await reorderEtapes(updatedEtapes.map(et => ({ id: et.id, order: et.order })));
+      } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la sauvegarde du nouvel ordre.');
+      }
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedEtapeId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
   if (!hasLoadedFresh && isLoadingData) {
     return (
       <div className="h-[600px] w-full rounded-xl border border-border bg-muted/20 flex flex-col items-center justify-center">
@@ -440,7 +489,7 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                   <p className="text-xs mt-1">Cliquez sur la carte pour commencer le tracé.</p>
                 </div>
               ) : (
-                [...etapes].sort((a, b) => a.order - b.order).map((etape) => (
+                [...etapes].sort((a, b) => a.order - b.order).map((etape, index) => (
                   <div 
                     key={etape.id} 
                     draggable
@@ -453,12 +502,24 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
                     )}
                     onClick={() => setEditingEtape(etape)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 -ml-2"
-                        title="Glisser pour réorganiser"
-                      >
-                        <GripVertical className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-center text-muted-foreground mr-1">
+                        <button 
+                          onClick={(e) => moveEtape(etape.id, 'up', e)} 
+                          className="hover:text-foreground disabled:opacity-30 p-0.5"
+                          disabled={index === 0}
+                          title="Monter"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => moveEtape(etape.id, 'down', e)} 
+                          className="hover:text-foreground disabled:opacity-30 p-0.5"
+                          disabled={index === etapes.length - 1}
+                          title="Descendre"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
                       </div>
                       <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                         {etape.order}
