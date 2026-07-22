@@ -324,15 +324,6 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     });
   };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedEtapeId(id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
 
   if (!hasLoadedFresh && isLoadingData) {
     return (
