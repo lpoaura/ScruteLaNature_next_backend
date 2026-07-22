@@ -217,6 +217,10 @@ export class StatsService {
     if (filterOrganismeId) parcoursFilter.organismeId = filterOrganismeId;
     if (filterZonageId) parcoursFilter.zonageId = filterZonageId;
 
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOf2MonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
     const parcoursList = await this.db.parcours.findMany({
       where: parcoursFilter,
       include: {
@@ -227,7 +231,41 @@ export class StatsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    let csv = 'ID,Titre,Statut,Difficulté,Distance (km),Durée (min),Organisme,Zonage,Nb Étapes,Nb Participants,Nb Téléchargements,Nb Avis\n';
+    // Téléchargements ce mois et 2 derniers mois par parcours
+    const parcoursIds = parcoursList.map(p => p.id);
+
+    const [dlThisMonthRaw, dl2MonthsRaw, playsThisMonthRaw, plays2MonthsRaw] = await Promise.all([
+      this.db.parcoursDownload.groupBy({
+        by: ['parcoursId'],
+        where: { parcoursId: { in: parcoursIds }, downloadedAt: { gte: startOfThisMonth } },
+        _count: { parcoursId: true },
+      }),
+      this.db.parcoursDownload.groupBy({
+        by: ['parcoursId'],
+        where: { parcoursId: { in: parcoursIds }, downloadedAt: { gte: startOf2MonthsAgo } },
+        _count: { parcoursId: true },
+      }),
+      this.db.userParcours.groupBy({
+        by: ['parcoursId'],
+        where: { parcoursId: { in: parcoursIds }, completedAt: { gte: startOfThisMonth } },
+        _count: { parcoursId: true },
+      }),
+      this.db.userParcours.groupBy({
+        by: ['parcoursId'],
+        where: { parcoursId: { in: parcoursIds }, completedAt: { gte: startOf2MonthsAgo } },
+        _count: { parcoursId: true },
+      }),
+    ]);
+
+    const idx = <T extends { parcoursId: string; _count: { parcoursId: number } }>(arr: T[]) =>
+      Object.fromEntries(arr.map(r => [r.parcoursId, r._count.parcoursId]));
+
+    const dlThisMonth = idx(dlThisMonthRaw);
+    const dl2Months   = idx(dl2MonthsRaw);
+    const playsThisMonth = idx(playsThisMonthRaw);
+    const plays2Months   = idx(plays2MonthsRaw);
+
+    let csv = 'ID,Titre,Statut,Difficulté,Distance (km),Durée (min),Organisme,Zonage,Nb Étapes,Nb Téléch. (mois),Nb Téléch. (2 mois),Nb Téléch. (total),Nb Parties (mois),Nb Parties (2 mois),Nb Parties (total),Nb Avis\n';
 
     for (const p of parcoursList) {
       const row = [
@@ -240,8 +278,12 @@ export class StatsService {
         `"${p.organisme?.nom || ''}"`,
         `"${p.zonage?.nom || ''}"`,
         p._count.etapes,
-        p._count.usersStats,
+        dlThisMonth[p.id] ?? 0,
+        dl2Months[p.id] ?? 0,
         p._count.downloads,
+        playsThisMonth[p.id] ?? 0,
+        plays2Months[p.id] ?? 0,
+        p._count.usersStats,
         p._count.reviews,
       ];
       csv += row.join(',') + '\n';
