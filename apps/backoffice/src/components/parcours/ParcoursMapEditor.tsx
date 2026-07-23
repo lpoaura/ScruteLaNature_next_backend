@@ -323,13 +323,12 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
     const etape1 = currentEtapes[index];
     const etape2 = currentEtapes[targetIndex];
 
-    // Swap locally: garder les lat/lng, n'echanger que titre, description et jeux
+    // Swap locally: garder les lat/lng, n'echanger que titre et jeux
     const newEtapes = currentEtapes.map(e => {
       if (e.id === etape1.id) {
         return {
           ...e,
           title: etape2.title,
-          description: etape2.description,
           jeux: (etape2.jeux ?? []).map(j => ({ ...j, etapeId: etape1.id })),
         };
       }
@@ -337,7 +336,6 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
         return {
           ...e,
           title: etape1.title,
-          description: etape1.description,
           jeux: (etape1.jeux ?? []).map(j => ({ ...j, etapeId: etape2.id })),
         };
       }
@@ -351,8 +349,8 @@ export default function ParcoursMapEditor({ parcours, onUpdate }: ParcoursMapEdi
       try {
         await Promise.all([
           // Echanger les champs texte
-          updateEtape(etape1.id, { title: etape2.title, description: etape2.description }),
-          updateEtape(etape2.id, { title: etape1.title, description: etape1.description }),
+          updateEtape(etape1.id, { title: etape2.title }),
+          updateEtape(etape2.id, { title: etape1.title }),
           // Reassigner les jeux de l'etape1 vers etape2
           ...(etape1.jeux ?? []).map(j => updateJeu(j.id, { etapeId: etape2.id })),
           // Reassigner les jeux de l'etape2 vers etape1
