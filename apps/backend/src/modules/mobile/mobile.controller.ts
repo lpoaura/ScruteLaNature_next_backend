@@ -38,13 +38,15 @@ export class MobileController {
 
 
   @Get('parcours/search')
+  @OptionalAuth()
   @ApiOperation({
-    summary:
-      'Recherche de parcours publiés par zonage et/ou accessibilité (joueur / invité)',
-    description:
-      'Route accessible aux joueurs authentifiés (y compris mode Invité). Retourne uniquement les parcours au statut PUBLISHED.',
+    summary: 'Rechercher et filtrer les parcours publiés (Chantier 3.3)',
+    description: 'Permet la recherche par texte (titre, description) et le filtrage multi-critères.',
   })
-  @ApiQuery({ name: 'zonageId', required: false, type: String })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'difficulty', required: false, enum: ['FACILE', 'MOYEN', 'DIFFICILE'] })
+  @ApiQuery({ name: 'maxDuration', required: false, type: Number })
+  @ApiQuery({ name: 'maxDistance', required: false, type: Number })
   @ApiQuery({ name: 'isPMRFriendly', required: false, type: Boolean })
   @ApiQuery({ name: 'isChildFriendly', required: false, type: Boolean })
   @ApiQuery({ name: 'isMentalHandicapFriendly', required: false, type: Boolean })
@@ -70,28 +72,31 @@ export class MobileController {
   }
 
   @Get('parcours/:id/preview')
+  @OptionalAuth()
   @ApiOperation({
-    summary: 'Prévisualiser un parcours (Mode Test)',
-    description: 'Retourne la structure complète du parcours même s\'il n\'est pas publié. Destiné au test depuis le back-office.',
+    summary: 'Prévisualiser un parcours (Admin uniquement)',
+    description: 'Identique au téléchargement, mais autorise l\'accès aux parcours non publiés pour les tests internes (Back-office).',
   })
   @ApiParam({ name: 'id', description: 'ID du parcours' })
   @ApiResponse({ status: 200, description: 'Le parcours complet.' })
+  @ApiResponse({ status: 403, description: 'Accès refusé.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
-  previewParcours(@Param('id') id: string) {
-    return this.mobileService.downloadParcours(id, true);
+  previewParcours(@Param('id') id: string, @Request() req: any) {
+    return this.mobileService.downloadParcours(id, true, req.user?.id);
   }
 
   @Get('badges')
+  @OptionalAuth()
   @ApiOperation({
-    summary: 'Récupérer tous les badges existants',
-    description: 'Retourne la liste de tous les badges du jeu pour affichage côté mobile.',
+    summary: 'Récupérer la liste de tous les badges disponibles',
   })
-  @ApiResponse({ status: 200, description: 'La liste de tous les badges.' })
+  @ApiResponse({ status: 200, description: 'Liste des badges.' })
   getBadges() {
     return this.mobileService.getBadges();
   }
 
   @Get('parcours/nearby')
+  @OptionalAuth()
   @ApiOperation({
     summary: 'Trouver des parcours autour d\'une position GPS (Chantier 3.4)',
     description: 'Calcule la distance avec la première étape de chaque parcours publié et retourne ceux dans le rayon spécifié (par défaut 50km), triés du plus proche au plus éloigné.',
@@ -102,5 +107,26 @@ export class MobileController {
   })
   getNearby(@Query() dto: NearbyParcoursDto) {
     return this.mobileService.getNearbyParcours(dto);
+  }
+
+  @Get('anecdotes')
+  @OptionalAuth()
+  @ApiOperation({
+    summary: 'Récupérer les anecdotes actives (Le saviez-vous ?)',
+  })
+  @ApiResponse({ status: 200, description: 'Liste des anecdotes.' })
+  getAnecdotes() {
+    return this.mobileService.getActiveAnecdotes();
+  }
+
+  @Get('community/feed')
+  @OptionalAuth()
+  @ApiOperation({
+    summary: 'Récupérer le flux d\'actualité de la communauté',
+    description: 'Retourne les 10 derniers avis laissés sur les parcours',
+  })
+  @ApiResponse({ status: 200, description: 'Liste des derniers avis.' })
+  getCommunityFeed() {
+    return this.mobileService.getCommunityFeed();
   }
 }

@@ -35,6 +35,17 @@ export interface Organisme {
   createdAt: string;
 }
 
+// ── Anecdote ──────────────────────────────────────────────────────────────────
+
+export interface Anecdote {
+  id: string;
+  content: string;
+  imageUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Zonage ────────────────────────────────────────────────────────────────────
 
 export interface Zonage {
@@ -74,6 +85,7 @@ export interface Parcours {
   isPMRFriendly: boolean;
   isChildFriendly: boolean;
   isMentalHandicapFriendly: boolean;
+  isCoupDeCoeur: boolean;
   coverImage: string | null;
   pathGeoJSON?: string | null;
   organismeId: string;

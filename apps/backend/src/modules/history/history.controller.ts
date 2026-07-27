@@ -10,11 +10,11 @@ export class HistoryController {
 
   @Get()
   async getHistory(@Req() req) {
-    return this.historyService.getUserHistory(req.user.userId);
+    return this.historyService.getUserHistory(req.user.id);
   }
 
   @Post()
   async recordHistory(@Req() req, @Body() dto: RecordHistoryDto) {
-    return this.historyService.recordHistory(req.user.userId, dto);
+    return this.historyService.recordHistory(req.user.id, dto);
   }
 }

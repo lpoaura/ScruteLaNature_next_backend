@@ -10,9 +10,10 @@ import {
   Trash2,
   Eye,
   Map,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Star
 } from 'lucide-react';
-import { getParcours, deleteParcours, type PaginatedParcours } from '@/src/services/parcours.service';
+import { getParcours, deleteParcours, updateParcours, type PaginatedParcours } from '@/src/services/parcours.service';
 import { getZonages } from '@/src/services/zonages.service';
 import { getOrganismes } from '@/src/services/organismes.service';
 import { useAuth } from '@/src/hooks/use-auth';
@@ -86,6 +87,16 @@ export default function ParcoursClient() {
       fetchData();
     } catch {
       alert('Erreur lors de la suppression.');
+    }
+  };
+
+  const toggleCoupDeCoeur = async (parcours: Parcours) => {
+    try {
+      await updateParcours(parcours.id, { isCoupDeCoeur: !parcours.isCoupDeCoeur });
+      // Mettre à jour la liste locale pour un feedback instantané
+      setParcoursList(prev => prev.map(p => p.id === parcours.id ? { ...p, isCoupDeCoeur: !parcours.isCoupDeCoeur } : p));
+    } catch (err) {
+      alert('Erreur lors de la mise à jour du statut Coup de Cœur.');
     }
   };
 
@@ -269,9 +280,22 @@ export default function ParcoursClient() {
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           
+                          <button
+                            onClick={() => toggleCoupDeCoeur(parcours)}
+                            className={cn(
+                              "p-1.5 rounded-md transition-colors",
+                              parcours.isCoupDeCoeur 
+                                ? "text-amber-500 bg-amber-50 hover:bg-amber-100" 
+                                : "text-muted-foreground hover:text-amber-500 hover:bg-amber-50"
+                            )}
+                            title={parcours.isCoupDeCoeur ? "Retirer des coups de cœur" : "Mettre en coup de cœur"}
+                          >
+                            <Star className="h-4 w-4" fill={parcours.isCoupDeCoeur ? "currentColor" : "none"} />
+                          </button>
+
                           <Link
                             href={`/dashboard/parcours/${parcours.id}/edit`}
-                            className="p-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-100 rounded-md transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-100 rounded-md transition-colors"
                             title="Modifier"
                           >
                             <Edit className="h-4 w-4" />

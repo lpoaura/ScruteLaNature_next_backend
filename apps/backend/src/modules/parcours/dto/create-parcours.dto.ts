@@ -110,4 +110,9 @@ export class CreateParcoursDto {
   @ValidateNested()
   @Type(() => CreateBadgeDto)
   badge?: CreateBadgeDto;
+
+  @ApiPropertyOptional({ example: false, description: 'Coup de coeur mis en avant' })
+  @IsOptional()
+  @IsBoolean()
+  isCoupDeCoeur?: boolean;
 }

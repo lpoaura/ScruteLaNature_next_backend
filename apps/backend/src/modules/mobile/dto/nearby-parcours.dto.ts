@@ -22,4 +22,9 @@ export class NearbyParcoursDto {
   @IsNumber()
   @IsOptional()
   radiusKm?: number;
+
+  @ApiPropertyOptional({ description: 'Filtrer uniquement les coups de coeur' })
+  @IsOptional()
+  @Type(() => Boolean)
+  isCoupDeCoeur?: boolean;
 }

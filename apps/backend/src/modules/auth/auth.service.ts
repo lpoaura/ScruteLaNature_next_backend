@@ -92,6 +92,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        level: user.level,
+        totalPoints: user.totalPoints,
+        co2Saved: user.co2Saved,
       },
     };
   }

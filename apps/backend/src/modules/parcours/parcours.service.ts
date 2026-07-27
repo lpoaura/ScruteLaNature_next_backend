@@ -57,6 +57,7 @@ export class ParcoursService {
           distanceKm: true,
           durationMin: true,
           coverImage: true,
+          isCoupDeCoeur: true,
           zonage: { select: { id: true, nom: true } },
           organisme: { select: { id: true, nom: true } },
           createdBy: { select: { id: true, firstName: true, lastName: true, email: true } },
