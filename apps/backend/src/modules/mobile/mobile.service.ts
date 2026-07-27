@@ -310,6 +310,7 @@ export class MobileService {
     const parcoursList = await this.db.parcours.findMany({
       where: {
         status: PublishStatus.PUBLISHED,
+        ...(dto.isCoupDeCoeur ? { isCoupDeCoeur: true } : {}),
       },
       select: {
         id: true,
@@ -322,6 +323,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
+        isCoupDeCoeur: true,
         badge: true,
         zonage: { select: { nom: true } },
         etapes: {
@@ -376,5 +378,35 @@ export class MobileService {
 
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+
+  async getActiveAnecdotes() {
+    return this.db.anecdote.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getCommunityFeed() {
+    return this.db.review.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        user: {
+          select: {
+            pseudo: true,
+          }
+        },
+        parcours: {
+          select: {
+            title: true,
+          }
+        }
+      }
+    });
   }
 }

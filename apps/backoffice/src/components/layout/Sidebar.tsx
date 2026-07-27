@@ -15,6 +15,7 @@ import {
   LogOut,
   Bird,
   PanelLeft,
+  Lightbulb,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/src/hooks/use-auth';
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Parcours', href: '/dashboard/parcours', icon: Map },
   { label: 'Médiathèque', href: '/dashboard/medias', icon: Image },
   { label: 'Avis & Modération', href: '/dashboard/moderation', icon: MessageSquare },
+  { label: 'Le saviez-vous ?', href: '/dashboard/anecdotes', icon: Lightbulb },
   { label: 'Statistiques', href: '/dashboard/statistiques', icon: BarChart2, adminOnly: true },
   { label: 'Mon Équipe', href: '/dashboard/equipe', icon: Users, adminOnly: true },
   { label: 'Organismes', href: '/dashboard/organismes', icon: Building2, superAdminOnly: true },

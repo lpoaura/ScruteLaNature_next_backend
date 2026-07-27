@@ -26,6 +26,7 @@ import { StatsModule } from './modules/stats/stats.module';
 import { DownloadsModule } from './modules/downloads/downloads.module';
 
 import { HistoryModule } from './modules/history/history.module';
+import { AnecdotesModule } from './modules/anecdotes/anecdotes.module';
 
 @Module({
   imports: [ 
@@ -71,6 +72,7 @@ import { HistoryModule } from './modules/history/history.module';
     StatsModule,
     DownloadsModule,
     HistoryModule,
+    AnecdotesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -259,6 +259,7 @@ model Parcours {
   durationMin   Int
   coverImage    String
   status        PublishStatus @default(DRAFT)
+  isCoupDeCoeur Boolean       @default(false)
 
   // Mode Escape Game
   isEscapeGame     Boolean @default(false)
@@ -437,4 +438,17 @@ model Review {
   @@unique([userId, parcoursId])
   @@index([parcoursId])
   @@map("reviews")
+}
+
+// ─── ANECDOTES / LE SAVIEZ-VOUS ──────────────────────────────────────────────
+model Anecdote {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  imageUrl  String?  // Image or picto uploadé
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("anecdotes")
 }
