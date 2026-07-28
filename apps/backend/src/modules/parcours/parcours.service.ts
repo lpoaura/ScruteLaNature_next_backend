@@ -11,12 +11,16 @@ import { PartialType } from '@nestjs/mapped-types';
 import { Role, PublishStatus } from '@prisma/client';
 import * as fs from 'fs';
 import { join } from 'path';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class UpdateParcoursDto extends PartialType(CreateParcoursDto) {}
 
 @Injectable()
 export class ParcoursService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Liste les parcours — cloisonnés par organisme sauf pour SUPER_ADMIN
@@ -231,6 +235,9 @@ export class ParcoursService {
       }
     }
 
+    const wasPublished = existing.status === PublishStatus.PUBLISHED;
+    const willBePublished = dataToUpdate.status === PublishStatus.PUBLISHED;
+
     const updated = await this.db.parcours.update({
       where: { id },
       data: dataToUpdate,
@@ -241,6 +248,31 @@ export class ParcoursService {
       this.cleanupOldSpecificImage(existing.coverImage, dataToUpdate.coverImage);
     }
 
+    if (!wasPublished && willBePublished) {
+      this.notificationsService.sendToAll(
+        'Nouveau Parcours disponible !',
+        `Le parcours "${updated.title}" vient d'être publié. Allez le découvrir !`,
+        { type: 'NEW_PARCOURS', parcoursId: updated.id }
+      ).catch(err => console.error("Erreur lors de l'envoi des notifications push:", err));
+    } else if (wasPublished && (willBePublished || dataToUpdate.status === undefined)) {
+      // Si le parcours était publié, et reste publié ou on ne touche pas au status, 
+      // c'est une modification : on notifie ceux qui l'ont téléchargé
+      this.db.parcoursDownload.findMany({
+        where: { parcoursId: id, userId: { not: null } },
+        select: { userId: true },
+        distinct: ['userId']
+      }).then(downloads => {
+        const userIds = downloads.map(d => d.userId).filter(Boolean) as string[];
+        if (userIds.length > 0) {
+          this.notificationsService.sendPushNotifications(
+            userIds,
+            'Mise à jour de parcours',
+            `Le parcours "${updated.title}" a été mis à jour. Pensez à le retélécharger !`,
+            { type: 'UPDATE_PARCOURS', parcoursId: updated.id }
+          ).catch(err => console.error('Erreur notification maj parcours:', err));
+        }
+      }).catch(err => console.error('Erreur recherche downloads:', err));
+    }
 
     return updated;
   }

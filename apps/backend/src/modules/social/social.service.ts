@@ -9,6 +9,7 @@ import { DatabaseService } from '../../database/database.service';
 import { FriendshipStatus, Role } from '@prisma/client';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // Projection minimale pour ne jamais exposer de données sensibles (email, password, etc.)
 const PUBLIC_USER_SELECT = {
@@ -21,7 +22,10 @@ const PUBLIC_USER_SELECT = {
 
 @Injectable()
 export class SocialService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   // ── 0. Rechercher un utilisateur ──────────────────────────────────────────
   
@@ -99,8 +103,19 @@ export class SocialService {
       },
       include: {
         receiver: { select: PUBLIC_USER_SELECT },
+        requester: { select: PUBLIC_USER_SELECT },
       },
     });
+
+    // Envoyer une notification Push au destinataire
+    if (friendship.requester) {
+      this.notificationsService.sendPushNotifications(
+        [receiver.id],
+        "Nouvelle demande d'ami",
+        `${friendship.requester.pseudo} veut devenir votre ami !`,
+        { type: 'FRIEND_REQUEST', friendshipId: friendship.id }
+      ).catch(err => console.error('Erreur notification push:', err));
+    }
 
     return {
       message: `Demande d'ami envoyée à ${receiver.pseudo} !`,
@@ -168,7 +183,7 @@ export class SocialService {
       throw new BadRequestException(`Impossible d'accepter une demande au statut "${friendship.status}".`);
     }
 
-    return this.db.friendship.update({
+    const updated = await this.db.friendship.update({
       where: { id: friendshipId },
       data: { status: FriendshipStatus.ACCEPTED },
       include: {
@@ -176,6 +191,18 @@ export class SocialService {
         receiver: { select: PUBLIC_USER_SELECT },
       },
     });
+
+    // Envoyer une notification Push au demandeur (requester)
+    if (updated.receiver) {
+      this.notificationsService.sendPushNotifications(
+        [updated.requesterId],
+        "Demande d'ami acceptée",
+        `${updated.receiver.pseudo} a accepté votre demande.`,
+        { type: 'FRIEND_ACCEPT', friendshipId: updated.id }
+      ).catch(err => console.error('Erreur notification push:', err));
+    }
+
+    return updated;
   }
 
   // ── 5. Bloquer quelqu'un ─────────────────────────────────────────────────

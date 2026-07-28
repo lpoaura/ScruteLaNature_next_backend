@@ -27,9 +27,13 @@ import { DownloadsModule } from './modules/downloads/downloads.module';
 
 import { HistoryModule } from './modules/history/history.module';
 import { AnecdotesModule } from './modules/anecdotes/anecdotes.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [ 
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     AppConfigModule,
     DatabaseModule,
@@ -73,6 +77,7 @@ import { AnecdotesModule } from './modules/anecdotes/anecdotes.module';
     DownloadsModule,
     HistoryModule,
     AnecdotesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

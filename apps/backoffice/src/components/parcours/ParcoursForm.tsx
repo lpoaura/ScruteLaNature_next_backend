@@ -110,7 +110,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     
     // Gérer les nombres
     if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+      setFormData((prev: any) => ({ ...prev, [name]: value === '' ? '' : parseFloat(value) }));
       return;
     }
 
@@ -155,6 +155,9 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
     const payload = {
       ...formData,
+      distanceKm: Number(formData.distanceKm) || 0,
+      durationMin: Number(formData.durationMin) || 0,
+      timeLimitMinutes: Number(formData.timeLimitMinutes) || 0,
       badge: hasBadge ? badgeData : null,
     };
 
