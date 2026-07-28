@@ -198,6 +198,7 @@ export class MobileService {
         isPMRFriendly: true,
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
+        isEscapeGame: true,
         badge: true,
         zonage: {
           select: { id: true, nom: true, code: true },
@@ -224,7 +225,7 @@ export class MobileService {
    * tous ses jeux, son organisme et sa zonage, prêt à être téléchargé
    * pour le mode hors-ligne de l'application mobile.
    */
-  async downloadParcours(id: string, isPreview = false, userId?: string) {
+  async downloadParcours(id: string, isPreview = false, userId?: string, logDownload = true) {
     const parcours = await this.db.parcours.findFirst({
       where: {
         id,
@@ -259,8 +260,8 @@ export class MobileService {
       parcours.etapes = parcours.etapes.filter((etape) => etape.jeux && etape.jeux.length > 0);
     }
 
-    // Tracker le téléchargement pour les statistiques (si pas en prévisualisation)
-    if (!isPreview) {
+    // Tracker le téléchargement pour les statistiques (si pas en prévisualisation et si demandé)
+    if (!isPreview && logDownload) {
       // On log le download en asynchrone pour ne pas ralentir la réponse
       this.db.parcoursDownload.create({
         data: {
@@ -324,6 +325,7 @@ export class MobileService {
         isChildFriendly: true,
         isMentalHandicapFriendly: true,
         isCoupDeCoeur: true,
+        isEscapeGame: true,
         badge: true,
         zonage: { select: { nom: true } },
         etapes: {
@@ -404,6 +406,11 @@ export class MobileService {
         parcours: {
           select: {
             title: true,
+            zonage: {
+              select: {
+                nom: true,
+              }
+            }
           }
         }
       }

@@ -339,6 +339,12 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    // Mettre à jour la date de dernière activité du joueur
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date() },
+    });
+
     if (sessionId) {
       await this.databaseService.session.update({
         where: { id: sessionId },
