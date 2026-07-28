@@ -1,28 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useAuth } from '@/src/hooks/useAuth';
+
 import { Bell, Send } from 'lucide-react';
 
 export default function NotificationsPage() {
-  const { getToken } = useAuth();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !body) return;
 
     setIsSubmitting(true);
+    setSuccessMsg('');
+    setErrorMsg('');
     try {
-      const token = getToken();
+      const token = localStorage.getItem('accessToken');
       const res = await fetch('/api/admin/notifications/send-all', {
         method: 'POST',
         headers: {
@@ -33,15 +30,15 @@ export default function NotificationsPage() {
       });
 
       if (!res.ok) {
-        throw new Error('Erreur lors de l\\'envoi');
+        throw new Error("Erreur lors de l'envoi");
       }
 
-      toast.success('Notifications envoyées à tous les utilisateurs !');
+      setSuccessMsg('Notifications envoyées à tous les utilisateurs !');
       setTitle('');
       setBody('');
     } catch (err) {
       console.error(err);
-      toast.error('Impossible d\\'envoyer les notifications.');
+      setErrorMsg("Impossible d'envoyer les notifications.");
     } finally {
       setIsSubmitting(false);
     }
@@ -50,54 +47,72 @@ export default function NotificationsPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Notifications Push</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Notifications Push</h2>
       </div>
 
       <div className="max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="border-b border-border pb-3">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
               <Bell className="h-5 w-5" />
               Campagne Manuelle
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
               Envoyer une notification push (alerte sur le téléphone) à TOUS les utilisateurs ayant l'application installée.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSend} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre de la notification</Label>
-                <Input
-                  id="title"
-                  placeholder="Ex: Mise à jour majeure !"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  maxLength={50}
-                  required
-                />
-              </div>
+            </p>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="body">Message</Label>
-                <Textarea
-                  id="body"
-                  placeholder="Ex: Découvrez les nouveaux parcours dans votre région."
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={4}
-                  maxLength={150}
-                  required
-                />
-              </div>
+          {successMsg && (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium">
+              {successMsg}
+            </div>
+          )}
 
-              <Button type="submit" disabled={isSubmitting || !title || !body} className="w-full sm:w-auto flex gap-2">
-                <Send className="h-4 w-4" />
-                {isSubmitting ? 'Envoi en cours...' : 'Envoyer à tout le monde'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+          {errorMsg && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive font-medium">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSend} className="space-y-6 pt-2">
+            <div className="space-y-2">
+              <label htmlFor="title" className="text-sm font-medium text-foreground">Titre de la notification</label>
+              <input
+                id="title"
+                type="text"
+                placeholder="Ex: Mise à jour majeure !"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={50}
+                required
+                className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="body" className="text-sm font-medium text-foreground">Message</label>
+              <textarea
+                id="body"
+                placeholder="Ex: Découvrez les nouveaux parcours dans votre région."
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={4}
+                maxLength={150}
+                required
+                className="w-full px-3 py-2 border border-input rounded-md bg-background focus:ring-2 focus:ring-primary outline-none resize-none"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={isSubmitting || !title || !body} 
+              className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 w-full sm:w-auto"
+            >
+              <Send className="h-4 w-4" />
+              {isSubmitting ? 'Envoi en cours...' : 'Envoyer à tout le monde'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
