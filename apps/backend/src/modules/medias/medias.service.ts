@@ -6,7 +6,8 @@ import {
 import { AppConfigService } from '../../config/app-config.service';
 import { DatabaseService } from '../../database/database.service';
 import * as fs from 'fs';
-import { join } from 'path';
+import { join, extname } from 'path';
+import sharp from 'sharp';
 
 @Injectable()
 export class MediasService {
@@ -43,6 +44,59 @@ export class MediasService {
       size: file.size,
       url,
     };
+  }
+
+  /**
+   * Convertit l'image en WebP et construit la réponse
+   */
+  async processAndBuildUploadResponse(file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Aucun fichier reçu');
+    }
+
+    // Conversion automatique en WebP pour toutes les images (hors SVG)
+    if (file.mimetype && file.mimetype.startsWith('image/') && !file.mimetype.includes('svg')) {
+      if (file.path && fs.existsSync(file.path)) {
+        const ext = extname(file.filename);
+        if (ext.toLowerCase() !== '.webp') {
+          const origExtIdx = file.filename.lastIndexOf('.');
+          const baseFilename = origExtIdx > 0 ? file.filename.substring(0, origExtIdx) : file.filename;
+          const newFilename = `${baseFilename}.webp`;
+          const newPath = join(file.destination, newFilename);
+
+          try {
+            await sharp(file.path)
+              .webp({ quality: 85 })
+              .toFile(newPath);
+
+            // Supprimer l'ancien fichier d'origine
+            if (fs.existsSync(file.path)) {
+              fs.unlinkSync(file.path);
+            }
+
+            // Mettre à jour les propriétés du fichier vers le nouveau fichier WebP
+            file.filename = newFilename;
+            file.path = newPath;
+            file.mimetype = 'image/webp';
+            const newStats = fs.statSync(newPath);
+            file.size = newStats.size;
+
+            // Mettre à jour originalname avec l'extension .webp
+            const origNameExtIdx = file.originalname.lastIndexOf('.');
+            if (origNameExtIdx > 0) {
+              file.originalname = `${file.originalname.substring(0, origNameExtIdx)}.webp`;
+            } else {
+              file.originalname = `${file.originalname}.webp`;
+            }
+          } catch (error) {
+            console.error('Erreur lors de la conversion WebP:', error);
+            throw new BadRequestException("Impossible de convertir l'image en WebP.");
+          }
+        }
+      }
+    }
+
+    return this.buildUploadResponse(file);
   }
 
   /**

@@ -6,7 +6,7 @@ import * as fs from 'fs';
 
 // Types MIME autorisés par catégorie
 const ALLOWED_TYPES = {
-  images: ['image/jpeg', 'image/png', 'image/webp'],
+  images: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/tiff', 'image/heic', 'image/heif', 'image/bmp'],
   audio: ['audio/mpeg', 'audio/mp3'],
   gpx: ['application/gpx+xml', 'application/octet-stream', 'text/xml', 'application/xml'],
 };
@@ -71,7 +71,7 @@ export const multerConfig = {
     } else {
       cb(
         new BadRequestException(
-          `Type de fichier non autorisé : ${file.mimetype}. Types acceptés : images (jpg, png, webp), audio (mp3), GPX.`,
+          `Type de fichier non autorisé : ${file.mimetype}. Types acceptés : images (jpg, png, webp, gif, avif...), audio (mp3), GPX.`,
         ),
         false,
       );
