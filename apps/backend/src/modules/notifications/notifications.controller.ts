@@ -25,9 +25,17 @@ export class NotificationsController {
 
   @Post('send-all')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Envoyer une notification push à tous les utilisateurs' })
+  @ApiOperation({
+    summary: 'Envoyer une notification push à tous les utilisateurs (avec rapport de diagnostic)',
+    description: "Envoie un message via l'API Expo et retourne un diagnostic précis du nombre d'appareils cibles, du nombre d'envois réussis et du détail des erreurs ou refus éventuels.",
+  })
   async sendToAll(@Body() dto: SendPushDto) {
-    await this.notificationsService.sendToAll(dto.title, dto.body, { source: 'backoffice' });
-    return { message: "Notifications en cours d'envoi." };
+    const report = await this.notificationsService.sendToAll(dto.title, dto.body, { source: 'backoffice' });
+    return {
+      message: report.success
+        ? `Notifications envoyées avec succès (${report.sentCount} appareil[s] notifié[s]).`
+        : `L'envoi des notifications a échoué ou a renvoyé un avertissement (${report.sentCount} succès, ${report.errorCount} erreur[s]).`,
+      report,
+    };
   }
 }
