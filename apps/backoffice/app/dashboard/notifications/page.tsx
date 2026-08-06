@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
+import { sendPushToAll } from '@/src/services/notifications.service';
 import { Bell, Send } from 'lucide-react';
 
 export default function NotificationsPage() {
@@ -19,26 +19,19 @@ export default function NotificationsPage() {
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/admin/notifications/send-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title, body }),
-      });
+      const res = await sendPushToAll(title, body);
 
-      if (!res.ok) {
-        throw new Error("Erreur lors de l'envoi");
+      if (res.report && !res.report.success) {
+        const details = res.report.errors?.map((e) => e.message).join(' | ');
+        setErrorMsg(`${res.message}${details ? ` (${details})` : ''}`);
+      } else {
+        setSuccessMsg(res.message || 'Notifications envoyées à tous les utilisateurs !');
+        setTitle('');
+        setBody('');
       }
-
-      setSuccessMsg('Notifications envoyées à tous les utilisateurs !');
-      setTitle('');
-      setBody('');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrorMsg("Impossible d'envoyer les notifications.");
+      setErrorMsg(err.message || "Impossible d'envoyer les notifications.");
     } finally {
       setIsSubmitting(false);
     }
