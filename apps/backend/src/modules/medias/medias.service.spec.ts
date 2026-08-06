@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MediasService } from './medias.service';
 import { AppConfigService } from '../../config/app-config.service';
+import { DatabaseService } from '../../database/database.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const mockAppConfig = {
@@ -8,6 +9,11 @@ const mockAppConfig = {
     (subfolder: string, filename: string) =>
       `http://localhost:3000/uploads/${subfolder}/${filename}`,
   ),
+};
+
+const mockDbService = {
+  parcours: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
+  jeu: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]) },
 };
 
 describe('MediasService', () => {
@@ -18,6 +24,7 @@ describe('MediasService', () => {
       providers: [
         MediasService,
         { provide: AppConfigService, useValue: mockAppConfig },
+        { provide: DatabaseService, useValue: mockDbService },
       ],
     }).compile();
     service = module.get<MediasService>(MediasService);
@@ -60,6 +67,28 @@ describe('MediasService', () => {
 
       service.buildUploadResponse(fakeFile);
       expect(mockAppConfig.buildMediaUrl).toHaveBeenCalledWith('audio', 'ambiance.mp3');
+    });
+  });
+
+  // ── processAndBuildUploadResponse ─────────────────────────────────────────
+
+  describe('processAndBuildUploadResponse', () => {
+    it('devrait retourner la réponse normalement si le fichier n\'est pas accessible sur le disque (testitaire simple)', async () => {
+      const fakeFile = {
+        filename: 'test.jpg',
+        originalname: 'test.jpg',
+        mimetype: 'image/jpeg',
+        size: 1234,
+        destination: '/uploads/images',
+        path: '/inexistant/path.jpg',
+      } as Express.Multer.File;
+
+      const result = await service.processAndBuildUploadResponse(fakeFile);
+      expect(result.filename).toBe('test.jpg');
+    });
+
+    it('devrait lever BadRequestException si aucun fichier n\'est fourni', async () => {
+      await expect(service.processAndBuildUploadResponse(null as any)).rejects.toThrow(BadRequestException);
     });
   });
 
