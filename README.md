@@ -7,12 +7,26 @@
 
 ## 🏗️ Architecture du monorepo
 
-```
+```text
 lpo-balades-web/
 ├── apps/
-│   ├── backend/         → API REST NestJS (TypeScript) — port 3000
-│   └── backoffice/      → Interface admin Next.js — port 3001
-└── package.json         → npm workspaces (racine)
+│   ├── backend/               → API REST NestJS (TypeScript) — port 3000
+│   │   ├── prisma/            → Schéma de base de données, Migrations, Seeders
+│   │   └── src/               → Code source du serveur API
+│   │       ├── common/        → Filtres globaux (erreurs Prisma), Guards, Décorateurs
+│   │       ├── database/      → Service d'instanciation Prisma Client
+│   │       ├── modules/       → Logique métier (Auth, Users, Parcours, Notifications...)
+│   │       └── providers/     → Services tiers (Mailing, Expo Push)
+│   │
+│   └── backoffice/            → Interface admin Next.js (App Router) — port 3001
+│       ├── app/               → Pages de l'application (Routing Next.js)
+│       │   ├── (auth)/        → Écrans de connexion / mot de passe oublié
+│       │   └── dashboard/     → Interface interne cloisonnée (Zonages, Statistiques...)
+│       ├── components/        → Composants UI globaux (shadcn/ui, navbar, sidebar)
+│       └── src/               
+│           └── lib/           → Utilitaires, définition du client API (apiClient)
+│
+└── package.json               → npm workspaces (racine)
 ```
 
 ### `apps/backend` — API principale
@@ -155,6 +169,70 @@ Parcours → Review[], UserParcours[]
 
 ---
 
+## 🔔 Notifications Push (Expo)
+
+Le système de notifications push utilise **Expo Server SDK**.
+
+### Architecture d'envoi
+1. L'application mobile demande un token d'appareil (Ex: `ExponentPushToken[...]`) et l'envoie au Backend via `PATCH /users/me`.
+2. Le token est stocké dans le champ `pushToken` de l'entité `User`.
+3. Le **Backoffice** appelle `POST /admin/notifications/send-all`.
+4. Le service **NotificationsService** du Backend récupère tous les utilisateurs ayant un `pushToken`, vérifie leur validité, divise les envois en lots (chunks) et contacte l'API d'Expo.
+5. Expo transmet à **Firebase Cloud Messaging (FCM)** pour Android, ou **APNs** pour iOS.
+
+### ⚠️ Piège classique lors des tests (0 utilisateurs trouvés)
+Si le Backoffice affiche l'erreur : *"Aucun utilisateur ayant enregistré un token de notification n'existe en base de données"*, cela est généralement dû à une différence d'environnements :
+- L'APK installé sur le téléphone de test est configuré pour pointer vers l'API de **Production** (`https://api...`). Le téléphone s'enregistre donc sur la base de données de production.
+- Vous lancez le Backoffice et le Backend en **Local** (`http://localhost:3000`). La base de données locale n'a reçu aucun token.
+👉 **Solution :** Testez l'envoi depuis le backoffice de production, OU modifiez le `.env` de l'app mobile pour pointer vers votre IP locale et re-compilez un Dev Client (`npx expo run:android`).
+
+---
+
+## 📈 Guide de Montée en Version (Upgrades)
+
+Maintenir le monorepo à jour implique de gérer Prisma, NestJS, et Next.js de manière cohérente :
+
+### 1. Mise à jour de Prisma (Base de données)
+Lorsqu'une nouvelle version de Prisma sort, il est impératif de mettre à jour le CLI **et** le Client simultanément dans le workspace `backend` :
+```bash
+cd apps/backend
+npm install prisma@latest @prisma/client@latest
+npx prisma generate
+```
+
+### 2. Mises à jour Node.js / NPM Packages
+Pour mettre à jour les packages de sécurité ou frameworks majeurs :
+```bash
+# Vérifier les paquets obsolètes à la racine et dans les workspaces
+npm outdated -ws
+
+# Mettre à jour un paquet spécifique dans le backoffice (ex: Next.js)
+npm install next@latest -w backoffice
+
+# Mettre à jour le backend (ex: NestJS)
+npm install @nestjs/core@latest @nestjs/common@latest -w backend
+```
+*Note : Privilégiez des mises à jour testées individuellement plutôt qu'un `npm update` global qui pourrait casser les dépendances croisées.*
+
+---
+
+## 🆕 Dernières Évolutions (Changelog Récent)
+
+Pour faciliter la reprise du projet par d'autres développeurs, voici les derniers correctifs et choix d'architecture mis en place :
+
+### 1. Correctifs de l'espace de travail (NPM Workspaces)
+- **Erreur de script racine** : Le script `npm run dev` à la racine plantait à cause du paquet `concurrently` introuvable. Ce paquet a été installé à la racine du monorepo pour permettre le lancement simultané du `backend` (port 3000) et du `backoffice` (port 3001) avec une seule commande.
+
+### 2. Backoffice : Appels API et SSR (Next.js App Router)
+- **Problème résolu** : Les requêtes depuis les Server Components (comme la page `notifications/page.tsx`) vers le backend retournaient des erreurs `404 Not Found` lorsqu'elles utilisaient des chemins relatifs (`/api/...`).
+- **Solution d'architecture** : Toutes les communications Server-to-Server doivent désormais utiliser l'utilitaire `apiClient` situé dans `apps/backoffice/src/lib/api-client.ts`. Cet utilitaire construit automatiquement l'URL absolue (`http://localhost:3000/api/...` ou prod) et transmet de façon transparente le token d'authentification récupéré via `cookies()`.
+
+### 3. Backoffice : Interface de Notifications Push
+- Ajout d'une interface d'administration permettant l'envoi manuel de notifications Push à tous les utilisateurs.
+- Le backend lit correctement les erreurs renvoyées par Expo (ex: logs détaillés sur les tokens non enregistrés) et les transmet au front-end pour afficher un diagnostic précis en cas d'échec de la campagne.
+
+---
+
 ## 🌿 Workflow Git
 
 | Branche | Usage |
@@ -169,3 +247,4 @@ git checkout -b feat/sprint-5-backoffice
 git push origin feat/sprint-5-backoffice
 # → Pull Request → Review Fred → Merge main
 ```
+
