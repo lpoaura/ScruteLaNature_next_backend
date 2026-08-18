@@ -13,6 +13,7 @@ export interface DashboardStats {
   global: {
     totalParcours: number;
     totalPlayers: number;
+    totalGuests: number;
     totalMembers: number;
     totalCompletions: number;
   };
