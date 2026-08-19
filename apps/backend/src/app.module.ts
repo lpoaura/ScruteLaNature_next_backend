@@ -32,7 +32,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [ 
+  imports: [
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     AppConfigModule,
@@ -45,6 +45,11 @@ import { ScheduleModule } from '@nestjs/schedule';
           host: config.get<string>('MAIL_HOST'),
           port: config.get<number>('MAIL_PORT'),
           secure: false,
+          ...(config.get<string>('MAIL_OFFICE365') === 'true' && {
+            tls: {
+              ciphers: 'SSLv3',
+            },
+          }),
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASSWORD'),
@@ -92,4 +97,4 @@ import { ScheduleModule } from '@nestjs/schedule';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
