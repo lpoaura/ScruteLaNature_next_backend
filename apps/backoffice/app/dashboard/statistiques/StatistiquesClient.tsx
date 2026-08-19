@@ -40,8 +40,8 @@ const KPI_CONFIGS = [
   },
   {
     key: 'totalPlayers' as const,
-    label: 'Joueurs inscrits',
-    sublabel: 'comptes joueurs actifs',
+    label: 'Total des joueurs',
+    sublabel: 'inscrits et invités',
     icon: Users,
     gradient: 'from-blue-500 to-indigo-600',
     bg: 'bg-blue-50 dark:bg-blue-950/30',

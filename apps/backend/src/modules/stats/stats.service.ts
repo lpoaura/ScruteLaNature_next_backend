@@ -39,10 +39,20 @@ export class StatsService {
     const upWhere = noScope ? undefined : { parcoursId: { in: parcoursIds } };
 
     const totalPlayers = noScope
-      ? await this.db.user.count({ where: { role: Role.USER, isGuest: false } })
+      ? await this.db.user.count({ where: { role: Role.USER } })
       : await this.db.userParcours
           .groupBy({ by: ['userId'], where: upWhere })
           .then((r) => r.length);
+
+    const totalGuests = noScope
+      ? await this.db.user.count({ where: { role: Role.USER, isGuest: true } })
+      : await this.db.userParcours
+          .findMany({
+            where: upWhere,
+            select: { user: { select: { isGuest: true } } },
+            distinct: ['userId'],
+          })
+          .then((rows) => rows.filter((r) => r.user.isGuest).length);
 
     const membersWhere: any = isSuperAdmin
       ? { role: { in: [Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN] } }
@@ -198,7 +208,13 @@ export class StatsService {
     }));
 
     return {
-      global: { totalParcours, totalPlayers, totalMembers, totalCompletions },
+      global: {
+        totalParcours,
+        totalPlayers,
+        totalGuests,
+        totalMembers,
+        totalCompletions,
+      },
       byOrganisme: statsByOrganisme,
       byZonage: zonages.map(z => ({ id: z.id, nom: z.nom, nbParcours: z._count.parcours })),
       byParcours,
