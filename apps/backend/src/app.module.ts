@@ -44,7 +44,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         transport: {
           host: config.get<string>('MAIL_HOST'),
           port: config.get<number>('MAIL_PORT'),
-          secure: false,
+          secure: config.get<string>('MAIL_SECURE') === 'true', // true pour le port 465 (TLS), false pour 587 (STARTTLS)
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASSWORD'),
