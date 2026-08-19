@@ -17,6 +17,7 @@ import {
   PanelLeft,
   Lightbulb,
   Bell,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/src/hooks/use-auth';
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Médiathèque', href: '/dashboard/medias', icon: Image },
   { label: 'Avis & Modération', href: '/dashboard/moderation', icon: MessageSquare },
   { label: 'Le saviez-vous ?', href: '/dashboard/anecdotes', icon: Lightbulb },
+  { label: 'Signalements', href: '/dashboard/signalements', icon: ShieldAlert },
   { label: 'Notifications', href: '/dashboard/notifications', icon: Bell, adminOnly: true },
   { label: 'Statistiques', href: '/dashboard/statistiques', icon: BarChart2, adminOnly: true },
   { label: 'Mon Équipe', href: '/dashboard/equipe', icon: Users, adminOnly: true },

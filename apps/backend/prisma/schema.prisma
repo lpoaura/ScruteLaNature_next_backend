@@ -115,6 +115,9 @@ model User {
   badges              UserBadge[]
   parcoursDone        UserParcours[]
   reviews             Review[]
+  signalements        Signalement[]
+
+  // Historique & Sync hors-ligne
   parcoursCreated     Parcours[]           @relation("ParcoursCreatedBy")
   downloads           ParcoursDownload[]   @relation("UserDownloads")
   sentInvitations     ParcoursInvitation[] @relation("SentInvitations")
@@ -287,10 +290,11 @@ model Parcours {
   isChildFriendly          Boolean @default(false)
   isMentalHandicapFriendly Boolean @default(false)
 
-  etapes     Etape[]
-  usersStats UserParcours[]
-  reviews    Review[]
-  downloads  ParcoursDownload[]
+  etapes       Etape[]
+  usersStats   UserParcours[]
+  reviews      Review[]
+  downloads    ParcoursDownload[]
+  signalements Signalement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -314,7 +318,8 @@ model Etape {
   longitude Float
   title     String
 
-  jeux Jeu[]
+  jeux         Jeu[]
+  signalements Signalement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -453,4 +458,43 @@ model Anecdote {
   updatedAt DateTime @updatedAt
 
   @@map("anecdotes")
+}
+
+// ======================================================
+//  SIGNALEMENTS TERRAIN
+// ======================================================
+enum ReportType {
+  INACCESSIBLE
+  MISSING_CLUE
+  TECHNICAL_ERROR
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  IGNORED
+}
+
+model Signalement {
+  id          String       @id @default(uuid())
+  type        ReportType
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  parcoursId  String
+  parcours    Parcours     @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  
+  etapeId     String?
+  etape       Etape?       @relation(fields: [etapeId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([parcoursId])
+  @@index([status])
+  @@map("signalements")
 }
