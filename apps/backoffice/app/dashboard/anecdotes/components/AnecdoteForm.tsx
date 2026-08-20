@@ -43,6 +43,7 @@ export default function AnecdoteForm({ initialData }: AnecdoteFormProps) {
       setError(err instanceof Error ? err.message : 'Erreur lors de l\'upload de l\'image');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
