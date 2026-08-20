@@ -66,6 +66,7 @@ export class MediasService {
 
           try {
             await sharp(file.path)
+              .rotate()
               .webp({ quality: 85 })
               .toFile(newPath);
 

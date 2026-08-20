@@ -28,6 +28,7 @@ import { DownloadsModule } from './modules/downloads/downloads.module';
 import { HistoryModule } from './modules/history/history.module';
 import { AnecdotesModule } from './modules/anecdotes/anecdotes.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SignalementsModule } from './modules/signalements/signalements.module';
 
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -83,6 +84,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     HistoryModule,
     AnecdotesModule,
     NotificationsModule,
+    SignalementsModule,
   ],
   controllers: [AppController],
   providers: [

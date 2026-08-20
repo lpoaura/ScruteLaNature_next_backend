@@ -273,7 +273,6 @@ export default function StatistiquesClient() {
                 <div className={`${cfg.iconBg} p-2.5 rounded-xl`}>
                   <Icon className={`h-5 w-5 ${cfg.iconColor}`} />
                 </div>
-                <TrendingUp className="h-4 w-4 text-muted-foreground/40" />
               </div>
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-muted-foreground">{cfg.label}</p>
