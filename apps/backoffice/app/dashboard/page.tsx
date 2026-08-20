@@ -3,7 +3,7 @@ import { Header } from '@/src/components/layout/Header';
 import {
   Map,
   Users,
-  Leaf,
+
   MapPin,
   Plus,
   ArrowRight,
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     {
       label: 'Parcours actifs',
       value: stats.parcours.actifs.toString(),
-      sub: `dont ${stats.parcours.brouillons} en brouillon`,
+      sub: `ET ${stats.parcours.brouillons} en brouillon`,
       icon: Map,
       color: 'text-blue-500',
       bg: 'bg-blue-50',
@@ -59,14 +59,6 @@ export default async function DashboardPage() {
       icon: Users,
       color: 'text-violet-500',
       bg: 'bg-violet-50',
-    },
-    {
-      label: 'CO₂ économisé',
-      value: `${stats.co2.toString()} kg`,
-      sub: 'par la communauté locale',
-      icon: Leaf,
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-50',
     },
     {
       label: 'Zonages couverts',
