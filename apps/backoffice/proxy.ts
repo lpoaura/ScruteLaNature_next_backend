@@ -40,8 +40,10 @@ export async function proxy(request: NextRequest) {
     try {
       const refreshReq = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3000/api'}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`
+        },
       });
 
       if (refreshReq.ok) {

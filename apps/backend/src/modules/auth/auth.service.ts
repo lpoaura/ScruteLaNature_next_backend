@@ -219,16 +219,31 @@ export class AuthService {
       throw new ForbiddenException('Accès refusé');
     }
 
-    const tokens = await this.getTokens(user.id, user.email, user.role);
-    await this.updateRefreshToken(
-      user.id,
-      tokens.refresh_token,
-      ipAddress,
-      userAgent,
-      validSessionId,
+    // 1. Générer uniquement un nouveau Access Token (pas de rotation du refresh token)
+    const secret = this.configService.get<string>('JWT_SECRET');
+    const expiresIn = this.configService.get<string>('JWT_EXPIRATION') || '15m';
+    const access_token = await this.jwtService.signAsync(
+      {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        isTwoFactorAuthenticated: false,
+      },
+      {
+        secret,
+        expiresIn: expiresIn as any,
+      }
     );
 
-    return tokens;
+    // 2. Mettre à jour la date de dernière activité sans changer le hash du refresh token
+    await this.databaseService.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date() },
+    });
+    
+    // (Optionnel : on pourrait aussi mettre à jour ipAddress / userAgent sur la session ici)
+
+    return { access_token, refresh_token: refreshToken };
   }
 
   async verifyEmail(token: string) {
