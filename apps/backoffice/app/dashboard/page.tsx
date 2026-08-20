@@ -28,7 +28,7 @@ const QUICK_ACTIONS = [
   },
   {
     label: 'Statistiques',
-    href: '/dashboard/stats',
+    href: '/dashboard/statistiques',
     icon: ArrowRight,
     description: 'Export pour les financeurs',
   },
