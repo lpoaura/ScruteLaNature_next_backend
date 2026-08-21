@@ -620,10 +620,10 @@ export default function JeuxManager({ etape, onUpdateEtape }: JeuxManagerProps) 
                     <input
                       type="number"
                       min="8"
-                      value={editingJeu.donneesJeu?.targetResult || 50}
+                      value={editingJeu.donneesJeu?.targetResult || ''}
                       onChange={(e) => setEditingJeu({
                         ...editingJeu,
-                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: Math.max(8, parseInt(e.target.value) || 8), levels: 4 }
+                        donneesJeu: { ...editingJeu.donneesJeu, targetResult: parseInt(e.target.value, 10) || 0, levels: 4 }
                       })}
                       className="w-full px-3 py-1.5 border border-input rounded bg-background text-sm outline-none"
                     />
