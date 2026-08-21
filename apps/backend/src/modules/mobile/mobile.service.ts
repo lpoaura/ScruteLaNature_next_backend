@@ -389,9 +389,10 @@ export class MobileService {
     });
   }
 
-  async getCommunityFeed() {
+  async getCommunityFeed(parcoursId?: string) {
     return this.db.review.findMany({
-      take: 10,
+      take: 100,
+      where: parcoursId ? { parcoursId } : undefined,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,

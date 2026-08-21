@@ -126,8 +126,8 @@ export class MobileController {
     description: 'Retourne les 10 derniers avis laissés sur les parcours',
   })
   @ApiResponse({ status: 200, description: 'Liste des derniers avis.' })
-  getCommunityFeed() {
-    return this.mobileService.getCommunityFeed();
+  getCommunityFeed(@Query('parcoursId') parcoursId?: string) {
+    return this.mobileService.getCommunityFeed(parcoursId);
   }
 
   @Get('parcours/:id')

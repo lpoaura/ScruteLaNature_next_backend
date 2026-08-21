@@ -12,11 +12,11 @@ export interface Signalement {
 }
 
 export async function getSignalements(): Promise<Signalement[]> {
-  return apiClient<Signalement[]>('/admin/signalements');
+  return apiClient<Signalement[]>('/signalements/admin');
 }
 
 export async function updateSignalementStatus(id: string, status: Signalement['status']): Promise<Signalement> {
-  return apiClient<Signalement>(`/admin/signalements/${id}/status`, {
+  return apiClient<Signalement>(`/signalements/admin/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
