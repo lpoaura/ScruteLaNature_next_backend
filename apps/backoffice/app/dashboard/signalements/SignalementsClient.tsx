@@ -102,15 +102,15 @@ export default function SignalementsClient({ initialData }: { initialData: Signa
                 <td className="px-6 py-4 text-right">
                   {sig.status === 'PENDING' ? (
                     <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => handleStatusChange(sig.id, 'RESOLVED')}
+                      <button type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleStatusChange(sig.id, 'RESOLVED'); }}
                         className="p-1.5 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 transition-colors"
                         title="Marquer comme résolu"
                       >
                         <CheckCircle size={16} />
                       </button>
-                      <button 
-                        onClick={() => handleStatusChange(sig.id, 'IGNORED')}
+                      <button type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleStatusChange(sig.id, 'IGNORED'); }}
                         className="p-1.5 text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                         title="Ignorer"
                       >
@@ -118,8 +118,8 @@ export default function SignalementsClient({ initialData }: { initialData: Signa
                       </button>
                     </div>
                   ) : (
-                    <button 
-                      onClick={() => handleStatusChange(sig.id, 'PENDING')}
+                    <button type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleStatusChange(sig.id, 'PENDING'); }}
                       className="text-xs text-blue-600 hover:underline dark:text-blue-400"
                     >
                       Ré-ouvrir
