@@ -68,9 +68,25 @@ export class MediasService {
             const metadata = await sharp(file.path).metadata();
             let processor = sharp(file.path);
             
-            // Les fichiers HEIC/HEIF (iOS) sont déjà orientés par libheif (via la box irot).
-            // Appeler rotate() appliquerait en plus la rotation EXIF, causant une double rotation.
-            if (metadata.format !== 'heif') {
+            let shouldRotate = true;
+
+            // 1. Les fichiers HEIC/HEIF (iOS) sont déjà orientés par libheif (via la box irot).
+            if (metadata.format === 'heif') {
+              shouldRotate = false;
+            }
+
+            // 2. Prévention du bug Android "EXIF obsolète" (Stale EXIF).
+            // Si l'EXIF demande une rotation de 90/270° (5, 6, 7, 8) mais que l'image est DÉJÀ en portrait 
+            // (largeur < hauteur), c'est que les pixels ont déjà été pivotés physiquement par l'appareil 
+            // ou l'éditeur, mais l'EXIF n'a pas été réinitialisé à 1.
+            // Si on la tourne, elle finira couchée (paysage). On l'ignore donc.
+            if (metadata.orientation && metadata.orientation >= 5 && metadata.orientation <= 8) {
+              if (metadata.width && metadata.height && metadata.width < metadata.height) {
+                shouldRotate = false;
+              }
+            }
+
+            if (shouldRotate) {
               processor = processor.rotate();
             }
 
