@@ -74,15 +74,17 @@ export class ParcoursController {
   @Roles(Role.EDITOR, Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOperation({ summary: 'Mettre à jour un parcours (titre, zonage, accessibilité, statut)' })
   @ApiParam({ name: 'id', description: 'UUID du parcours' })
+  @ApiQuery({ name: 'organismeId', required: false, description: 'Pour changer l\'organisme (SUPER_ADMIN uniquement)' })
   @ApiResponse({ status: 200, description: 'Parcours mis à jour.' })
   @ApiResponse({ status: 403, description: 'Parcours hors de votre organisme.' })
   @ApiResponse({ status: 404, description: 'Parcours introuvable.' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateParcoursDto,
+    @Query('organismeId') queryOrganismeId: string,
     @Request() req: any,
   ) {
-    return this.parcoursService.update(id, dto, req.user.role, req.user.organismeId ?? null);
+    return this.parcoursService.update(id, dto, req.user.role, req.user.organismeId ?? null, queryOrganismeId);
   }
 
   @Patch(':id/request-publish')

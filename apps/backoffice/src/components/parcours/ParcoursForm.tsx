@@ -83,7 +83,11 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
 
         if (isSuperAdmin && orgData) {
           setOrganismes(orgData);
-          if (orgData.length > 0) setSelectedOrganismeId(orgData[0].id);
+          if (isEdit && initialData?.organismeId) {
+            setSelectedOrganismeId(initialData.organismeId);
+          } else if (orgData.length > 0) {
+            setSelectedOrganismeId(orgData[0].id);
+          }
         }
 
         if (!isEdit && !initialData?.zonageId && zData.length > 0) {
@@ -164,7 +168,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
     startTransition(async () => {
       try {
         if (isEdit && initialData) {
-          await updateParcours(initialData.id, payload as any);
+          await updateParcours(initialData.id, payload as any, isSuperAdmin ? selectedOrganismeId : undefined);
         } else {
           await createParcours(payload as any, isSuperAdmin ? selectedOrganismeId : undefined);
         }
@@ -398,7 +402,7 @@ export default function ParcoursForm({ initialData, isEdit = false }: ParcoursFo
                   />
                 </div>
 
-                {isSuperAdmin && !isEdit && (
+                {isSuperAdmin && (
                   <div className="space-y-2">
                     <label htmlFor="organismeId" className="text-sm font-medium">
                       Organisme <span className="text-destructive">*</span>

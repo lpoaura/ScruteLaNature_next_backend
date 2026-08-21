@@ -176,6 +176,7 @@ export class ParcoursService {
     dto: UpdateParcoursDto,
     userRole: Role,
     userOrganismeId: string | null,
+    newOrganismeId?: string,
   ) {
     const existing = await this.findOne(id, userRole, userOrganismeId); // lève 404 ou 403
 
@@ -189,13 +190,15 @@ export class ParcoursService {
       throw new ForbiddenException('Les éditeurs ne peuvent pas modifier le statut d\'un parcours.');
     }
 
-    // Un ADMIN peut publier directement (suppression de la restriction)
-
     // Exclure le champ status du dto pour EDITOR (double sécurité)
     const { badge, zonageId, ...rawRest } = dto as any;
     const safeRest = userRole === Role.EDITOR ? (({ status, ...rest }) => rest)(rawRest as any) : rawRest;
 
     const dataToUpdate: any = { ...safeRest };
+
+    if (userRole === Role.SUPER_ADMIN && newOrganismeId) {
+      dataToUpdate.organisme = { connect: { id: newOrganismeId } };
+    }
 
     // Nettoyage explicite : supprimer les IDs scalaires du payload pour éviter les conflits Prisma (Unknown argument zonageId)
     delete dataToUpdate.zonageId;
