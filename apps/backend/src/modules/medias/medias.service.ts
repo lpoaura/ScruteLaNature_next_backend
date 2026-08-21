@@ -65,8 +65,16 @@ export class MediasService {
           const newPath = join(file.destination, newFilename);
 
           try {
-            await sharp(file.path)
-              .rotate()
+            const metadata = await sharp(file.path).metadata();
+            let processor = sharp(file.path);
+            
+            // Les fichiers HEIC/HEIF (iOS) sont déjà orientés par libheif (via la box irot).
+            // Appeler rotate() appliquerait en plus la rotation EXIF, causant une double rotation.
+            if (metadata.format !== 'heif') {
+              processor = processor.rotate();
+            }
+
+            await processor
               .webp({ quality: 85 })
               .toFile(newPath);
 
