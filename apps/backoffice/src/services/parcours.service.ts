@@ -51,8 +51,9 @@ export async function createParcours(dto: Partial<Parcours>, organismeId?: strin
 /**
  * Met à jour un parcours existant.
  */
-export async function updateParcours(id: string, dto: Partial<Parcours>): Promise<Parcours> {
-  return apiClient<Parcours>(`/admin/parcours/${id}`, {
+export async function updateParcours(id: string, dto: Partial<Parcours>, organismeId?: string): Promise<Parcours> {
+  const query = organismeId ? `?organismeId=${organismeId}` : '';
+  return apiClient<Parcours>(`/admin/parcours/${id}${query}`, {
     method: 'PATCH',
     body: JSON.stringify(dto),
   });
